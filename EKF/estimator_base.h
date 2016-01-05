@@ -58,6 +58,33 @@ struct gps_message {
 	bool vel_ned_valid;		// GPS ground speed is valid
 };
 
+struct parameters {
+	float mag_delay_ms;
+	float baro_delay_ms;
+	float gps_delay_ms;
+	float airspeed_delay_ms;
+	float 	requiredEph;
+	float 	requiredEpv;
+
+	float gyro_noise;
+	float accel_noise;
+
+	// process noise
+	float gyro_bias_p_noise;
+	float accel_bias_p_noise;
+	float gyro_scale_p_noise;
+	float mag_p_noise;
+	float wind_vel_p_noise;
+
+	float gps_vel_noise;
+	float gps_pos_noise;
+	float baro_noise;
+
+	float mag_heading_noise;	// measurement noise used for simple heading fusion
+	float mag_declination_deg;	// magnetic declination in degrees
+	float heading_innov_gate;	// innovation gate for heading innovation test
+};
+
 class EstimatorBase
 {
 public:
@@ -87,6 +114,9 @@ public:
 	// set optical flow data
 	void setOpticalFlowData(uint64_t time_usec, float *data);
 
+	// return a address to the parameters struct
+	// in order to give access to the application
+	parameters *getParamHandle() {return &_params;}
 protected:
 
 	typedef matrix::Vector<float, 2> Vector2f;
@@ -155,33 +185,7 @@ protected:
 		uint64_t    time_us;
 	};
 
-	struct {
-		uint32_t mag_delay_ms;
-		uint32_t baro_delay_ms;
-		uint32_t gps_delay_ms;
-		uint32_t airspeed_delay_ms;
-		float 	requiredEph;
-		float 	requiredEpv;
-
-		float gyro_noise;
-		float accel_noise;
-
-		// process noise
-		float gyro_bias_p_noise;
-		float accel_bias_p_noise;
-		float gyro_scale_p_noise;
-		float mag_p_noise;
-		float wind_vel_p_noise;
-
-		float gps_vel_noise;
-		float gps_pos_noise;
-		float baro_noise;
-
-		float mag_heading_noise;	// measurement noise used for simple heading fusion
-		float mag_declination_deg;	// magnetic declination in degrees
-		float heading_innov_gate;	// innovation gate for heading innovation test
-
-	} _params;
+	parameters _params;		// filter parameters
 
 	static const uint8_t OBS_BUFFER_LENGTH = 10;
 	static const uint8_t IMU_BUFFER_LENGTH = 30;
@@ -239,11 +243,11 @@ protected:
 
 	// flags capturing information about severe nummerical problems for various fusions
 	struct {
-		bool bad_mag_x:1;
-		bool bad_mag_y:1;
-		bool bad_mag_z:1;
-		bool bad_airspeed:1;
-		bool bad_sideslip:1;
+		bool bad_mag_x: 1;
+		bool bad_mag_y: 1;
+		bool bad_mag_z: 1;
+		bool bad_airspeed: 1;
+		bool bad_sideslip: 1;
 	} _fault_status;
 
 
@@ -272,17 +276,20 @@ public:
 			quat[i] = _output_new.quat_nominal(i);
 		}
 	}
-	void copy_velocity(float *vel) {
+	void copy_velocity(float *vel)
+	{
 		for (unsigned i = 0; i < 3; i++) {
 			vel[i] = _output_new.vel(i);
 		}
 	}
-	void copy_position(float *pos) {
+	void copy_position(float *pos)
+	{
 		for (unsigned i = 0; i < 3; i++) {
 			pos[i] = _output_new.pos(i);
 		}
 	}
-	void copy_timestamp(uint64_t *time_us) {
+	void copy_timestamp(uint64_t *time_us)
+	{
 		*time_us = _imu_time_last;
 	}
 
