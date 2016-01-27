@@ -260,7 +260,6 @@ void EstimatorBase::initialiseVariables(uint64_t time_usec)
 	_state.quat_nominal(0) = 1.0f;
 
 	_dt_imu_avg = 0.0f;
-	_imu_time_last = time_usec;
 
 	_imu_sample_delayed.delta_ang.setZero();
 	_imu_sample_delayed.delta_vel.setZero();
@@ -307,9 +306,8 @@ void EstimatorBase::initialiseVariables(uint64_t time_usec)
 
 void EstimatorBase::initialiseGPS(struct gps_message *gps)
 {
-	//Check if the GPS fix is good enough for us to use
+	// Check if the GPS fix is good enough for us to use
 	if (gps_is_good(gps)) {
-		printf("gps is good\n");
 		// Initialise projection
 		double lat = gps->lat / 1.0e7;
 		double lon = gps->lon / 1.0e7;
@@ -346,79 +344,4 @@ bool EstimatorBase::position_is_valid()
 	// return true if the position estimate is valid
 	// TOTO implement proper check based on published GPS accuracy, innovaton consistency checks and timeout status
 	return _gps_initialised &&  (hrt_absolute_time() - _last_valid_gps_time_us) < 5e6;
-}
-
-void EstimatorBase::printStoredIMU()
-{
-	printf("---------Printing IMU data buffer------------\n");
-
-	for (int i = 0; i < IMU_BUFFER_LENGTH; i++) {
-		printIMU(&_imu_buffer[i]);
-	}
-}
-
-void EstimatorBase::printIMU(struct imuSample *data)
-{
-	printf("time %llu\n", data->time_us);
-	printf("delta_ang_dt %.5f\n", (double)data->delta_ang_dt);
-	printf("delta_vel_dt %.5f\n", (double)data->delta_vel_dt);
-	printf("dA: %.5f %.5f %.5f \n", (double)data->delta_ang(0), (double)data->delta_ang(1), (double)data->delta_ang(2));
-	printf("dV: %.5f %.5f %.5f \n\n", (double)data->delta_vel(0), (double)data->delta_vel(1), (double)data->delta_vel(2));
-}
-
-void EstimatorBase::printQuaternion(Quaternion &q)
-{
-	printf("q1 %.5f q2 %.5f q3 %.5f q4 %.5f\n", (double)q(0), (double)q(1), (double)q(2), (double)q(3));
-}
-
-void EstimatorBase::print_imu_avg_time()
-{
-	printf("dt_avg: %.5f\n", (double)_dt_imu_avg);
-}
-
-void EstimatorBase::printStoredMag()
-{
-	printf("---------Printing mag data buffer------------\n");
-
-	for (int i = 0; i < OBS_BUFFER_LENGTH; i++) {
-		printMag(&_mag_buffer[i]);
-	}
-}
-
-void EstimatorBase::printMag(struct magSample *data)
-{
-	printf("time %llu\n", data->time_us);
-	printf("mag: %.5f %.5f %.5f \n\n", (double)data->mag(0), (double)data->mag(1), (double)data->mag(2));
-
-}
-
-void EstimatorBase::printBaro(struct baroSample *data)
-{
-	printf("time %llu\n", data->time_us);
-	printf("baro: %.5f\n\n", (double)data->hgt);
-}
-
-void EstimatorBase::printStoredBaro()
-{
-	printf("---------Printing baro data buffer------------\n");
-
-	for (int i = 0; i < OBS_BUFFER_LENGTH; i++) {
-		printBaro(&_baro_buffer[i]);
-	}
-}
-
-void EstimatorBase::printGps(struct gpsSample *data)
-{
-	printf("time %llu\n", data->time_us);
-	printf("gps pos: %.5f %.5f %.5f\n", (double)data->pos(0), (double)data->pos(1), (double)data->hgt);
-	printf("gps vel %.5f %.5f %.5f\n\n", (double)data->vel(0), (double)data->vel(1), (double)data->vel(2));
-}
-
-void EstimatorBase::printStoredGps()
-{
-	printf("---------Printing GPS data buffer------------\n");
-
-	for (int i = 0; i < OBS_BUFFER_LENGTH; i++) {
-		printGps(&_gps_buffer[i]);
-	}
 }

@@ -50,6 +50,7 @@ public:
 	Ekf();
 	~Ekf();
 
+	// should be called every time new data is pushed into the filter
 	bool update();
 
 	// gets the innovations of velocity and position measurements
@@ -93,11 +94,11 @@ private:
 
 	uint8_t _mag_fuse_index;	// counter for sequential mag axis fusion
 
-	uint64_t _time_last_fake_gps;
+	uint64_t _time_last_fake_gps;	// last timestamp in microseconds when we faked a gps measurement for static mode 
 
-	Vector3f _earth_rate_NED;
+	Vector3f _earth_rate_NED;		// earth rotation vector (NED) in rad/s
 
-	matrix::Dcm<float> _R_prev;
+	matrix::Dcm<float> _R_prev;		// transformation matrix from earth frame to body frame of previous ekf step
 
 	float P[_k_num_states][_k_num_states];	// state covariance matrix
 
@@ -106,56 +107,66 @@ private:
 	float _heading_innov;		// heading measurement innovation
 
 	float _vel_pos_innov_var[6]; // innovation variances: 0-2 vel, 3-5 pos
-	float _mag_innov_var[3]; // earth magnetic field innovation variance
+	float _mag_innov_var[3]; 	// earth magnetic field innovation variance
 	float _heading_innov_var; // heading measurement innovation variance
 
 	// complementary filter states
-	Vector3f _delta_angle_corr;
-	Vector3f _delta_vel_corr;
-	Vector3f _vel_corr;
+	Vector3f _delta_angle_corr;	// delta angle correction vector
+	Vector3f _delta_vel_corr;	// delta velocity correction vector
+	Vector3f _vel_corr;			// velocity correction vector
 
+	// update the real time complementary filter states. This includes the prediction
+	// and the correction step
 	void calculateOutputStates();
 
+	// initialise filter states of both the delayed ekf and the real time complementary filter
 	bool initialiseFilter(void);
 
+	// initialise ekf covariance matrix
 	void initialiseCovariance();
 
+	// predict ekf state
 	void predictState();
 
+	// predict ekf covariance
 	void predictCovariance();
 
+	// ekf sequential fusion of magnetometer measurements. index {0,1,2} defines the axis
+	// which should be fused
 	void fuseMag(uint8_t index);
 
+	// fuse magnetometer heading measurement
 	void fuseHeading();
 
+	// fuse airspeed measurement
 	void fuseAirspeed();
 
+	// fuse range measurements
 	void fuseRange();
 
+	// fuse velocity and position measurements (also barometer height)
 	void fuseVelPosHeight();
 
+	// reset velocity states of the ekf
 	void resetVelocity();
 
+	// reset position state of the ekf
 	void resetPosition();
 
-	void makeCovSymetrical();
-
+	// limit the diagonal of the covariance matrix
 	void limitCov();
 
-	void printCovToFile(char const *filename);
-
-	void assertCovNiceness();
-
+	// make ekf covariance matrix symmetric
 	void makeSymmetrical();
 
+	// constrain the ekf states
 	void constrainStates();
 
+	// generic function which will perform a fusion step given a kalman gain
+	// and a scalar innovation value
 	void fuse(float *K, float innovation);
 
-	void printStates();
-
-	void printStatesFast();
-
+	// calculate the earth rotation vector from a given latitude
 	void calcEarthRateNED(Vector3f &omega, double lat_rad) const;
 
 };
