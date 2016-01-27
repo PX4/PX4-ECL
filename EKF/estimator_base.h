@@ -45,7 +45,7 @@
 #include "RingBuffer.h"
 
 struct gps_message {
-	uint64_t time_usec;
+	uint64_t time_usec;		// timestamp in microseconds
 	int32_t lat;			// Latitude in 1E-7 degrees
 	int32_t lon;			// Longitude in 1E-7 degrees
 	int32_t alt;			// Altitude in 1E-3 meters (millimeters) above MSL
@@ -59,29 +59,29 @@ struct gps_message {
 };
 
 struct parameters {
-	float mag_delay_ms = 0.0f;
-	float baro_delay_ms = 0.0f;
-	float gps_delay_ms = 200.0f;
-	float airspeed_delay_ms = 200.0f;
-	float requiredEph = 10.0f;
-	float requiredEpv = 20.0f;
+	float mag_delay_ms = 0.0f;		// magnetometer measurement delay in milliseconds
+	float baro_delay_ms = 0.0f;		// barometer measurement delay in milliseconds
+	float gps_delay_ms = 200.0f;	// gps measurement delay in milliseconds
+	float airspeed_delay_ms = 200.0f;	// airspeed measurement delay in milliseconds
+	float requiredEph = 10.0f;			// required gps eph for navigation
+	float requiredEpv = 20.0f;			// required gps epv for navigation
 
 	// input noise
-	float gyro_noise = 0.001f;
-	float accel_noise = 0.1f;
+	float gyro_noise = 0.001f;			// gyro noise variance in (rad/s)²
+	float accel_noise = 0.1f;			// accelerometer noise variance in (m/s²)²
 
 	// process noise
-	float gyro_bias_p_noise = 1e-5f;
-	float accel_bias_p_noise = 1e-3f;
-	float gyro_scale_p_noise = 1e-4f;
-	float mag_p_noise = 1e-2f;
-	float wind_vel_p_noise = 0.05f;
+	float gyro_bias_p_noise = 1e-5f;	// gyro bias process noise in (rad/s)²
+	float accel_bias_p_noise = 1e-3f;	// accelerometer z axis bias process noise in (m/s²)²
+	float gyro_scale_p_noise = 1e-4f;	// gyro scale process noise
+	float mag_p_noise = 1e-2f;			// magnetometer measurement noise in ga²
+	float wind_vel_p_noise = 0.05f;		// wind velocity process noise in (m/s)²
 
-	float gps_vel_noise = 0.05f;
-	float gps_pos_noise = 1.0f;
-	float baro_noise = 0.1f;
+	float gps_vel_noise = 0.05f;		// gps velocity measurement noise in (m/s)²
+	float gps_pos_noise = 1.0f;			// gps position measurement noise in m²
+	float baro_noise = 0.1f;			// barometer altitude measurement noise in m²
 
-	float mag_heading_noise = 3e-2f;	// measurement noise used for simple heading fusion
+	float mag_heading_noise = 3e-2f;	// measurement noise used for simple heading fusion in rad²
 	float mag_declination_deg = 0.0f;	// magnetic declination in degrees
 	float heading_innov_gate = 0.5f;	// innovation gate for heading innovation test
 };
@@ -149,59 +149,61 @@ protected:
 	typedef matrix::Quaternion<float> Quaternion;
 	typedef matrix::Matrix<float, 3, 3> Matrix3f;
 
+	// ekf states (delayed time horizon)
 	struct stateSample {
-		Vector3f    ang_error;
-		Vector3f    vel;
-		Vector3f    pos;
-		Vector3f    gyro_bias;
-		Vector3f    gyro_scale;
-		float       accel_z_bias;
-		Vector3f    mag_I;
-		Vector3f    mag_B;
-		Vector2f    wind_vel;
-		Quaternion  quat_nominal;
+		Vector3f    ang_error;	// attitude axis angle error (error state formulation)
+		Vector3f    vel;		// NED velocity in earth frame in m/s
+		Vector3f    pos;		// NED position in earth frame in m
+		Vector3f    gyro_bias;	// gyro bias estimate in rad/s
+		Vector3f    gyro_scale;	// gyro scale estimate
+		float       accel_z_bias;	// accelerometer z axis bias estimate
+		Vector3f    mag_I;			// NED earth magnetic field in gauss
+		Vector3f    mag_B;			// magnetometer bias estimate in body frame in gauss
+		Vector2f    wind_vel;		// wind velocity in m/s
+		Quaternion  quat_nominal;	// nominal quaternion describing vehicle attitude
 	} _state;
 
+	// state estimate (non-delayed time horizon)
 	struct outputSample {
-		Quaternion  quat_nominal;
-		Vector3f    vel;
-		Vector3f    pos;
-		uint64_t 	time_us;
+		Quaternion  quat_nominal;	// nominal quaternion describing vehicle attitude
+		Vector3f    vel;			// NED velocity estimate in earth frame in m/s
+		Vector3f    pos;			// NED position estimate in earth frame in m/s
+		uint64_t 	time_us;		// timestamp in microseconds
 	};
 
 	struct imuSample {
-		Vector3f    delta_ang;
-		Vector3f    delta_vel;
-		float       delta_ang_dt;
-		float       delta_vel_dt;
-		uint64_t    time_us;
+		Vector3f    delta_ang;	// delta angle in body frame (integrated gyro measurements)
+		Vector3f    delta_vel;	// delta velocity in body frame (integrated accelerometer measurements)
+		float       delta_ang_dt;	// delta angle integration period in seconds
+		float       delta_vel_dt;	// delta velocity integration period in seconds
+		uint64_t    time_us;		// timestamp in microseconds
 	};
 
 	struct gpsSample {
-		Vector2f    pos;
-		float       hgt;
-		Vector3f    vel;
-		uint64_t    time_us;
+		Vector2f    pos;	// NE earth frame gps horizontal position measurement in m
+		float       hgt;	// gps height measurement in m
+		Vector3f    vel;	// NED earth frame gps velocity measurement in m/s
+		uint64_t    time_us;	// timestamp in microseconds
 	};
 
 	struct magSample {
-		Vector3f    mag;
-		uint64_t    time_us;
+		Vector3f    mag;	// NED magnetometer body frame measurements
+		uint64_t    time_us;	// timestamp in microseconds
 	};
 
 	struct baroSample {
-		float       hgt;
-		uint64_t    time_us;
+		float       hgt;	// barometer height above sea level measurement in m
+		uint64_t    time_us;	// timestamp in microseconds
 	};
 
 	struct rangeSample {
-		float       rng;
-		uint64_t    time_us;
+		float       rng;	// range (distance to ground) measurement in m
+		uint64_t    time_us;	// timestamp in microseconds
 	};
 
 	struct airspeedSample {
-		float       airspeed;
-		uint64_t    time_us;
+		float       airspeed;	// airspeed measurement in m/s
+		uint64_t    time_us;	// timestamp in microseconds
 	};
 
 	struct flowSample {
@@ -212,20 +214,20 @@ protected:
 
 	parameters _params;		// filter parameters
 
-	static const uint8_t OBS_BUFFER_LENGTH = 10;
-	static const uint8_t IMU_BUFFER_LENGTH = 30;
-	static const unsigned FILTER_UPDATE_PERRIOD_MS = 10;
+	static const uint8_t OBS_BUFFER_LENGTH = 10;	// defines how many measurement samples we can buffer
+	static const uint8_t IMU_BUFFER_LENGTH = 30;	// defines how many imu samples we can buffer
+	static const unsigned FILTER_UPDATE_PERRIOD_MS = 10;	// ekf prediction period in milliseconds
 
-	float _dt_imu_avg;
-	uint64_t _imu_time_last;
+	float _dt_imu_avg;		// average imu update period in s
 
-	uint64_t _last_valid_gps_time_us;
+	uint64_t _last_valid_gps_time_us;	// timestamp in microseconds when we had valid gps measurement for the last time
 
-	imuSample _imu_sample_delayed;
-	imuSample _imu_down_sampled;
+	imuSample _imu_sample_delayed;		// captures the imu sample on the delayed time horizon
+	imuSample _imu_down_sampled;		// captures down-sampled imu data to go from sensor update rate to filter update rate
 	Quaternion
-	_q_down_sampled;
+	_q_down_sampled;					// captures down-sampled quaternion 
 
+	// measurement samples capturing measurements on the delayed time horizon
 	magSample _mag_sample_delayed;
 	baroSample _baro_sample_delayed;
 	gpsSample _gps_sample_delayed;
@@ -233,16 +235,17 @@ protected:
 	airspeedSample _airspeed_sample_delayed;
 	flowSample _flow_sample_delayed;
 
-	outputSample _output_sample_delayed;
-	outputSample _output_new;
-	imuSample _imu_sample_new;
+	outputSample _output_sample_delayed;	// filter output on the delayed time horizon
+	outputSample _output_new;				// filter output on the non-delayed time horizon
+	imuSample _imu_sample_new;				// imu sample capturing the newest imu data
+											// this has already been corrected for gyro scale, gyro and accel bias
 
 
-	uint64_t _imu_ticks;
+	uint64_t _imu_ticks;					// counter for imu updates
 
-	bool _imu_updated = false;
-	bool _start_predict_enabled = false;
-	bool _initialised = false;
+	bool _imu_updated = false;				// true if the ekf should update
+	bool _start_predict_enabled = false;	// ekf should start estimation
+	bool _initialised = false;				// true if ekf base class (data buffering) is initialised		
 	bool _gps_initialised = false;
 	bool _gps_speed_valid = false;
 
@@ -250,6 +253,7 @@ protected:
 
 	bool _in_air = true;			// indicates if the vehicle is in the air
 
+	// buffer instances
 	RingBuffer<imuSample> _imu_buffer;
 	RingBuffer<gpsSample> _gps_buffer;
 	RingBuffer<magSample> _mag_buffer;
@@ -259,12 +263,12 @@ protected:
 	RingBuffer<flowSample> 	_flow_buffer;
 	RingBuffer<outputSample> _output_buffer;
 
-	uint64_t _time_last_imu;
-	uint64_t _time_last_gps;
-	uint64_t _time_last_mag;
-	uint64_t _time_last_baro;
-	uint64_t _time_last_range;
-	uint64_t _time_last_airspeed;
+	uint64_t _time_last_imu;	// timestamp of last imu sample in microseconds
+	uint64_t _time_last_gps;	// timestamp of last gps measurement in microseconds
+	uint64_t _time_last_mag;	// timestamp of last magnetometer measurement in microseconds
+	uint64_t _time_last_baro;	// timestamp of last barometer measurement in microseconds
+	uint64_t _time_last_range;	// timestamp of last range measurement in microseconds
+	uint64_t _time_last_airspeed;	// timestamp of last airspeed measurement in microseconds
 
 	// flags capturing information about severe nummerical problems for various fusions
 	struct {
@@ -275,32 +279,29 @@ protected:
 		bool bad_sideslip: 1;
 	} _fault_status;
 
+	// intialise the filter variables. This function initialised the data buffers
+	// and sets all values of this base class to sane values
 	void initialiseVariables(uint64_t timestamp);
 
+	// initialise gps: this sets the global origin of the ekf once the checks
+	// defined in gps_is_good have passed
 	void initialiseGPS(struct gps_message *gps);
 
+	// run gps quality checks
 	bool gps_is_good(struct gps_message *gps);
 
 public:
-	void printIMU(struct imuSample *data);
-	void printStoredIMU();
-	void printQuaternion(Quaternion &q);
-	void print_imu_avg_time();
-	void printMag(struct magSample *data);
-	void printStoredMag();
-	void printBaro(struct baroSample *data);
-	void printStoredBaro();
-	void printGps(struct gpsSample *data);
-	void printStoredGps();
-
+	// indicate if horizontal position estimate is valid
 	bool position_is_valid();
 
+	// copy states of the non-delayed time horizon
 	void copy_quaternion(float *quat)
 	{
 		for (unsigned i = 0; i < 4; i++) {
 			quat[i] = _output_new.quat_nominal(i);
 		}
 	}
+
 	void copy_velocity(float *vel)
 	{
 		for (unsigned i = 0; i < 3; i++) {
@@ -315,7 +316,7 @@ public:
 	}
 	void copy_timestamp(uint64_t *time_us)
 	{
-		*time_us = _imu_time_last;
+		*time_us = _time_last_imu;
 	}
 
 	uint64_t _last_gps_origin_time_us = 0;

@@ -75,11 +75,6 @@ public:
 
 	inline void push(data_type sample, bool debug = false)
 	{
-		if (debug) {
-			printf("elapsed %llu\n", sample.time_us - _time_last);
-			_time_last = sample.time_us;
-		}
-
 		int head_new = _head;
 
 		if (_first_write) {
