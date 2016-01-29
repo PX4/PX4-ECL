@@ -50,6 +50,7 @@ px4_add_module(
 		validation/data_validator_group.cpp
 		EKF/estimator_base.cpp
 		EKF/ekf.cpp
+		EKF/ekf_frontend.cpp
 		EKF/ekf_helper.cpp
 		EKF/covariance.cpp
 		EKF/vel_pos_fusion.cpp

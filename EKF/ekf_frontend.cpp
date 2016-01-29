@@ -47,7 +47,7 @@ _instances(0)
 
 Ekf::~Ekf()
 {
-	Ekf_core *temp;
+	Ekf_list *temp;
 	for(uint8_t i=0; i < _instances; i++) {
 		temp = ekf_list_start->next_instance;
 		if(temp == NULL) {
@@ -60,7 +60,7 @@ Ekf::~Ekf()
 }
 
 //creates a new instance of Ekf returns -1 if failed
-int8_t Ekf::instance()
+int8_t Ekf::create()
 {
 	int8_t ret = -1;
 	if(_instances == 0) {
@@ -83,9 +83,9 @@ end:
 	return ret;
 }
 
-Ekf_core* Ekf::get_ekf_instance(uint8_t instance)
+Ekf_core* Ekf::instance(uint8_t instance)
 {
-	Ekf_core* ekf;
+	Ekf_list* ekf;
 	ekf = ekf_list_start;
 	for(uint8_t i=0; i < instance; i++) {
 		ekf = ekf->next_instance;
@@ -93,5 +93,5 @@ Ekf_core* Ekf::get_ekf_instance(uint8_t instance)
 			return NULL;
 		}
 	}
-	return ekf;
+	return &ekf->instance;
 }
