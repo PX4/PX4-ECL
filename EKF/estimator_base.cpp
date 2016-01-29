@@ -40,21 +40,12 @@
  */
 
 #include <math.h>
-#include "estimator_base.h"
+#include "ekf.h"
 #include <mathlib/mathlib.h>
 
 
-EstimatorBase::EstimatorBase()
-{
-}
-
-EstimatorBase::~EstimatorBase()
-{
-
-}
-
 // Accumulate imu data and store to buffer at desired rate
-void EstimatorBase::setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, uint64_t delta_vel_dt, float *delta_ang,
+void Ekf_core::setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, uint64_t delta_vel_dt, float *delta_ang,
 			       float *delta_vel)
 {
 	if (!_initialised) {
@@ -135,7 +126,7 @@ void EstimatorBase::setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, uint64
 	_imu_sample_delayed = _imu_buffer.get_oldest();
 }
 
-void EstimatorBase::setMagData(uint64_t time_usec, float *data)
+void Ekf_core::setMagData(uint64_t time_usec, float *data)
 {
 
 
@@ -154,7 +145,7 @@ void EstimatorBase::setMagData(uint64_t time_usec, float *data)
 	}
 }
 
-void EstimatorBase::setGpsData(uint64_t time_usec, struct gps_message *gps)
+void Ekf_core::setGpsData(uint64_t time_usec, struct gps_message *gps)
 {
 
 	if (!_gps_initialised) {
@@ -191,7 +182,7 @@ void EstimatorBase::setGpsData(uint64_t time_usec, struct gps_message *gps)
 	}
 }
 
-void EstimatorBase::setBaroData(uint64_t time_usec, float *data)
+void Ekf_core::setBaroData(uint64_t time_usec, float *data)
 {
 	if (time_usec - _time_last_baro > 70000) {
 
@@ -208,7 +199,7 @@ void EstimatorBase::setBaroData(uint64_t time_usec, float *data)
 	}
 }
 
-void EstimatorBase::setAirspeedData(uint64_t time_usec, float *data)
+void Ekf_core::setAirspeedData(uint64_t time_usec, float *data)
 {
 	if (time_usec > _time_last_airspeed) {
 		airspeedSample airspeed_sample_new;
@@ -223,18 +214,18 @@ void EstimatorBase::setAirspeedData(uint64_t time_usec, float *data)
 }
 
 // set range data
-void EstimatorBase::setRangeData(uint64_t time_usec, float *data)
+void Ekf_core::setRangeData(uint64_t time_usec, float *data)
 {
 
 }
 
 // set optical flow data
-void EstimatorBase::setOpticalFlowData(uint64_t time_usec, float *data)
+void Ekf_core::setOpticalFlowData(uint64_t time_usec, float *data)
 {
 
 }
 
-void EstimatorBase::initialiseVariables(uint64_t time_usec)
+void Ekf_core::initialiseVariables(uint64_t time_usec)
 {
 	_imu_buffer.allocate(IMU_BUFFER_LENGTH);
 	_gps_buffer.allocate(OBS_BUFFER_LENGTH);
@@ -305,7 +296,7 @@ void EstimatorBase::initialiseVariables(uint64_t time_usec)
 
 }
 
-void EstimatorBase::initialiseGPS(struct gps_message *gps)
+void Ekf_core::initialiseGPS(struct gps_message *gps)
 {
 	//Check if the GPS fix is good enough for us to use
 	if (gps_is_good(gps)) {
@@ -320,7 +311,7 @@ void EstimatorBase::initialiseGPS(struct gps_message *gps)
 	}
 }
 
-bool EstimatorBase::gps_is_good(struct gps_message *gps)
+bool Ekf_core::gps_is_good(struct gps_message *gps)
 {
 	// go through apm implementation of calcGpsGoodToAlign for fancier checks
 	// Use a stricter check for initialisation than during flight to avoid complete loss of GPS
@@ -341,14 +332,14 @@ bool EstimatorBase::gps_is_good(struct gps_message *gps)
 	}
 }
 
-bool EstimatorBase::position_is_valid()
+bool Ekf_core::position_is_valid()
 {
 	// return true if the position estimate is valid
 	// TOTO implement proper check based on published GPS accuracy, innovaton consistency checks and timeout status
 	return _gps_initialised &&  (hrt_absolute_time() - _last_valid_gps_time_us) < 5e6;
 }
 
-void EstimatorBase::printStoredIMU()
+void Ekf_core::printStoredIMU()
 {
 	printf("---------Printing IMU data buffer------------\n");
 
@@ -357,7 +348,7 @@ void EstimatorBase::printStoredIMU()
 	}
 }
 
-void EstimatorBase::printIMU(struct imuSample *data)
+void Ekf_core::printIMU(struct imuSample *data)
 {
 	printf("time %llu\n", data->time_us);
 	printf("delta_ang_dt %.5f\n", (double)data->delta_ang_dt);
@@ -366,17 +357,17 @@ void EstimatorBase::printIMU(struct imuSample *data)
 	printf("dV: %.5f %.5f %.5f \n\n", (double)data->delta_vel(0), (double)data->delta_vel(1), (double)data->delta_vel(2));
 }
 
-void EstimatorBase::printQuaternion(Quaternion &q)
+void Ekf_core::printQuaternion(Quaternion &q)
 {
 	printf("q1 %.5f q2 %.5f q3 %.5f q4 %.5f\n", (double)q(0), (double)q(1), (double)q(2), (double)q(3));
 }
 
-void EstimatorBase::print_imu_avg_time()
+void Ekf_core::print_imu_avg_time()
 {
 	printf("dt_avg: %.5f\n", (double)_dt_imu_avg);
 }
 
-void EstimatorBase::printStoredMag()
+void Ekf_core::printStoredMag()
 {
 	printf("---------Printing mag data buffer------------\n");
 
@@ -385,20 +376,20 @@ void EstimatorBase::printStoredMag()
 	}
 }
 
-void EstimatorBase::printMag(struct magSample *data)
+void Ekf_core::printMag(struct magSample *data)
 {
 	printf("time %llu\n", data->time_us);
 	printf("mag: %.5f %.5f %.5f \n\n", (double)data->mag(0), (double)data->mag(1), (double)data->mag(2));
 
 }
 
-void EstimatorBase::printBaro(struct baroSample *data)
+void Ekf_core::printBaro(struct baroSample *data)
 {
 	printf("time %llu\n", data->time_us);
 	printf("baro: %.5f\n\n", (double)data->hgt);
 }
 
-void EstimatorBase::printStoredBaro()
+void Ekf_core::printStoredBaro()
 {
 	printf("---------Printing baro data buffer------------\n");
 
@@ -407,14 +398,14 @@ void EstimatorBase::printStoredBaro()
 	}
 }
 
-void EstimatorBase::printGps(struct gpsSample *data)
+void Ekf_core::printGps(struct gpsSample *data)
 {
 	printf("time %llu\n", data->time_us);
 	printf("gps pos: %.5f %.5f %.5f\n", (double)data->pos(0), (double)data->pos(1), (double)data->hgt);
 	printf("gps vel %.5f %.5f %.5f\n\n", (double)data->vel(0), (double)data->vel(1), (double)data->vel(2));
 }
 
-void EstimatorBase::printStoredGps()
+void Ekf_core::printStoredGps()
 {
 	printf("---------Printing GPS data buffer------------\n");
 

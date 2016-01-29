@@ -42,7 +42,7 @@
 #include "ekf.h"
 #include <drivers/drv_hrt.h>
 
-Ekf::Ekf():
+Ekf_core::Ekf_core():
 	_filter_initialised(false),
 	_earth_rate_initialised(false),
 	_fuse_height(false),
@@ -66,12 +66,12 @@ Ekf::Ekf():
 }
 
 
-Ekf::~Ekf()
+Ekf_core::~Ekf_core()
 {
 
 }
 
-bool Ekf::update()
+bool Ekf_core::update()
 {
 	bool ret = false;	// indicates if there has been an update
 
@@ -134,7 +134,7 @@ bool Ekf::update()
 	return ret;
 }
 
-bool Ekf::initialiseFilter(void)
+bool Ekf_core::initialiseFilter(void)
 {
 	_state.ang_error.setZero();
 	_state.vel.setZero();
@@ -202,7 +202,7 @@ bool Ekf::initialiseFilter(void)
 	return true;
 }
 
-void Ekf::predictState()
+void Ekf_core::predictState()
 {
 	if (!_earth_rate_initialised) {
 		if (_gps_initialised) {
@@ -234,7 +234,7 @@ void Ekf::predictState()
 	constrainStates();
 }
 
-void Ekf::calculateOutputStates()
+void Ekf_core::calculateOutputStates()
 {
 	imuSample imu_new = _imu_sample_new;
 	Vector3f delta_angle;
@@ -300,17 +300,17 @@ void Ekf::calculateOutputStates()
 }
 
 
-void Ekf::fuseAirspeed()
+void Ekf_core::fuseAirspeed()
 {
 
 }
 
-void Ekf::fuseRange()
+void Ekf_core::fuseRange()
 {
 
 }
 
-void Ekf::printStates()
+void Ekf_core::printStates()
 {
 	static int counter = 0;
 
@@ -361,7 +361,7 @@ void Ekf::printStates()
 
 }
 
-void Ekf::printStatesFast()
+void Ekf_core::printStatesFast()
 {
 	static int counter_fast = 0;
 

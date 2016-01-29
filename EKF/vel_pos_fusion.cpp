@@ -41,7 +41,7 @@
 
 #include "ekf.h"
 
-void Ekf::fuseVelPosHeight()
+void Ekf_core::fuseVelPosHeight()
 {
 	bool fuse_map[6] = {};
 	float R[6] = {};
@@ -129,7 +129,7 @@ void Ekf::fuseVelPosHeight()
 
 }
 
-void Ekf::fuse(float *K, float innovation)
+void Ekf_core::fuse(float *K, float innovation)
 {
 	for (unsigned i = 0; i < 3; i++) {
 		_state.ang_error(i) = _state.ang_error(i) - K[i] * innovation;

@@ -41,7 +41,7 @@
 #include "ekf.h"
 #include <mathlib/mathlib.h>
 
-void Ekf::fuseMag(uint8_t index)
+void Ekf_core::fuseMag(uint8_t index)
 {
 	// assign intermediate variables
 	float q0 = _state.quat_nominal(0);
@@ -390,7 +390,7 @@ void Ekf::fuseMag(uint8_t index)
 	limitCov();
 }
 
-void Ekf::fuseHeading()
+void Ekf_core::fuseHeading()
 {
 	// assign intermediate state variables
 	float q0 = _state.quat_nominal(0);

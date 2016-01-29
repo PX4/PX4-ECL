@@ -46,7 +46,7 @@
 
 #define sq(_arg)	powf(_arg, 2.0f)
 
-void Ekf::initialiseCovariance()
+void Ekf_core::initialiseCovariance()
 {
 	for (unsigned i = 0; i < _k_num_states; i++) {
 		for (unsigned j = 0; j < _k_num_states; j++) {
@@ -99,7 +99,7 @@ void Ekf::initialiseCovariance()
 
 }
 
-void Ekf::predictCovariance()
+void Ekf_core::predictCovariance()
 {
 	// assign intermediate state variables
 	float q0 = _state.quat_nominal(0);
@@ -692,7 +692,7 @@ void Ekf::predictCovariance()
 	limitCov();
 }
 
-void Ekf::limitCov()
+void Ekf_core::limitCov()
 {
 	// Covariance diagonal limits. Use same values for states which
 	// belong to the same group (e.g. vel_x, vel_y, vel_z)

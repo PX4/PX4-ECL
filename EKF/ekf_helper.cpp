@@ -49,7 +49,7 @@
 
 // Reset the velocity states. If we have a recent and valid
 // gps measurement then use for velocity initialisation
-void Ekf::resetVelocity()
+void Ekf_core::resetVelocity()
 {
 	// if we have a valid GPS measurement use it to initialise velocity states
 	gpsSample gps_newest = _gps_buffer.get_newest();
@@ -64,7 +64,7 @@ void Ekf::resetVelocity()
 
 // Reset position states. If we have a recent and valid
 // gps measurement then use for position initialisation
-void Ekf::resetPosition()
+void Ekf_core::resetPosition()
 {
 	// if we have a valid GPS measurement use it to initialise position states
 	gpsSample gps_newest = _gps_buffer.get_newest();
@@ -82,7 +82,7 @@ void Ekf::resetPosition()
 }
 
 #if defined(__PX4_POSIX) && !defined(__PX4_QURT)
-void Ekf::printCovToFile(char const *filename)
+void Ekf_core::printCovToFile(char const *filename)
 {
 	std::ofstream myfile;
 	myfile.open(filename);
@@ -101,7 +101,7 @@ void Ekf::printCovToFile(char const *filename)
 
 // This checks if the diagonal of the covariance matrix is non-negative
 // and that the matrix is symmetric
-void Ekf::assertCovNiceness()
+void Ekf_core::assertCovNiceness()
 {
 	for (int row = 0; row < _k_num_states; row++) {
 		for (int column = 0; column < row; column++) {
@@ -115,7 +115,7 @@ void Ekf::assertCovNiceness()
 }
 
 // This function forces the covariance matrix to be symmetric
-void Ekf::makeSymmetrical()
+void Ekf_core::makeSymmetrical()
 {
 	for (unsigned row = 0; row < _k_num_states; row++) {
 		for (unsigned column = 0; column < row; column++) {
@@ -126,7 +126,7 @@ void Ekf::makeSymmetrical()
 	}
 }
 
-void Ekf::constrainStates()
+void Ekf_core::constrainStates()
 {
 	for (int i = 0; i < 3; i++) {
 		_state.ang_error(i) = math::constrain(_state.ang_error(i), -1.0f, 1.0f);
@@ -164,7 +164,7 @@ void Ekf::constrainStates()
 }
 
 // calculate the earth rotation vector
-void Ekf::calcEarthRateNED(Vector3f &omega, double lat_rad) const
+void Ekf_core::calcEarthRateNED(Vector3f &omega, double lat_rad) const
 {
 	omega(0) = _k_earth_rate * cosf((float)lat_rad);
 	omega(1) = 0.0f;
@@ -173,44 +173,44 @@ void Ekf::calcEarthRateNED(Vector3f &omega, double lat_rad) const
 
 // gets the innovations of velocity and position measurements
 // 0-2 vel, 3-5 pos
-void Ekf::get_vel_pos_innov(float vel_pos_innov[6])
+void Ekf_core::get_vel_pos_innov(float vel_pos_innov[6])
 {
 	memcpy(vel_pos_innov, _vel_pos_innov, sizeof(float) * 6);
 }
 
 // writes the innovations of the earth magnetic field measurements
-void Ekf::get_mag_innov(float mag_innov[3])
+void Ekf_core::get_mag_innov(float mag_innov[3])
 {
 	memcpy(mag_innov, _mag_innov, 3 * sizeof(float));
 }
 
 // gets the innovations of the heading measurement
-void Ekf::get_heading_innov(float *heading_innov)
+void Ekf_core::get_heading_innov(float *heading_innov)
 {
 	memcpy(heading_innov, &_heading_innov, sizeof(float));
 }
 
 // gets the innovation variances of velocity and position measurements
 // 0-2 vel, 3-5 pos
-void Ekf::get_vel_pos_innov_var(float vel_pos_innov_var[6])
+void Ekf_core::get_vel_pos_innov_var(float vel_pos_innov_var[6])
 {
 	memcpy(vel_pos_innov_var, _vel_pos_innov_var, sizeof(float) * 6);
 }
 
 // gets the innovation variances of the earth magnetic field measurements
-void Ekf::get_mag_innov_var(float mag_innov_var[3])
+void Ekf_core::get_mag_innov_var(float mag_innov_var[3])
 {
 	memcpy(mag_innov_var, _mag_innov_var, sizeof(float) * 3);
 }
 
 // gets the innovation variance of the heading measurement
-void Ekf::get_heading_innov_var(float *heading_innov_var)
+void Ekf_core::get_heading_innov_var(float *heading_innov_var)
 {
 	memcpy(heading_innov_var, &_heading_innov_var, sizeof(float));
 }
 
 // get the state vector at the delayed time horizon
-void Ekf::get_state_delayed(float *state)
+void Ekf_core::get_state_delayed(float *state)
 {
 	for (int i = 0; i < 3; i++) {
 		state[i] = _state.ang_error(i);
@@ -248,7 +248,7 @@ void Ekf::get_state_delayed(float *state)
 }
 
 // get the diagonal elements of the covariance matrix
-void Ekf::get_covariances(float *covariances)
+void Ekf_core::get_covariances(float *covariances)
 {
 	for (unsigned i = 0; i < _k_num_states; i++) {
 		covariances[i] = P[i][i];
