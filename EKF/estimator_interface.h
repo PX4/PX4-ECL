@@ -58,58 +58,58 @@ public:
 	virtual bool update() = 0;
 
 	/**
-	 * \brief Gets the innovations of velocity and position measurements
+	 * \brief Gets the innovations of velocity and position measurements.
 	 * \arg vel_pos_innov Array of velocity and position innovation values: 0-2 velocity, 3-5 position.
 	 */
 	virtual void get_vel_pos_innov(float vel_pos_innov[6]) = 0;
 
 	/**
-	 * \brief Gets the innovations of the earth magnetic field measurements
+	 * \brief Gets the innovations of the earth magnetic field measurements.
 	 * \arg mag_innov Array to store the magnetometer innovation values.
 	 */
 	virtual void get_mag_innov(float mag_innov[3]) = 0;
 
 	/**
-	 * \brief Gets the innovations of the heading measurement
+	 * \brief Gets the innovations of the heading measurement.
 	 * \arg heading_innov Array to store the heading inovation values.
 	 */
 	virtual void get_heading_innov(float *heading_innov) = 0;
 
 	/**
-	 * \brief Gets the innovation variances of velocity and position measurements
+	 * \brief Gets the innovation variances of velocity and position measurements.
 	 * \arg vel_pos_innov_var Array to store the velocity and position innovation variances: 0-2 velocity, 3-5 position.
 	 */
 	virtual void get_vel_pos_innov_var(float vel_pos_innov_var[6]) = 0;
 
 	/**
-	 * \brief Gets the innovation variances of the earth magnetic field measurements
+	 * \brief Gets the innovation variances of the earth magnetic field measurements.
 	 * \arg mag_innov_var Array to store the magnetometer innovation variances.
 	 */
 	virtual void get_mag_innov_var(float mag_innov_var[3]) = 0;
 
 	/**
-	 * \brief Gets the innovation variance of the heading measurement
+	 * \brief Gets the innovation variance of the heading measurement.
 	 * \arg heading_innov_var Pointer to the heading innovation variance.
 	 */
 	virtual void get_heading_innov_var(float *heading_innov_var) = 0;
 	
 	/**
-	 * \brief Gets the innovation variance of the heading measurement
-	 * \arg state 
+	 * \brief Gets the innovation variance of the heading measurement.
+	 * \arg state	@TODO - Requires description.
 	 */
 	virtual void get_state_delayed(float *state) = 0;
 
 	/**
-	 * \brief Gets the innovation variance of the heading measurement
-	 * \arg covariances Point to the measurement and noise covariance values. (???)
+	 * \brief Gets the innovation variance of the heading measurement.
+	 * \arg covariances Point to the measurement and noise covariance values.	@TODO - Requires description.
 	 */
 	virtual void get_covariances(float *covariances) = 0;
 
 	/**
-	 * \brief Get the ekf WGS-84 origin positoin and height and the system time it was last set
-	 * \arg origin_time 
-	 * \arg origin_pos 
-	 * /arg origin_alt 
+	 * \brief Get the ekf WGS-84 origin positoin and height and the system time it was last set.
+	 * \arg origin_time 	@TODO - Requires description.
+	 * \arg origin_pos 		@TODO - Requires description.
+	 * /arg origin_alt 		@TODO - Requires description.
 	 */
 	virtual void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt) = 0;
 
