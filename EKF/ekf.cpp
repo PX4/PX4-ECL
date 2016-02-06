@@ -73,9 +73,8 @@ Ekf::Ekf():
 
 Ekf::~Ekf()
 {
-
-
 }
+
 bool Ekf::init(uint64_t timestamp)
 {
 	bool ret = initialise_interface(timestamp);
@@ -96,7 +95,6 @@ bool Ekf::init(uint64_t timestamp)
 	_output_new.vel.setZero();
 	_output_new.pos.setZero();
 	_output_new.quat_nominal = matrix::Quaternion<float>();
-
 
 	_imu_down_sampled.delta_ang.setZero();
 	_imu_down_sampled.delta_vel.setZero();
@@ -297,10 +295,8 @@ void Ekf::predictState()
 	constrainStates();
 }
 
-
 bool Ekf::collect_imu(imuSample &imu)
 {
-
 	imu.delta_ang(0) = imu.delta_ang(0) * _state.gyro_scale(0);
 	imu.delta_ang(1) = imu.delta_ang(1) * _state.gyro_scale(1);
 	imu.delta_ang(2) = imu.delta_ang(2) * _state.gyro_scale(2);
@@ -415,7 +411,6 @@ void Ekf::calculateOutputStates()
 	_vel_corr = (_state.pos - _output_sample_delayed.pos);
 
 }
-
 
 void Ekf::fuseAirspeed()
 {

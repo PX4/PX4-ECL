@@ -42,164 +42,306 @@
 
 #include "estimator_interface.h"
 
-#define sq(_arg)	powf(_arg, 2.0f)
+#define sq(_arg)    powf(_arg, 2.0f)
 
 class Ekf : public EstimatorInterface
 {
 public:
 
-	Ekf();
-	~Ekf();
+    Ekf();
+    ~Ekf();
 
-	bool init(uint64_t timestamp);
-	bool update();
+    bool init(uint64_t timestamp);
+    bool update();
 
-	// gets the innovations of velocity and position measurements
-	// 0-2 vel, 3-5 pos
-	void get_vel_pos_innov(float vel_pos_innov[6]);
+    /**
+     * \brief Gets the innovations of velocity and position measurements.
+     * \arg vel_pos_innov Reference array to return the velocity and position innovation values: 0-2 velocity, 3-5 position.
+     */
+    void get_vel_pos_innov(float vel_pos_innov[6]);
 
-	// gets the innovations of the earth magnetic field measurements
-	void get_mag_innov(float mag_innov[3]);
+    /**
+     * \brief Gets the innovations of the earth magnetic field measurements.
+     * \arg mag_innov Reference array to return the magnetometer innovation values.
+     */
+    void get_mag_innov(float mag_innov[3]);
 
-	// gets the innovations of the heading measurement
-	void get_heading_innov(float *heading_innov);
+    /**
+     * \brief Gets the innovations of the heading measurement.
+     * \arg heading_innov Reference array to return the heading inovation values.
+     */
+    void get_heading_innov(float *heading_innov);
 
-	// gets the innovation variances of velocity and position measurements
-	// 0-2 vel, 3-5 pos
-	void get_vel_pos_innov_var(float vel_pos_innov_var[6]);
+    /**
+     * \brief Gets the innovation variances of velocity and position measurements.
+     * \arg vel_pos_innov_var Reference array to return the velocity and position innovation variances: 0-2 velocity, 3-5 position.
+     */
+    void get_vel_pos_innov_var(float vel_pos_innov_var[6]);
 
-	// gets the innovation variances of the earth magnetic field measurements
-	void get_mag_innov_var(float mag_innov_var[3]);
+    /**
+     * \brief Gets the innovation variances of the earth magnetic field measurements.
+     * \arg mag_innov_var Reference array to return the magnetometer innovation variances.
+     */
+    void get_mag_innov_var(float mag_innov_var[3]);
 
-	// gets the innovation variance of the heading measurement
-	void get_heading_innov_var(float *heading_innov_var);
+    /**
+     * \brief Gets the innovation variance of the heading measurement.
+     * \arg heading_innov_var Pointer to the heading innovation variance.
+     */
+    void get_heading_innov_var(float *heading_innov_var);
+    
+    /**
+     * \brief Gets the innovation variance of the heading measurement.
+     * \arg state           - @TODO - Requires description.
+     */
+    void get_state_delayed(float *state);
 
-	// get the state vector at the delayed time horizon
-	void get_state_delayed(float *state);
+    /**
+     * \brief Gets the innovation variance of the heading measurement.
+     * \arg covariances Point to the measurement and noise covariance values.   @TODO - Requires description.
+     */
+    void get_covariances(float *covariances);
 
-	// get the diagonal elements of the covariance matrix
-	void get_covariances(float *covariances);
+    /**
+     * \brief Get the ekf WGS-84 origin positoin and height and the system time it was last set.
+     * \arg origin_time     - @TODO - Requires description.
+     * \arg origin_pos      - @TODO - Requires description.
+     * /arg origin_alt      - @TODO - Requires description.
+     */
+    void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt);
 
-	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
-	bool collect_gps(uint64_t time_usec, struct gps_message *gps);
-	bool collect_imu(imuSample &imu);
+    /**
+     * \brief Asks estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined.
+     * \arg time_usec Collects the GPS sensor update data.
+     * \arg gps Pointer to the GPS data member variable.
+     * \return Returns true iff successful.
+     */
+    bool collect_gps(uint64_t time_usec, struct gps_message *gps);
 
-	filter_control_status_u _control_status = {};
+    /**
+     * \brief Collects the current IMU sensor data measurements.
+     * \arg imu Current imu measurement sample data.
+     * \return Returns true iff successful.
+     */
+    bool collect_imu(imuSample &imu);
 
-	// get the ekf WGS-84 origin position and height and the system time it was last set
-	void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt);
+    /**
+     * \param       - @TODO - Requires description.
+     */
+    filter_control_status_u _control_status = {};
 
 private:
 
-	static const uint8_t _k_num_states = 24;
-	static constexpr float _k_earth_rate = 0.000072921f;
+    /** \param _k_num_states Length of the State Vector, (number of states to be estimated). */
+    static const uint8_t _k_num_states = 24;
 
-	stateSample _state;
+    /** \param _k_earth_rate Rotational rate of the earth (rad/s). */
+    static constexpr float _k_earth_rate = 0.000072921f;
 
-	bool _filter_initialised;
-	bool _earth_rate_initialised;
+    /** \param _state       - @TODO - Requires description. */
+    stateSample _state;
 
-	bool _fuse_height;	// baro height data should be fused
-	bool _fuse_pos;		// gps position data should be fused
-	bool _fuse_hor_vel;		// gps horizontal velocity measurement should be fused
-	bool _fuse_vert_vel;	// gps vertical velocity measurement should be fused
+    /** \param _filter_initialised Boolean flag to indicate if the filter has been initialized. */
+    bool _filter_initialised;
 
-	uint64_t _time_last_fake_gps;
+    /** \param _earth_rate_initialised Boolean flag to indicate if the earth rotational rate has been initialized. */
+    bool _earth_rate_initialised;
 
-	uint64_t _time_last_pos_fuse;   // time the last fusion of horizotal position measurements was performed (usec)
-	uint64_t _time_last_vel_fuse;   // time the last fusion of velocity measurements was performed (usec)
-	uint64_t _time_last_hgt_fuse;   // time the last fusion of height measurements was performed (usec)
-	uint64_t _time_last_of_fuse;    // time the last fusion of optical flow measurements were performed (usec)
-	Vector2f _last_known_posNE;     // last known local NE position vector (m)
-	float _last_disarmed_posD;      // vertical position recorded at arming (m)
+    /** \param _fuse_height Boolean flag to indicate if barometric pressure altimeter measurement should be fused. */
+    bool _fuse_height;
+    
+    /** \param _fuse_height Boolean flag to indicate if GPS position measurement should be fused. */
+    bool _fuse_pos;
+    
+    /** \param _fuse_height Boolean flag to indicate if GPS horizontal velocity measurement should be fused. */
+    bool _fuse_hor_vel;
+    
+    /** \param _fuse_height Boolean flag to indicate if GPS vertical velocity measurement should be fused. */
+    bool _fuse_vert_vel;
 
-	Vector3f _earth_rate_NED;
+    /** \param _time_last_fake_gps Clock time of the last faked GPS measurement (usec). */
+    uint64_t _time_last_fake_gps;
+    
+    /** \param _time_last_pos_fuse Clock time the last fusion of horizotal position measurements was performed (usec). */
+    uint64_t _time_last_pos_fuse;
+    
+    /** \param _time_last_vel_fuse Clock time the last fusion of velocity measurements was performed (usec). */
+    uint64_t _time_last_vel_fuse;
+    
+    /** \param _time_last_hgt_fuse Clock time the last fusion of height measurements was performed (usec). */
+    uint64_t _time_last_hgt_fuse;
+    
+    /** \param _time_last_of_fuse Clock time the last fusion of optical flow measurements were performed (usec). */
+    uint64_t _time_last_of_fuse;
+    
+    /** \param _last_known_posNE Last known local NE position vector (m). */
+    Vector2f _last_known_posNE;
+    
+    /** \param _last_disarmed_posD Vertical position recorded at arming (m). */
+    float _last_disarmed_posD;
 
-	matrix::Dcm<float> _R_prev;
+    /** \param _earth_rate_NED Earth rotational rate in the local NED coordinate frame. */
+    Vector3f _earth_rate_NED;
 
-	float P[_k_num_states][_k_num_states];	// state covariance matrix
+    /** \param _R_prev              - @TODO - Requires description. */
+    matrix::Dcm<float> _R_prev;
 
-	float _vel_pos_innov[6];	// innovations: 0-2 vel,  3-5 pos
-	float _mag_innov[3];		// earth magnetic field innovations
-	float _heading_innov;		// heading measurement innovation
+    /** \param P The NxN state covariance matrix. */
+    float P[_k_num_states][_k_num_states];
 
-	float _vel_pos_innov_var[6]; // innovation variances: 0-2 vel, 3-5 pos
-	float _mag_innov_var[3]; // earth magnetic field innovation variance
-	float _heading_innov_var; // heading measurement innovation variance
+    /** \param _vel_pos_innov Velocity and Position Innovations: 0-2 velocity, 3-5 position. */
+    float _vel_pos_innov[6];
+    
+    /** \param _mag_innov Earth magnetic field innovations. */
+    float _mag_innov[3];
+    
+    /** \param _heading_innov Heading measurement innovation. */
+    float _heading_innov;
 
-	// complementary filter states
-	Vector3f _delta_angle_corr;
-	Vector3f _delta_vel_corr;
-	Vector3f _vel_corr;
-	imuSample _imu_down_sampled;
-	Quaternion _q_down_sampled;
+    /** \param _vel_pos_innov_var Velocity and Position Innovation variances: 0-2 velocity, 3-5 position. */
+    float _vel_pos_innov_var[6];
+    
+    /** \param _mag_innov_var Earth magnetic field innovation variance. */
+    float _mag_innov_var[3];
+    
+    /** \param _heading_innov_var Heading measurement innovation variance. */
+    float _heading_innov_var;
 
-	// variables used for the GPS quality checks
-	float _gpsDriftVelN = 0.0f;     // GPS north position derivative (m/s)
-	float _gpsDriftVelE = 0.0f;     // GPS east position derivative (m/s)
-	float _gps_drift_velD = 0.0f;     // GPS down position derivative (m/s)
-	float _gps_velD_diff_filt = 0.0f;   // GPS filtered Down velocity (m/s)
-	float _gps_velN_filt = 0.0f;  // GPS filtered North velocity (m/s)
-	float _gps_velE_filt = 0.0f;   // GPS filtered East velocity (m/s)
-	uint64_t _last_gps_fail_us = 0;   // last system time in usec that the GPS failed it's checks
+    //----------------------------------------- Complementary Filter States -----------------------------------------//
+    /** \param . */
+    Vector3f _delta_angle_corr;
+    
+    /** \param . */
+    Vector3f _delta_vel_corr;
+    
+    /** \param . */
+    Vector3f _vel_corr;
+    
+    /** \param . */
+    imuSample _imu_down_sampled;
+    
+    /** \param . */
+    Quaternion _q_down_sampled;
 
-	// Variables used to publish the WGS-84 location of the EKF local NED origin
-	uint64_t _last_gps_origin_time_us = 0;              // time the origin was last set (uSec)
-	float _gps_alt_ref = 0.0f;                          // WGS-84 height (m)
+    //--------------------------------- Variables used for the GPS quality checks -----------------------------------//
+    /** \param _gpsDriftVelN GPS north position derivative (m/s). */
+    float _gpsDriftVelN = 0.0f;
+    
+    /** \param _gpsDriftVelE GPS east position derivative (m/s). */
+    float _gpsDriftVelE = 0.0f;
+    
+    /** \param _gps_drift_velD GPS down position derivative (m/s). */
+    float _gps_drift_velD = 0.0f;
+    
+    /** \param _gps_velD_diff_filt GPS filtered Down velocity (m/s). */
+    float _gps_velD_diff_filt = 0.0f;
+    
+    /** \param _gps_velN_filt GPS filtered North velocity (m/s). */
+    float _gps_velN_filt = 0.0f;
+    
+    /** \param _gps_velE_filt GPS filtered East velocity (m/s). */
+    float _gps_velE_filt = 0.0f;
+    
+    /** \param _last_gps_fail_us The last system time in usec that the GPS failed it's checks. */
+    uint64_t _last_gps_fail_us = 0;
 
 
-	gps_check_fail_status_u _gps_check_fail_status;
+    //------------------ Variables used to publish the WGS-84 location of the EKF local NED origin ------------------//
+    /** \param _last_gps_origin_time_us Clock time the origin was last set (uSec). */
+    uint64_t _last_gps_origin_time_us = 0;
+    
+    /** \param _gps_alt_ref WGS-84 height (m). */
+    float _gps_alt_ref = 0.0f;
 
-	void calculateOutputStates();
+    /** \param _gps_check_fail_status           - @TODO - Requires description. */
+    gps_check_fail_status_u _gps_check_fail_status;
 
-	bool initialiseFilter(void);
+    /** \brief Calculates the Output States.*/
+    void calculateOutputStates();
 
-	void initialiseCovariance();
+    /** \brief Initializes the EKF.*/
+    bool initialiseFilter(void);
 
-	void predictState();
+    /** \brief Initializes the Covariance matrices.*/
+    void initialiseCovariance();
 
-	void predictCovariance();
+    /** \brief State Prediction step.*/
+    void predictState();
 
-	void fuseMag();
+    /** \brief Covariance Matrix Prediction step.*/
+    void predictCovariance();
 
-	void fuseHeading();
+    /** \brief Fuse Magnetometer Measurements.*/
+    void fuseMag();
 
-	void fuseAirspeed();
+    /** \brief Fuse Heading Measurements.*/
+    void fuseHeading();
 
-	void fuseRange();
+    /** \brief Fuse Airspeed measurement.*/
+    void fuseAirspeed();
 
-	void fuseVelPosHeight();
+    /** \brief Fuse Distance Sensor/Range measurement.*/
+    void fuseRange();
 
-	void resetVelocity();
+    /** \brief Fuse the Velocity, Position, and Height measurements.*/
+    void fuseVelPosHeight();
 
-	void resetPosition();
+    /** \brief Reset the velocity estimate.*/
+    void resetVelocity();
 
-	void makeCovSymetrical();
+    /** \brief Reset the Position estimate.*/
+    void resetPosition();
 
-	void limitCov();
+    /** \brief Enforce Covariance Matrix symmetry.*/
+    void makeCovSymetrical();
 
-	void printCovToFile(char const *filename);
+    /** \brief Bound value growth in the Covariance Matrix values.*/
+    void limitCov();
 
-	void assertCovNiceness();
+    /**
+     * \brief Output Covariance Matrix to file.
+     * \arg filename The output filename.
+     */
+    void printCovToFile(char const *filename);
 
-	void makeSymmetrical();
+    /** \brief                  - @TODO - Requires description.*/
+    void assertCovNiceness();
 
-	void constrainStates();
+    /** \brief Enforce matrix symmetry.*/
+    void makeSymmetrical();
 
-	void fuse(float *K, float innovation);
+    /** \brief                  - @TODO - Requires description.*/
+    void constrainStates();
 
-	void printStates();
+    /**
+     * \brief               - @TODO - Requires description.
+     * \arg K               - @TODO - Requires description.
+     * \arg innovation      - @TODO - Requires description.
+     */
+    void fuse(float *K, float innovation);
 
-	void printStatesFast();
+    /** \brief Print State values to terminal.*/
+    void printStates();
 
-	void calcEarthRateNED(Vector3f &omega, double lat_rad) const;
+    /** \brief Print State values at high rate to terminal.*/
+    void printStatesFast();
 
-	// return true id the GPS quality is good enough to set an origin and start aiding
-	bool gps_is_good(struct gps_message *gps);
+    /**
+     * \brief Calculates the Earth Rotational Rate in the NED local coordinate frame.
+     * \arg omega Rotational rate vector reference to return calculated value.
+     * \arg lat_rad The Current Lattitude at which to calculate the local coordinate frame rotational rate.
+     */
+    void calcEarthRateNED(Vector3f &omega, double lat_rad) const;
 
-	// Control the filter fusion modes
-	void controlFusionModes();
+    /**
+     * \brief Return true id the GPS quality is good enough to set an origin and start aiding.
+     * \arg gps Pointer to the GPS message object.
+     */
+    bool gps_is_good(struct gps_message *gps);
 
-	// Determine if we are airborne or motors are armed
-	void calculateVehicleStatus();
+    /** \brief Control the filter fusion modes. */
+    void controlFusionModes();
+
+    /** \brief Determine if we are airborne or motors are armed. */
+    void calculateVehicleStatus();
 };
