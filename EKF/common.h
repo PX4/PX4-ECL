@@ -43,7 +43,7 @@
 namespace estimator
 {
     struct gps_message {
-        /** \param time_usec Clock time in mircorseconds. */
+        /** \param time_usec Clock time in mircoseconds. */
         uint64_t time_usec;
 
         /** \param lat Latitude in 1E-7 degrees. */
