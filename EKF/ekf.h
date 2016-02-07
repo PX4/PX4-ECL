@@ -208,19 +208,19 @@ private:
     float _heading_innov_var;
 
     //----------------------------------------- Complementary Filter States -----------------------------------------//
-    /** \param . */
+    /** \param _delta_angle_corr        - @TODO - Requires description. */
     Vector3f _delta_angle_corr;
     
-    /** \param . */
+    /** \param _delta_vel_corr          - @TODO - Requires description. */
     Vector3f _delta_vel_corr;
     
-    /** \param . */
+    /** \param _vel_corr                - @TODO - Requires description. */
     Vector3f _vel_corr;
     
-    /** \param . */
+    /** \param _imu_down_sampled        - @TODO - Requires description. */
     imuSample _imu_down_sampled;
     
-    /** \param . */
+    /** \param _q_down_sampled          - @TODO - Requires description. */
     Quaternion _q_down_sampled;
 
     //--------------------------------- Variables used for the GPS quality checks -----------------------------------//
