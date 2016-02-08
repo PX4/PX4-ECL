@@ -171,10 +171,10 @@ public:
     /**
      * \brief Sets delta angle imu data member variable at \var time_usec.
      * \arg time_usec Current time of the sensor update.
-     * \arg delta_ang_dt                                                @TODO - Requires description. 
-     * \arg delta_vel_dt                                                @TODO - Requires description. 
-     * \arg delta_ang Pointer to the \var delta_ang member variable.    @TODO - Requires description review.
-     * \arg delta_vel Pointer to the \var delta_vel member variable.    @TODO - Requires description review. 
+     * \arg delta_ang_dt The integration period of the gyro in micorseconds.
+     * \arg delta_vel_dt The integration period of the accelerometer in micorseconds.
+     * \arg delta_ang Pointer to the \var delta_ang member variable, the angle deltas (x,y,z).
+     * \arg delta_vel Pointer to the \var delta_vel member variable, the velocity deltas (x,y,z).
      */
     void setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, uint64_t delta_vel_dt, float *delta_ang, float *delta_vel);
 
