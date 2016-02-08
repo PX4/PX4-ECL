@@ -226,4 +226,7 @@ protected:
 	fault_status_t _fault_status;
 	bool initialise_interface(uint64_t timestamp);
 	void unallocate_buffers();
+
+	float _mag_declination_gps =
+		0.0f; // magnetic declination returned by the geo library using the last valid GPS position (rad)
 };

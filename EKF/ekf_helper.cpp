@@ -94,6 +94,55 @@ void Ekf::resetHeight()
 	}
 }
 
+// Reset heading and magnetic field states
+bool Ekf::resetMagHeading(Vector3f &mag_init)
+{
+	// If we don't a tilt estimate then we cannot initialise the yaw
+	if (!_control_status.flags.tilt_align) {
+		return false;
+	}
+
+	// get the roll, pitch, yaw estimates and set the yaw to zero
+	matrix::Quaternion<float> q(_state.quat_nominal(0), _state.quat_nominal(1), _state.quat_nominal(2),
+				    _state.quat_nominal(3));
+	matrix::Euler<float> euler_init(q);
+	euler_init(2) = 0.0f;
+
+	// rotate the magnetometer measurements into earth axes
+	matrix::Dcm<float> R_to_earth_zeroyaw(euler_init);
+	Vector3f mag_ef_zeroyaw = R_to_earth_zeroyaw * mag_init;
+	euler_init(2) = _mag_declination - atan2f(mag_ef_zeroyaw(1), mag_ef_zeroyaw(0));
+
+	// calculate initial quaternion states
+	_state.quat_nominal = Quaternion(euler_init);
+	_output_new.quat_nominal = _state.quat_nominal;
+
+	// calculate initial earth magnetic field states
+	matrix::Dcm<float> R_to_earth(euler_init);
+	_state.mag_I = R_to_earth * mag_init;
+
+	return true;
+}
+
+// Calculate the magnetic declination to be used by the alignment and fusion processing
+void Ekf::calcMagDeclination()
+{
+	// set source of magnetic declination
+	if (_params.mag_declination_source & MASK_USE_GEO_DECL) {
+		// use parameter value until GPS is available, then use value returned by geo library
+		if (_NED_origin_initialised) {
+			_mag_declination = _mag_declination_gps;
+
+		} else {
+			_mag_declination = math::radians(_params.mag_declination_deg);
+		}
+
+	} else {
+		// always use the parameter value
+		_mag_declination = math::radians(_params.mag_declination_deg);
+	}
+}
+
 #if defined(__PX4_POSIX) && !defined(__PX4_QURT)
 void Ekf::printCovToFile(char const *filename)
 {

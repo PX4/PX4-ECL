@@ -40,6 +40,7 @@
  */
 
 #include "ekf.h"
+#include <mathlib/mathlib.h>
 
 // GPS pre-flight check bit locations
 #define MASK_GPS_NSATS  (1<<0)
@@ -67,6 +68,13 @@ bool Ekf::collect_gps(uint64_t time_usec, struct gps_message *gps)
 			_gps_alt_ref = 1e-3f * (float)gps->alt + _state.pos(2);
 			_NED_origin_initialised = true;
 			_last_gps_origin_time_us = _time_last_imu;
+			// set the magnetic declination returned by the geo library using the current GPS position
+			_mag_declination_gps = math::radians(get_mag_declination(lat, lon));
+
+			// save the declination to the relevant parameter
+			if (_params.mag_declination_source & MASK_SAVE_GEO_DECL) {
+				param_set(param_find("EKF2_MAG_DECL"), &_mag_declination_gps);
+			}
 		}
 	}
 

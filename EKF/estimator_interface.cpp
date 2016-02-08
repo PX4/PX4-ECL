@@ -147,6 +147,7 @@ void EstimatorInterface::setGpsData(uint64_t time_usec, struct gps_message *gps)
 		gps_sample_new.hgt = gps->alt / 1e3f;
 
 		_gps_buffer.push(gps_sample_new);
+
 	}
 }
 

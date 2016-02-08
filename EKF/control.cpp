@@ -40,23 +40,33 @@
  */
 
 #include "ekf.h"
+#include <mathlib/mathlib.h>
 
 void Ekf::controlFusionModes()
 {
 	// Determine the vehicle status
 	calculateVehicleStatus();
 
+	// Get the magnetic declination
+	calcMagDeclination();
+
 	// optical flow fusion mode selection logic
 	_control_status.flags.opt_flow = false;
 
 	// GPS fusion mode selection logic
-	// To start use GPS we need angular alignment completed, the local NED origin set and fresh GPS data
+	// To start using GPS we need tilt and yaw alignment completed, the local NED origin set and fresh GPS data
 	if (!_control_status.flags.gps) {
-		if (_control_status.flags.angle_align && (_time_last_imu - _time_last_gps) < 5e5 && _NED_origin_initialised
+		if (_control_status.flags.tilt_align && (_time_last_imu - _time_last_gps) < 5e5 && _NED_origin_initialised
 		    && (_time_last_imu - _last_gps_fail_us > 5e6)) {
-			_control_status.flags.gps = true;
-			resetPosition();
-			resetVelocity();
+			// Reset the yaw and magnetic field states
+			_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+
+			// If the heading is valid, reset the positon and velocity and start using gps aiding
+			if (_control_status.flags.yaw_align) {
+				resetPosition();
+				resetVelocity();
+				_control_status.flags.gps = true;
+			}
 		}
 	}
 
@@ -117,6 +127,7 @@ void Ekf::controlFusionModes()
 	} else {
 		_control_status.flags.mag_dec = false;
 	}
+
 }
 
 void Ekf::calculateVehicleStatus()

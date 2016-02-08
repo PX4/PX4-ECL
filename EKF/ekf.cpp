@@ -144,14 +144,14 @@ bool Ekf::update()
 
 	// Fuse magnetometer data using the selected fuson method and only if angular alignment is complete
 	if (_mag_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_mag_sample_delayed)) {
-		if (_control_status.flags.mag_3D && _control_status.flags.angle_align) {
+		if (_control_status.flags.mag_3D && _control_status.flags.yaw_align) {
 			fuseMag();
 
 			if (_control_status.flags.mag_dec) {
 				fuseDeclination();
 			}
 
-		} else if (_control_status.flags.mag_hdg && _control_status.flags.angle_align) {
+		} else if (_control_status.flags.mag_hdg && _control_status.flags.yaw_align) {
 			fuseHeading();
 		}
 	}
@@ -247,27 +247,17 @@ bool Ekf::initialiseFilter(void)
 			return false;
 		}
 
+		// calculate initial tilt alignment
+		matrix::Euler<float> euler_init(roll, pitch, 0.0f);
+		_state.quat_nominal = Quaternion(euler_init);
+		_output_new.quat_nominal = _state.quat_nominal;
+		_control_status.flags.tilt_align = true;
+
 		// calculate the averaged magnetometer reading
 		Vector3f mag_init = _mag_sum * (1.0f / (float(_mag_counter)));
 
-		// rotate magnetic field into earth frame assuming zero yaw and estimate yaw angle assuming zero declination
-		// TODO use declination if available
-		matrix::Euler<float> euler_init(roll, pitch, 0.0f);
-		matrix::Dcm<float> R_to_earth_zeroyaw(euler_init);
-		Vector3f mag_ef_zeroyaw = R_to_earth_zeroyaw * mag_init;
-		float declination = 0.0f;
-		euler_init(2) = declination - atan2f(mag_ef_zeroyaw(1), mag_ef_zeroyaw(0));
-
-		// calculate initial quaternion states
-		_state.quat_nominal = Quaternion(euler_init);
-		_output_new.quat_nominal = _state.quat_nominal;
-
-		// TODO replace this with a conditional test based on fitered angle error states.
-		_control_status.flags.angle_align = true;
-
-		// calculate initial earth magnetic field states
-		matrix::Dcm<float> R_to_earth(euler_init);
-		_state.mag_I = R_to_earth * mag_init;
+		// calculate the initial magnetic field and yaw alignment
+		_control_status.flags.yaw_align = resetMagHeading(mag_init);
 
 		// calculate the averaged barometer reading
 		_baro_at_alignment = _baro_sum / (float)_baro_counter;
