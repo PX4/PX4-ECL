@@ -42,8 +42,6 @@
 
 #include "estimator_interface.h"
 
-#define sq(_arg)    powf(_arg, 2.0f)
-
 class Ekf : public EstimatorInterface
 {
 public:
@@ -344,4 +342,10 @@ private:
 
     /** \brief Determine if we are airborne or motors are armed. */
     void calculateVehicleStatus();
+
+	// return the square of two foating point numbers - used in autocoded sections
+	inline float sq(float var)
+	{
+		return var * var;
+	}
 };
