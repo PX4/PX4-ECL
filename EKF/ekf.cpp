@@ -153,6 +153,9 @@ bool Ekf::update()
 
 		} else if (_control_status.flags.mag_hdg && _control_status.flags.yaw_align) {
 			fuseHeading();
+
+		} else {
+			// do no fusion at all
 		}
 	}
 

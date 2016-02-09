@@ -127,10 +127,6 @@ private:
 
 	float _mag_declination = 0.0f; // magnetic declination used by reset and fusion functions (rad)
 
-	// Magnetic declination management bit locations
-#define MASK_USE_GEO_DECL   (1<<0)  // set to true to use the declination from the geo library when the GPS position becomes available, set to false to always use the EKF2_MAG_DECL value
-#define MASK_SAVE_GEO_DECL  (1<<1)  // set to true to set the EKF2_MAG_DECL parameter to the value returned by the geo library
-
 	// complementary filter states
 	Vector3f _delta_angle_corr;
 	Vector3f _delta_vel_corr;
