@@ -275,6 +275,9 @@ private:
     /** \brief Fuse Heading Measurements.*/
     void fuseHeading();
 
+    /** \brief Fuse Magnetic Declination.*/
+    void fuseDeclination();
+
     /** \brief Fuse Airspeed measurement.*/
     void fuseAirspeed();
 
