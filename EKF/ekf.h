@@ -244,6 +244,25 @@ private:
     uint64_t _last_gps_fail_us = 0;
 
 
+    //-------------------------------- Variables used to initialise the filter states -------------------------------//
+    /** \param _baro_counter number of baro samples averaged. */
+    uint8_t _baro_counter = 0;
+    
+    /** \param _baro_sum Summed baro measurement. */
+    float _baro_sum = 0.0f;
+    
+    /** \param _mag_counter number of magnetometer samples averaged. */
+    uint8_t _mag_counter = 0;
+
+    /** \param _mag_sum Summed magnetometer measurement. */
+    Vector3f _mag_sum = {};
+    
+    /** \param _delVel_sum Summed delta velocity. */
+    Vector3f _delVel_sum = {};
+    
+    /** \param _baro_at_alignment Baro offset relative to alignment position. */
+    float _baro_at_alignment;
+
     //------------------ Variables used to publish the WGS-84 location of the EKF local NED origin ------------------//
     /** \param _last_gps_origin_time_us Clock time the origin was last set (uSec). */
     uint64_t _last_gps_origin_time_us = 0;
@@ -292,6 +311,9 @@ private:
 
     /** \brief Reset the Position estimate.*/
     void resetPosition();
+
+    /** \brief Reset the Altitude estimate.*/
+    void resetHeight();
 
     /** \brief Enforce Covariance Matrix symmetry.*/
     void makeCovSymetrical();
@@ -346,7 +368,7 @@ private:
     /** \brief Determine if we are airborne or motors are armed. */
     void calculateVehicleStatus();
 
-	// return the square of two foating point numbers - used in autocoded sections
+	/** \brief Returns the square of two foating point numbers - used in autocoded sections. */
 	inline float sq(float var)
 	{
 		return var * var;
