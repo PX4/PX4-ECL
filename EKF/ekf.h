@@ -125,6 +125,8 @@ private:
 	float _mag_innov_var[3]; // earth magnetic field innovation variance
 	float _heading_innov_var; // heading measurement innovation variance
 
+	float _mag_declination = 0.0f; // magnetic declination used by reset and fusion functions (rad)
+
 	// complementary filter states
 	Vector3f _delta_angle_corr;
 	Vector3f _delta_vel_corr;
@@ -178,6 +180,13 @@ private:
 	void fuseVelPosHeight();
 
 	void resetVelocity();
+
+	// reset the heading and magnetic field states using the declination and magnetometer measurements
+	// return true if successful
+	bool resetMagHeading(Vector3f &mag_init);
+
+	// calculate the magnetic declination to be used by the alignment and fusion processing
+	void calcMagDeclination();
 
 	void resetPosition();
 
