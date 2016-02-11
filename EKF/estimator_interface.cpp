@@ -53,7 +53,6 @@ EstimatorInterface::EstimatorInterface()
 
 EstimatorInterface::~EstimatorInterface()
 {
-
 }
 
 // Accumulate imu data and store to buffer at desired rate
@@ -86,7 +85,6 @@ void EstimatorInterface::setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, u
 	imu_sample_new.time_us = time_usec;
 	_imu_ticks++;
 
-
 	if (collect_imu(imu_sample_new)) {
 		_imu_buffer.push(imu_sample_new);
 		_imu_ticks = 0;
@@ -96,13 +94,11 @@ void EstimatorInterface::setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, u
 		_imu_updated = false;
 	}
 
-
 	_imu_sample_delayed = _imu_buffer.get_oldest();
 }
 
 void EstimatorInterface::setMagData(uint64_t time_usec, float *data)
 {
-
 	if (time_usec - _time_last_mag > 70000) {
 
 		magSample mag_sample_new = {};
@@ -206,7 +202,6 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, float *data)
 
 bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 {
-
 	if (!(_imu_buffer.allocate(IMU_BUFFER_LENGTH) &&
 	      _gps_buffer.allocate(OBS_BUFFER_LENGTH) &&
 	      _mag_buffer.allocate(OBS_BUFFER_LENGTH) &&
@@ -215,11 +210,10 @@ bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 	      _airspeed_buffer.allocate(OBS_BUFFER_LENGTH) &&
 	      _flow_buffer.allocate(OBS_BUFFER_LENGTH) &&
 	      _output_buffer.allocate(IMU_BUFFER_LENGTH))) {
-		PX4_WARN("Estimator Buffer Allocation failed!");
+// 		PX4_WARN("Estimator Buffer Allocation failed!");
 		unallocate_buffers();
 		return false;
 	}
-
 
 	_dt_imu_avg = 0.0f;
 
@@ -254,7 +248,6 @@ void EstimatorInterface::unallocate_buffers()
 	_airspeed_buffer.unallocate();
 	_flow_buffer.unallocate();
 	_output_buffer.unallocate();
-
 }
 
 bool EstimatorInterface::position_is_valid()
