@@ -165,6 +165,12 @@ public:
 		*time_us = _imu_time_last;
 	}
 
+	// Copy the magnetic declination that we wish to save to the EKF2_MAG_DECL parameter for the next startup
+	void copy_mag_decl_deg(float *val)
+	{
+		*val = _mag_declination_to_save_deg;
+	}
+
 protected:
 
 	parameters _params;		// filter parameters
@@ -229,4 +235,6 @@ protected:
 
 	float _mag_declination_gps =
 		0.0f; // magnetic declination returned by the geo library using the last valid GPS position (rad)
+
+	float _mag_declination_to_save_deg = 0.0f; // magnetic declination to save to EKF2_MAG_DECL (deg)
 };
