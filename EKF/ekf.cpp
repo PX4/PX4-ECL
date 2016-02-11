@@ -40,7 +40,7 @@
  */
 
 #include "ekf.h"
-#include <drivers/drv_hrt.h>
+// #include <drivers/drv_hrt.h>
 
 Ekf::Ekf():
 	_control_status{},
@@ -60,7 +60,21 @@ Ekf::Ekf():
 	_heading_innov{},
 	_vel_pos_innov_var{},
 	_mag_innov_var{},
-	_heading_innov_var{}
+	_heading_innov_var{},
+	_gpsDriftVelN(0.0f),
+	_gpsDriftVelE(0.0f),
+	_gps_drift_velD(0.0f),
+	_gps_velD_diff_filt(0.0f),
+	_gps_velN_filt(0.0f),
+	_gps_velE_filt(0.0f),
+	_last_gps_fail_us(0),
+	_last_gps_origin_time_us(0),
+	_gps_alt_ref(0.0f),
+	_baro_counter(0),
+	_baro_sum(0.0f),
+	_mag_counter(0),
+	_mag_sum{},
+	_delVel_sum{}
 {
 	_earth_rate_NED.setZero();
 	_R_prev = matrix::Dcm<float>();
@@ -326,13 +340,18 @@ bool Ekf::collect_imu(imuSample &imu)
 	imu.delta_vel(2) -= _state.accel_z_bias * imu.delta_vel_dt / (_dt_imu_avg > 0 ? _dt_imu_avg : 0.01f);;
 
 	// store the new sample for the complementary filter prediciton
-	_imu_sample_new = {
-		.delta_ang	= imu.delta_ang,
-		.delta_vel	= imu.delta_vel,
-		.delta_ang_dt	= imu.delta_ang_dt,
-		.delta_vel_dt	= imu.delta_vel_dt,
-		.time_us	= imu.time_us
-	};
+// 	_imu_sample_new = {
+// 		.delta_ang	= imu.delta_ang,
+// 		.delta_vel	= imu.delta_vel,
+// 		.delta_ang_dt	= imu.delta_ang_dt,
+// 		.delta_vel_dt	= imu.delta_vel_dt,
+// 		.time_us	= imu.time_us
+// 	};
+	_imu_sample_new.delta_ang	= imu.delta_ang;
+	_imu_sample_new.delta_vel	= imu.delta_vel;
+	_imu_sample_new.delta_ang_dt	= imu.delta_ang_dt;
+	_imu_sample_new.delta_vel_dt	= imu.delta_vel_dt;
+	_imu_sample_new.time_us	= imu.time_us;
 
 	_imu_down_sampled.delta_ang_dt += imu.delta_ang_dt;
 	_imu_down_sampled.delta_vel_dt += imu.delta_vel_dt;
@@ -349,13 +368,19 @@ bool Ekf::collect_imu(imuSample &imu)
 
 	if ((_dt_imu_avg * _imu_ticks >= (float)(FILTER_UPDATE_PERRIOD_MS) / 1000) ||
 	    _dt_imu_avg * _imu_ticks >= 0.02f) {
-		imu = {
-			.delta_ang	= _q_down_sampled.to_axis_angle(),
-			.delta_vel	= _imu_down_sampled.delta_vel,
-			.delta_ang_dt	= _imu_down_sampled.delta_ang_dt,
-			.delta_vel_dt	= _imu_down_sampled.delta_vel_dt,
-			.time_us	= imu.time_us
-		};
+// 		imu = {
+// 			.delta_ang	= _q_down_sampled.to_axis_angle(),
+// 			.delta_vel	= _imu_down_sampled.delta_vel,
+// 			.delta_ang_dt	= _imu_down_sampled.delta_ang_dt,
+// 			.delta_vel_dt	= _imu_down_sampled.delta_vel_dt,
+// 			.time_us	= imu.time_us
+// 		};
+		imu.delta_ang	= _q_down_sampled.to_axis_angle();
+		imu.delta_vel	= _imu_down_sampled.delta_vel;
+		imu.delta_ang_dt	= _imu_down_sampled.delta_ang_dt;
+		imu.delta_vel_dt	= _imu_down_sampled.delta_vel_dt;
+		imu.time_us	= imu.time_us;
+		
 		_imu_down_sampled.delta_ang.setZero();
 		_imu_down_sampled.delta_vel.setZero();
 		_imu_down_sampled.delta_ang_dt = 0.0f;

@@ -82,7 +82,7 @@ public:
 	bool collect_gps(uint64_t time_usec, struct gps_message *gps);
 	bool collect_imu(imuSample &imu);
 
-	filter_control_status_u _control_status = {};
+	filter_control_status_u _control_status;
 
 	// get the ekf WGS-84 origin position and height and the system time it was last set
 	void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt);
@@ -90,7 +90,7 @@ public:
 private:
 
 	static const uint8_t _k_num_states = 24;
-	static constexpr float _k_earth_rate = 0.000072921f;
+	static const float _k_earth_rate = 0.000072921f;
 
 	stateSample _state;
 
@@ -133,24 +133,24 @@ private:
 	Quaternion _q_down_sampled;
 
 	// variables used for the GPS quality checks
-	float _gpsDriftVelN = 0.0f;     // GPS north position derivative (m/s)
-	float _gpsDriftVelE = 0.0f;     // GPS east position derivative (m/s)
-	float _gps_drift_velD = 0.0f;     // GPS down position derivative (m/s)
-	float _gps_velD_diff_filt = 0.0f;   // GPS filtered Down velocity (m/s)
-	float _gps_velN_filt = 0.0f;  // GPS filtered North velocity (m/s)
-	float _gps_velE_filt = 0.0f;   // GPS filtered East velocity (m/s)
-	uint64_t _last_gps_fail_us = 0;   // last system time in usec that the GPS failed it's checks
+	float _gpsDriftVelN; // = 0.0f;     // GPS north position derivative (m/s)
+	float _gpsDriftVelE; // = 0.0f;     // GPS east position derivative (m/s)
+	float _gps_drift_velD; // = 0.0f;     // GPS down position derivative (m/s)
+	float _gps_velD_diff_filt; // = 0.0f;   // GPS filtered Down velocity (m/s)
+	float _gps_velN_filt; // = 0.0f;  // GPS filtered North velocity (m/s)
+	float _gps_velE_filt; // = 0.0f;   // GPS filtered East velocity (m/s)
+	uint64_t _last_gps_fail_us; // = 0;   // last system time in usec that the GPS failed it's checks
 
 	// Variables used to publish the WGS-84 location of the EKF local NED origin
-	uint64_t _last_gps_origin_time_us = 0;              // time the origin was last set (uSec)
-	float _gps_alt_ref = 0.0f;                          // WGS-84 height (m)
+	uint64_t _last_gps_origin_time_us; // = 0;              // time the origin was last set (uSec)
+	float _gps_alt_ref; // = 0.0f;                          // WGS-84 height (m)
 
-	// Variables used to initialise the filter states
-	uint8_t _baro_counter = 0;      // number of baro samples averaged
-	float _baro_sum = 0.0f;         // summed baro measurement
-	uint8_t _mag_counter = 0;       // number of magnetometer samples averaged
-	Vector3f _mag_sum = {};         // summed magnetometer measurement
-	Vector3f _delVel_sum = {};      // summed delta velocity
+	// Variables used to initialize the filter states
+	uint8_t _baro_counter; // = 0;      // number of baro samples averaged
+	float _baro_sum; // = 0.0f;         // summed baro measurement
+	uint8_t _mag_counter; // = 0;       // number of magnetometer samples averaged
+	Vector3f _mag_sum; // = {};         // summed magnetometer measurement
+	Vector3f _delVel_sum; // = {};      // summed delta velocity
 	float _baro_at_alignment;       // baro offset relative to alignment position
 
 	gps_check_fail_status_u _gps_check_fail_status;

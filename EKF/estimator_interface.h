@@ -41,7 +41,7 @@
 
 #include <stdint.h>
 #include <matrix/matrix/math.hpp>
-#include <lib/geo/geo.h>
+#include <geo/geo.h>
 #include "RingBuffer.h"
 
 #include "common.h"
@@ -191,16 +191,16 @@ protected:
 
 	uint64_t _imu_ticks;
 
-	bool _imu_updated = false;
-	bool _initialised = false;
-	bool _vehicle_armed = false;     // vehicle arm status used to turn off functionality used on the ground
+	bool _imu_updated; // = false;
+	bool _initialised; // = false;
+	bool _vehicle_armed; // = false;     // vehicle arm status used to turn off functionality used on the ground
 
-	bool _NED_origin_initialised = false;
-	bool _gps_speed_valid = false;
-	float _gps_speed_accuracy = 0.0f; // GPS receiver reported speed accuracy (m/s)
-	struct map_projection_reference_s _pos_ref = {};    // Contains WGS-84 position latitude and longitude (radians)
+	bool _NED_origin_initialised; // = false;
+	bool _gps_speed_valid; // = false;
+	float _gps_speed_accuracy; //; // = 0.0f; // GPS receiver reported speed accuracy (m/s)
+	struct map_projection_reference_s _pos_ref; // = {};    // Contains WGS-84 position latitude and longitude (radians)
 
-	bool _mag_healthy = false;		// computed by mag innovation test
+	bool _mag_healthy; // = false;		// computed by mag innovation test
 	float _yaw_test_ratio;          // yaw innovation consistency check ratio
 	float _mag_test_ratio[3];       // magnetometer XYZ innovation consistency check ratios
 
