@@ -231,6 +231,5 @@ protected:
 	void unallocate_buffers();
 
 	float _mag_declination_gps;         // magnetic declination returned by the geo library using the last valid GPS position (rad)
-
 	float _mag_declination_to_save_deg; // magnetic declination to save to EKF2_MAG_DECL (deg)
 };

@@ -47,7 +47,18 @@
 #include <mathlib/mathlib.h>
 
 
-EstimatorInterface::EstimatorInterface()
+EstimatorInterface::EstimatorInterface():
+	_imu_updated(false),
+	_initialised(false),
+	_vehicle_armed(false),
+	_in_air(false),
+	_NED_origin_initialised(false),
+	_gps_speed_valid(false),
+	_gps_speed_accuracy(0.0f),
+	_pos_ref{},
+	_mag_healthy(false),
+	_mag_declination_gps(0.0f),
+	_mag_declination_to_save_deg(0.0f)
 {
 }
 
