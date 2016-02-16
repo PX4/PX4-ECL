@@ -190,11 +190,11 @@ struct parameters {
 		mag_declination_deg = 0.0f;
 		heading_innov_gate = 3.0f;
 		mag_innov_gate = 3.0f;
-        int mag_declination_source = 3;
-        int mag_fusion_type = 0;
+	    mag_declination_source = 7;
+	    mag_fusion_type = 0;
 
-        // these parameters control the strictness of GPS quality checks used to determine uf the GPS is
-        // good enough to set a local origin and commence aiding
+	// these parameters control the strictness of GPS quality checks used to determine uf the GPS is
+	// good enough to set a local origin and commence aiding
 		gps_check_mask = 21;
 		req_hacc = 5.0f;
 		req_vacc = 8.0f;
