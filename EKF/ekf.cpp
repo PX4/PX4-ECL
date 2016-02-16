@@ -58,6 +58,7 @@ Ekf::Ekf():
 	_vel_pos_innov{},
 	_mag_innov{},
 	_heading_innov{},
+	_mag_declination(0.0f),
 	_vel_pos_innov_var{},
 	_mag_innov_var{},
 	_heading_innov_var{},
@@ -158,15 +159,18 @@ bool Ekf::update()
 
 	// Fuse magnetometer data using the selected fuson method and only if angular alignment is complete
 	if (_mag_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_mag_sample_delayed)) {
-		if (_control_status.flags.mag_3D && _control_status.flags.angle_align) {
+		if (_control_status.flags.mag_3D && _control_status.flags.yaw_align) {
 			fuseMag();
 
 			if (_control_status.flags.mag_dec) {
 				fuseDeclination();
 			}
 
-		} else if (_control_status.flags.mag_hdg && _control_status.flags.angle_align) {
+		} else if (_control_status.flags.mag_hdg && _control_status.flags.yaw_align) {
 			fuseHeading();
+
+		} else {
+			// do no fusion at all
 		}
 	}
 
@@ -261,27 +265,17 @@ bool Ekf::initialiseFilter(void)
 			return false;
 		}
 
+		// calculate initial tilt alignment
+		matrix::Euler<float> euler_init(roll, pitch, 0.0f);
+		_state.quat_nominal = Quaternion(euler_init);
+		_output_new.quat_nominal = _state.quat_nominal;
+		_control_status.flags.tilt_align = true;
+
 		// calculate the averaged magnetometer reading
 		Vector3f mag_init = _mag_sum * (1.0f / (float(_mag_counter)));
 
-		// rotate magnetic field into earth frame assuming zero yaw and estimate yaw angle assuming zero declination
-		// TODO use declination if available
-		matrix::Euler<float> euler_init(roll, pitch, 0.0f);
-		matrix::Dcm<float> R_to_earth_zeroyaw(euler_init);
-		Vector3f mag_ef_zeroyaw = R_to_earth_zeroyaw * mag_init;
-		float declination = 0.0f;
-		euler_init(2) = declination - atan2f(mag_ef_zeroyaw(1), mag_ef_zeroyaw(0));
-
-		// calculate initial quaternion states
-		_state.quat_nominal = Quaternion(euler_init);
-		_output_new.quat_nominal = _state.quat_nominal;
-
-		// TODO replace this with a conditional test based on fitered angle error states.
-		_control_status.flags.angle_align = true;
-
-		// calculate initial earth magnetic field states
-		matrix::Dcm<float> R_to_earth(euler_init);
-		_state.mag_I = R_to_earth * mag_init;
+		// calculate the initial magnetic field and yaw alignment
+		_control_status.flags.yaw_align = resetMagHeading(mag_init);
 
 		// calculate the averaged barometer reading
 		_baro_at_alignment = _baro_sum / (float)_baro_counter;
@@ -467,84 +461,4 @@ void Ekf::fuseAirspeed()
 void Ekf::fuseRange()
 {
 
-}
-
-void Ekf::printStates()
-{
-	static int counter = 0;
-
-	if (counter % 50 == 0) {
-		printf("quaternion\n");
-
-		for (int i = 0; i < 4; i++) {
-			printf("quat %i %.5f\n", i, (double)_state.quat_nominal(i));
-		}
-
-		matrix::Euler<float> euler(_state.quat_nominal);
-		printf("yaw pitch roll %.5f %.5f %.5f\n", (double)euler(2), (double)euler(1), (double)euler(0));
-
-		printf("vel\n");
-
-		for (int i = 0; i < 3; i++) {
-			printf("v %i %.5f\n", i, (double)_state.vel(i));
-		}
-
-		printf("pos\n");
-
-		for (int i = 0; i < 3; i++) {
-			printf("p %i %.5f\n", i, (double)_state.pos(i));
-		}
-
-		printf("gyro_scale\n");
-
-		for (int i = 0; i < 3; i++) {
-			printf("gs %i %.5f\n", i, (double)_state.gyro_scale(i));
-		}
-
-		printf("mag earth\n");
-
-		for (int i = 0; i < 3; i++) {
-			printf("mI %i %.5f\n", i, (double)_state.mag_I(i));
-		}
-
-		printf("mag bias\n");
-
-		for (int i = 0; i < 3; i++) {
-			printf("mB %i %.5f\n", i, (double)_state.mag_B(i));
-		}
-
-		counter = 0;
-	}
-
-	counter++;
-
-}
-
-void Ekf::printStatesFast()
-{
-	static int counter_fast = 0;
-
-	if (counter_fast % 50 == 0) {
-		printf("quaternion\n");
-
-		for (int i = 0; i < 4; i++) {
-			printf("quat %i %.5f\n", i, (double)_output_new.quat_nominal(i));
-		}
-
-		printf("vel\n");
-
-		for (int i = 0; i < 3; i++) {
-			printf("v %i %.5f\n", i, (double)_output_new.vel(i));
-		}
-
-		printf("pos\n");
-
-		for (int i = 0; i < 3; i++) {
-			printf("p %i %.5f\n", i, (double)_output_new.pos(i));
-		}
-
-		counter_fast = 0;
-	}
-
-	counter_fast++;
 }
