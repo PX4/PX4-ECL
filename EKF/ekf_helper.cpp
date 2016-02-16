@@ -94,36 +94,63 @@ void Ekf::resetHeight()
 	}
 }
 
-#if defined(__PX4_POSIX) && !defined(__PX4_QURT)
-void Ekf::printCovToFile(char const *filename)
+// Reset heading and magnetic field states
+bool Ekf::resetMagHeading(Vector3f &mag_init)
 {
-	std::ofstream myfile;
-	myfile.open(filename);
-	myfile << "Covariance matrix\n";
-	myfile << std::setprecision(1);
-
-	for (int i = 0; i < _k_num_states; i++) {
-		for (int j = 0; j < _k_num_states; j++) {
-			myfile << std::to_string(P[i][j]) << std::setprecision(1) << "          ";
-		}
-
-		myfile << "\n\n\n\n\n\n\n\n\n\n";
+	// If we don't a tilt estimate then we cannot initialise the yaw
+	if (!_control_status.flags.tilt_align) {
+		return false;
 	}
+
+	// get the roll, pitch, yaw estimates and set the yaw to zero
+	matrix::Quaternion<float> q(_state.quat_nominal(0), _state.quat_nominal(1), _state.quat_nominal(2),
+				    _state.quat_nominal(3));
+	matrix::Euler<float> euler_init(q);
+	euler_init(2) = 0.0f;
+
+	// rotate the magnetometer measurements into earth axes
+	matrix::Dcm<float> R_to_earth_zeroyaw(euler_init);
+	Vector3f mag_ef_zeroyaw = R_to_earth_zeroyaw * mag_init;
+	euler_init(2) = _mag_declination - atan2f(mag_ef_zeroyaw(1), mag_ef_zeroyaw(0));
+
+	// calculate initial quaternion states
+	_state.quat_nominal = Quaternion(euler_init);
+	_output_new.quat_nominal = _state.quat_nominal;
+
+	// calculate initial earth magnetic field states
+	matrix::Dcm<float> R_to_earth(euler_init);
+	_state.mag_I = R_to_earth * mag_init;
+
+	// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
+	zeroRows(P, 16, 21);
+	zeroCols(P, 16, 21);
+
+	for (uint8_t index = 16; index <= 21; index ++) {
+		P[index][index] = sq(_params.mag_noise);
+	}
+
+	return true;
 }
-#endif
 
-// This checks if the diagonal of the covariance matrix is non-negative
-// and that the matrix is symmetric
-void Ekf::assertCovNiceness()
+// Calculate the magnetic declination to be used by the alignment and fusion processing
+void Ekf::calcMagDeclination()
 {
-	for (int row = 0; row < _k_num_states; row++) {
-		for (int column = 0; column < row; column++) {
-			assert(fabsf(P[row][column] - P[column][row]) < 0.00001f);
-		}
-	}
+	// set source of magnetic declination for internal use
+	if (_params.mag_declination_source & MASK_USE_GEO_DECL) {
+		// use parameter value until GPS is available, then use value returned by geo library
+		if (_NED_origin_initialised) {
+			_mag_declination = _mag_declination_gps;
+			_mag_declination_to_save_deg = math::degrees(_mag_declination);
 
-	for (int i = 0; i < _k_num_states; i++) {
-		assert(P[i][i] > -0.000001f);
+		} else {
+			_mag_declination = math::radians(_params.mag_declination_deg);
+			_mag_declination_to_save_deg = _params.mag_declination_deg;
+		}
+
+	} else {
+		// always use the parameter value
+		_mag_declination = math::radians(_params.mag_declination_deg);
+		_mag_declination_to_save_deg = _params.mag_declination_deg;
 	}
 }
 
@@ -274,4 +301,62 @@ void Ekf::get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *orig
 	memcpy(origin_time, &_last_gps_origin_time_us, sizeof(uint64_t));
 	memcpy(origin_pos, &_pos_ref, sizeof(map_projection_reference_s));
 	memcpy(origin_alt, &_gps_alt_ref, sizeof(float));
+}
+
+// fuse measurement
+void Ekf::fuse(float *K, float innovation)
+{
+	for (unsigned i = 0; i < 3; i++) {
+		_state.ang_error(i) = _state.ang_error(i) - K[i] * innovation;
+	}
+
+	for (unsigned i = 0; i < 3; i++) {
+		_state.vel(i) = _state.vel(i) - K[i + 3] * innovation;
+	}
+
+	for (unsigned i = 0; i < 3; i++) {
+		_state.pos(i) = _state.pos(i) - K[i + 6] * innovation;
+	}
+
+	for (unsigned i = 0; i < 3; i++) {
+		_state.gyro_bias(i) = _state.gyro_bias(i) - K[i + 9] * innovation;
+	}
+
+	for (unsigned i = 0; i < 3; i++) {
+		_state.gyro_scale(i) = _state.gyro_scale(i) - K[i + 12] * innovation;
+	}
+
+	_state.accel_z_bias -= K[15] * innovation;
+
+	for (unsigned i = 0; i < 3; i++) {
+		_state.mag_I(i) = _state.mag_I(i) - K[i + 16] * innovation;
+	}
+
+	for (unsigned i = 0; i < 3; i++) {
+		_state.mag_B(i) = _state.mag_B(i) - K[i + 19] * innovation;
+	}
+
+	for (unsigned i = 0; i < 2; i++) {
+		_state.wind_vel(i) = _state.wind_vel(i) - K[i + 22] * innovation;
+	}
+}
+
+// zero specified range of rows in the state covariance matrix
+void Ekf::zeroRows(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last)
+{
+	uint8_t row;
+
+	for (row = first; row <= last; row++) {
+		memset(&cov_mat[row][0], 0, sizeof(cov_mat[0][0]) * 24);
+	}
+}
+
+// zero specified range of columns in the state covariance matrix
+void Ekf::zeroCols(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last)
+{
+	uint8_t row;
+
+	for (row = 0; row <= 23; row++) {
+		memset(&cov_mat[row][first], 0, sizeof(cov_mat[0][0]) * (1 + last - first));
+	}
 }

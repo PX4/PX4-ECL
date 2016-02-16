@@ -46,17 +46,26 @@ void Ekf::controlFusionModes()
 	// Determine the vehicle status
 	calculateVehicleStatus();
 
+	// Get the magnetic declination
+	calcMagDeclination();
+
 	// optical flow fusion mode selection logic
 	_control_status.flags.opt_flow = false;
 
 	// GPS fusion mode selection logic
-	// To start use GPS we need angular alignment completed, the local NED origin set and fresh GPS data
+	// To start using GPS we need tilt and yaw alignment completed, the local NED origin set and fresh GPS data
 	if (!_control_status.flags.gps) {
-		if (_control_status.flags.angle_align && (_time_last_imu - _time_last_gps) < 5e5 && _NED_origin_initialised
+		if (_control_status.flags.tilt_align && (_time_last_imu - _time_last_gps) < 5e5 && _NED_origin_initialised
 		    && (_time_last_imu - _last_gps_fail_us > 5e6)) {
-			_control_status.flags.gps = true;
-			resetPosition();
-			resetVelocity();
+			// Reset the yaw and magnetic field states
+			_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+
+			// If the heading is valid, reset the positon and velocity and start using gps aiding
+			if (_control_status.flags.yaw_align) {
+				resetPosition();
+				resetVelocity();
+				_control_status.flags.gps = true;
+			}
 		}
 	}
 
@@ -92,31 +101,50 @@ void Ekf::controlFusionModes()
 
 	// Determine if we should use simple magnetic heading fusion which works better when there are large external disturbances
 	// or the more accurate 3-axis fusion
-	if (!_control_status.flags.armed) {
-		// always use simple mag fusion for initial startup
+	if (_params.mag_fusion_type == MAG_FUSE_TYPE_AUTO) {
+		if (!_control_status.flags.armed) {
+			// always use simple mag fusion for initial startup
+			_control_status.flags.mag_hdg = true;
+			_control_status.flags.mag_3D = false;
+
+		} else {
+			if (_control_status.flags.in_air) {
+				// always use 3-axis mag fusion when airborne
+				_control_status.flags.mag_hdg = false;
+				_control_status.flags.mag_3D = true;
+
+			} else {
+				// always use simple heading fusion when on the ground
+				_control_status.flags.mag_hdg = true;
+				_control_status.flags.mag_3D = false;
+			}
+		}
+
+	} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_HEADING) {
+		// always use simple heading fusion
 		_control_status.flags.mag_hdg = true;
 		_control_status.flags.mag_3D = false;
 
-	} else {
-		if (_control_status.flags.in_air) {
-			// always use 3-axis mag fusion when airborne
-			_control_status.flags.mag_hdg = false;
-			_control_status.flags.mag_3D = true;
+	} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_3D) {
+		// always use 3-axis mag fusion
+		_control_status.flags.mag_hdg = false;
+		_control_status.flags.mag_3D = true;
 
-		} else {
-			// always use simple heading fusion when on the ground
-			_control_status.flags.mag_hdg = true;
-			_control_status.flags.mag_3D = false;
-		}
+	} else {
+		// do no magnetometer fusion at all
+		_control_status.flags.mag_hdg = false;
+		_control_status.flags.mag_3D = false;
 	}
 
-	// if we are using 3-axis magnetometer fusion, but without external aiding, then the declination needs to be fused as an observation to prevent long term heading drift
-	if (_control_status.flags.mag_3D && !_control_status.flags.gps) {
+	// if we are using 3-axis magnetometer fusion, but without external aiding, then the declination must be fused as an observation to prevent long term heading drift
+	// fusing declination when gps aiding is available is optional, but recommneded to prevent problem if the vehicle is static for extended periods of time
+	if (_control_status.flags.mag_3D && (!_control_status.flags.gps || (_params.mag_declination_source & MASK_FUSE_DECL))) {
 		_control_status.flags.mag_dec = true;
 
 	} else {
 		_control_status.flags.mag_dec = false;
 	}
+
 }
 
 void Ekf::calculateVehicleStatus()
