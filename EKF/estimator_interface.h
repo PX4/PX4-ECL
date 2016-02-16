@@ -105,6 +105,7 @@ public:
 
 	// set magnetometer data
 	void setMagData(uint64_t time_usec, float *data);
+	//void setMagData(uint64_t time_usec, struct magSample *mag);
 
 	// set gps data
 	void setGpsData(uint64_t time_usec, struct gps_message *gps);
