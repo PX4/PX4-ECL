@@ -36,6 +36,7 @@
  * Function for fusing gps and baro measurements/
  *
  * @author Roman Bast <bapstroman@gmail.com>
+ * @author Siddharth Bharat Purohit <siddharthbharatpurohit@gmail.com>
  *
  */
 

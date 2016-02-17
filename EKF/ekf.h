@@ -114,6 +114,7 @@ private:
 	bool _fuse_vert_vel;	// gps vertical velocity measurement should be fused
 
 	uint64_t _time_last_fake_gps;	// last time in us at which we have faked gps measurement for static mode
+	bool _fuse_flow;	// flow measurement should be fused
 
 	uint64_t _time_last_pos_fuse;   // time the last fusion of horizotal position measurements was performed (usec)
 	uint64_t _time_last_vel_fuse;   // time the last fusion of velocity measurements was performed (usec)
@@ -210,6 +211,8 @@ private:
 
 	// reset velocity states of the ekf
 	void resetVelocity();
+
+	void fuseOptFlow();
 
 	// reset the heading and magnetic field states using the declination and magnetometer measurements
 	// return true if successful
