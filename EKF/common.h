@@ -63,6 +63,13 @@ typedef matrix::Vector<float, 3> Vector3f;
 typedef matrix::Quaternion<float> Quaternion;
 typedef matrix::Matrix<float, 3, 3> Matrix3f;
 
+struct flow_message {
+	uint8_t quality;			// Quality of Flow data
+	Vector2f flowdata;			// Flow data received
+	Vector2f gyrodata;			// Gyro data from flow sensor
+	uint32_t dt;				// integration time of flow samples
+};
+
 struct outputSample {
 	Quaternion  quat_nominal;	// nominal quaternion describing vehicle attitude
 	Vector3f    vel;	// NED velocity estimate in earth frame in m/s
