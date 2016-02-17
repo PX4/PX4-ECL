@@ -98,6 +98,10 @@ public:
 	// get the 1-sigma horizontal and vertical position uncertainty of the ekf WGS-84 position
 	void get_ekf_accuracy(float *ekf_eph, float *ekf_epv, bool *dead_reckoning);
 
+	void get_vel_var(Vector3f &vel_var);
+
+	void get_pos_var(Vector3f &pos_var);
+
 private:
 
 	static const uint8_t _k_num_states = 24;
