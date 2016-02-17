@@ -119,11 +119,31 @@ struct flowSample {
 	uint64_t    time_us;
 };
 
+enum fusion_mode_t {
+	FUSE_GPS,
+	FUSE_OF,
+	FUSE_GPS_OF,
+	FUSE_NONE
+};
+
+enum vdist_sensor_type_t {
+	VDIST_SENSOR_RANGE,
+	VDIST_SENSOR_BARO,
+	VDIST_SENSOR_GPS,
+	VDIST_SENSOR_NONE
+};
+
 struct parameters {
+	int fusion_mode = FUSE_OF;
+	int vdist_sensor_type = VDIST_SENSOR_RANGE;
+	float rng_gnd_clearance = 0.1f;
+
 	float mag_delay_ms = 0.0f;          // magnetometer measurement delay relative to the IMU
 	float baro_delay_ms = 0.0f;         // barometer height measurement delay relative to the IMU
 	float gps_delay_ms = 200.0f;        // GPS measurement delay relative to the IMU
 	float airspeed_delay_ms = 200.0f;   // airspeed measurement delay relative to the IMU
+	float flow_delay_ms = 200.0f;
+	float range_delay_ms = 200.0f;
 
 	// input noise
 	float gyro_noise = 1.0e-3f;         // IMU angular rate noise used for covariance prediction
@@ -141,8 +161,12 @@ struct parameters {
 	float pos_noaid_noise = 10.0f;      // observation noise for non-aiding position fusion
 	float baro_noise = 3.0f;            // observation noise for barometric height fusion
 	float baro_innov_gate = 3.0f;       // barometric height innovation consistency gate size in standard deviations
+	float range_noise = 0.1f;
+	float flow_innov_gate = 3.0f;
+	float flow_noise = 0.001f;
 	float posNE_innov_gate = 3.0f;      // GPS horizontal position innovation consistency gate size in standard deviations
 	float vel_innov_gate = 3.0f;        // GPS velocity innovation consistency gate size in standard deviations
+	float range_innov_gate = 5.0f;
 
 	float mag_heading_noise = 1.7e-1f;  // measurement noise used for simple heading fusion
 	float mag_noise = 5.0e-2f;          // measurement noise used for 3-axis magnetoemeter fusion
