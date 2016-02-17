@@ -92,8 +92,6 @@ Ekf::Ekf():
 
 Ekf::~Ekf()
 {
-
-
 }
 
 bool Ekf::init(uint64_t timestamp)
@@ -356,12 +354,13 @@ bool Ekf::collect_imu(imuSample &imu)
 
 	if ((_dt_imu_avg * _imu_ticks >= (float)(FILTER_UPDATE_PERRIOD_MS) / 1000) ||
 	    _dt_imu_avg * _imu_ticks >= 0.02f) {
-		imu.delta_ang	= _q_down_sampled.to_axis_angle();
-		imu.delta_vel	= _imu_down_sampled.delta_vel;
-		imu.delta_ang_dt	= _imu_down_sampled.delta_ang_dt;
-		imu.delta_vel_dt	= _imu_down_sampled.delta_vel_dt;
-		imu.time_us	= imu.time_us;
-		
+
+		imu.delta_ang     = _q_down_sampled.to_axis_angle();
+		imu.delta_vel     = _imu_down_sampled.delta_vel;
+		imu.delta_ang_dt  = _imu_down_sampled.delta_ang_dt;
+		imu.delta_vel_dt  = _imu_down_sampled.delta_vel_dt;
+		imu.time_us       = imu.time_us;
+
 		_imu_down_sampled.delta_ang.setZero();
 		_imu_down_sampled.delta_vel.setZero();
 		_imu_down_sampled.delta_ang_dt = 0.0f;

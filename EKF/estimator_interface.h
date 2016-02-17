@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
- * @file estimator_base.h
+ * @file estimator_interface.h
  * Definition of base class for attitude estimators
  *
  * @author Roman Bast <bapstroman@gmail.com>
@@ -165,7 +165,7 @@ public:
 
 protected:
 
-	parameters _params;		// filter parameters
+	parameters _params;    // filter parameters
 
 	static const uint8_t OBS_BUFFER_LENGTH = 10;            // defines how many measurement samples we can buffer
 	static const uint8_t IMU_BUFFER_LENGTH = 30;            // defines how many imu samples we can buffer
@@ -202,7 +202,6 @@ protected:
 	bool _mag_healthy;              // computed by mag innovation test
 	float _yaw_test_ratio;          // yaw innovation consistency check ratio
 	float _mag_test_ratio[3];       // magnetometer XYZ innovation consistency check ratios
-
 	float _vel_pos_test_ratio[6];   // velocity and position innovation consistency check ratios
 
 	// data buffer instances
