@@ -132,7 +132,8 @@ public:
 	// set vehicle landed status data
 	void set_in_air_status(bool in_air) {_in_air = in_air;}
 
-	bool position_is_valid();
+	bool global_position_is_valid();
+	bool local_position_is_valid();
 
 
 	void copy_quaternion(float *quat)
