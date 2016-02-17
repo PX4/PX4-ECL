@@ -80,6 +80,9 @@ public:
 
 	virtual void get_covariances(float *covariances) = 0;
 
+	virtual void get_vel_var(Vector3f &vel_var) = 0;
+	virtual void get_pos_var(Vector3f &pos_var) = 0;
+
 	// get the ekf WGS-84 origin positoin and height and the system time it was last set
 	virtual void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt) = 0;
 

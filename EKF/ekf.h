@@ -95,6 +95,10 @@ public:
 	// get the ekf WGS-84 origin position and height and the system time it was last set
 	void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt);
 
+	void get_vel_var(Vector3f &vel_var);
+
+	void get_pos_var(Vector3f &pos_var);
+
 private:
 
 	static const uint8_t _k_num_states = 24;
