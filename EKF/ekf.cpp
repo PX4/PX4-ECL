@@ -380,6 +380,34 @@ bool Ekf::collect_imu(imuSample &imu)
 	return false;
 }
 
+//TODO:
+// 1. filter gyro and option to set if using onboard gyro
+// 2. more checks to filter out garbage sample
+bool Ekf::collect_opticalflow(uint64_t time_usec, flow_message *flow)
+{
+
+	if (flow->quality == 0) {
+		// sample quality is bad, reject it!
+		return false;
+	} else if (fabsf(_state.pos(2)) < 0.05f) {
+		// we are very close to ground to have reasonable flow data
+		flow->flowdata(0) = 0.0f;
+        flow->flowdata(1) = 0.0f;
+        flow->gyrodata(0) = 0.0f;
+        flow->gyrodata(1) = 0.0f;
+	} else {
+		// convert accumulated flow data to rate measurement
+		float rate = 1e6f/flow->dt;
+
+		flow->flowdata(0) *= rate;
+		flow->flowdata(1) *= rate;
+		flow->gyrodata(0) *= rate;
+		flow->gyrodata(1) *= rate;
+	}
+	return true;
+}
+
+
 void Ekf::calculateOutputStates()
 {
 	imuSample imu_new = _imu_sample_new;

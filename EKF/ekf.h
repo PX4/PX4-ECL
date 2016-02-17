@@ -85,6 +85,7 @@ public:
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	bool collect_gps(uint64_t time_usec, struct gps_message *gps);
 	bool collect_imu(imuSample &imu);
+	bool collect_opticalflow(uint64_t time_usec, flow_message *flow);
 
 	// this is the current status of the filter control modes
 	filter_control_status_u _control_status = {};
