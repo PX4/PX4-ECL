@@ -48,6 +48,8 @@
 
 
 EstimatorInterface::EstimatorInterface():
+	_dt_imu_avg(0.0f),
+	_imu_ticks(0),
 	_imu_updated(false),
 	_initialised(false),
 	_vehicle_armed(false),
@@ -57,6 +59,15 @@ EstimatorInterface::EstimatorInterface():
 	_gps_speed_accuracy(0.0f),
 	_pos_ref{},
 	_mag_healthy(false),
+	_yaw_test_ratio(0.0f),
+	_mag_test_ratio{},
+	_vel_pos_test_ratio{},
+	_time_last_imu(0),
+	_time_last_gps(0),
+	_time_last_mag(0),
+	_time_last_baro(0),
+	_time_last_range(0),
+	_time_last_airspeed(0),
 	_mag_declination_gps(0.0f),
 	_mag_declination_to_save_deg(0.0f)
 {
@@ -231,7 +242,6 @@ bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 		unallocate_buffers();
 		return false;
 	}
-
 
 	_dt_imu_avg = 0.0f;
 
