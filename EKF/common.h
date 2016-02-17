@@ -113,6 +113,7 @@ struct airspeedSample {
 };
 
 struct flowSample {
+	uint8_t quality;
 	Vector2f    flowRadXY;
 	Vector2f    flowRadXYcomp;
 	uint64_t    time_us;
