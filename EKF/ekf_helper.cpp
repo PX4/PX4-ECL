@@ -80,17 +80,24 @@ void Ekf::resetPosition()
 	}
 }
 
-// Reset height state using the last baro measurement
+// Reset height state using the last height measurement
 void Ekf::resetHeight()
 {
-	// if we have a valid height measurement, use it to initialise the vertical position state
-	baroSample baro_newest = _baro_buffer.get_newest();
-
-	if (_time_last_imu - baro_newest.time_us < 200000) {
-		_state.pos(2) = _baro_at_alignment - baro_newest.hgt;
-
+	if (_params.vdist_sensor_type == VDIST_SENSOR_RANGE) {
+		rangeSample range_newest = _range_buffer.get_newest();
+		if (_time_last_imu - range_newest.time_us < 200000) {
+			_state.pos(2) = _hgt_at_alignment - range_newest.rng;
+		} else {
+			// TODO: reset to last known range based estimate
+		}
 	} else {
-		// XXX use the value of the last known position
+		// initialize vertical position with newest baro measurement
+		baroSample baro_newest = _baro_buffer.get_newest();
+		if (_time_last_imu - baro_newest.time_us < 200000) {
+			_state.pos(2) = _hgt_at_alignment - baro_newest.hgt;
+		} else {
+			// TODO: reset to last known baro based estimate
+		}
 	}
 }
 

@@ -105,15 +105,31 @@ void Ekf::fuseVelPosHeight()
 		gate_size[4] = gate_size[3];
 	}
 
+    // TODO: enable use of Baro and range together or one being failsafe for other
+	bool use_rng_height = _fuse_range_data;
+	bool use_baro_height = !use_rng_height;
+
 	if (_fuse_height) {
-		fuse_map[5] = true;
-		// vertical position innovation - baro measurement has opposite sign to earth z axis
-		_vel_pos_innov[5] = _state.pos(2) - (_baro_at_alignment - _baro_sample_delayed.hgt);
-		// observation variance - user parameter defined
-		R[5] = fmaxf(_params.baro_noise, 0.01f);
-		R[5] = R[5] * R[5];
-		// innovation gate size
-		gate_size[5] = fmaxf(_params.baro_innov_gate, 1.0f);
+		if(use_baro_height) {
+    		fuse_map[5] = true;
+            // vertical position innovation - baro measurement has opposite sign to earth z axis
+            _vel_pos_innov[5] = _state.pos(2) - (_hgt_at_alignment -_baro_sample_delayed.hgt);
+            // observation variance - user parameter defined
+            R[5] = fmaxf(_params.baro_noise, 0.01f);
+            R[5] = R[5] * R[5];
+            // innovation gate size
+            gate_size[5] = fmaxf(_params.baro_innov_gate, 1.0f);
+        } else if(use_rng_height) {
+            fuse_map[5] = true;
+            matrix::Dcm<float> earth_to_body(_state.quat_nominal);  //convert quat to DCM
+            earth_to_body = earth_to_body.transpose();  // calculate earth to body rot mat
+            _vel_pos_innov[5] = _state.pos(2) - (-math::max(_range_sample_delayed.rng*earth_to_body(2,2),_params.rng_gnd_clearance));
+            // observation variance - user parameter defined
+            R[5] = fmaxf(_params.range_noise, 0.01f);
+            R[5] = R[5] * R[5];
+            // innovation gate size
+            gate_size[5] = fmaxf(_params.range_innov_gate, 1.0f);
+        }
 	}
 
 	// calculate innovation test ratios

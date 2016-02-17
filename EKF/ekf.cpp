@@ -157,7 +157,11 @@ bool Ekf::update()
 			}
 		}
 
-		if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
+
+		if (_range_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_range_sample_delayed)) {
+			_fuse_range_data = true;
+			_fuse_height = true;
+		} else if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed) && _params.vdist_sensor_type == VDIST_SENSOR_BARO) {
 			_fuse_height = true;
 		}
 
@@ -230,17 +234,23 @@ bool Ekf::initialiseFilter(void)
 		_mag_sum += mag_init.mag;
 	}
 
-	// Sum the barometer measurements
-	// initialize vertical position with newest baro measurement
-	baroSample baro_init = _baro_buffer.get_newest();
-
-	if (baro_init.time_us != 0) {
-		_baro_counter ++;
-		_baro_sum += baro_init.hgt;
+	if (_params.vdist_sensor_type == VDIST_SENSOR_RANGE) {
+		rangeSample range_init = _range_buffer.get_newest();
+		if (range_init.time_us != 0) {
+			_hgt_counter ++;
+			_hgt_sum += range_init.rng;
+		}
+	} else {
+		// initialize vertical position with newest baro measurement
+		baroSample baro_init = _baro_buffer.get_newest();
+		if (baro_init.time_us != 0) {
+			_hgt_counter ++;
+			_hgt_sum += baro_init.hgt;
+		}
 	}
 
 	// check to see if we have enough measruements and return false if not
-	if (_baro_counter < 10 || _mag_counter < 10) {
+	if (_hgt_counter < 10 || _mag_counter < 10) {
 		return false;
 
 	} else {
@@ -283,7 +293,7 @@ bool Ekf::initialiseFilter(void)
 		resetMagHeading(mag_init);
 
 		// calculate the averaged barometer reading
-		_baro_at_alignment = _baro_sum / (float)_baro_counter;
+		_hgt_at_alignment = _hgt_sum / (float)_hgt_counter;
 
 		// set the velocity to the GPS measurement (by definition, the initial position and height is at the origin)
 		resetVelocity();
