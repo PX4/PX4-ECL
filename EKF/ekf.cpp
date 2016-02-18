@@ -42,17 +42,17 @@
 #include "ekf.h"
 
 Ekf::Ekf():
-	_filter_initialised(false),
-	_earth_rate_initialised(false),
-	_fuse_height(false),
-	_fuse_pos(false),
-	_fuse_hor_vel(false),
-	_fuse_vert_vel(false),
-	_time_last_fake_gps(0),
-	_time_last_pos_fuse(0),
-	_time_last_vel_fuse(0),
-	_time_last_hgt_fuse(0),
-	_time_last_of_fuse(0),
+    _filter_initialised(false),
+    _earth_rate_initialised(false),
+    _fuse_height(false),
+    _fuse_pos(false),
+    _fuse_hor_vel(false),
+    _fuse_vert_vel(false),
+    _time_last_fake_gps(0),
+    _time_last_pos_fuse(0),
+    _time_last_vel_fuse(0),
+    _time_last_hgt_fuse(0),
+    _time_last_of_fuse(0),
     _last_disarmed_posD(0.0f),
 	_heading_innov(0.0f),
 	_heading_innov_var(0.0f),
@@ -75,7 +75,7 @@ Ekf::Ekf():
     _control_status_prev = {};
     _state = {};
     _last_known_posNE.setZero();
-	_earth_rate_NED.setZero();
+    _earth_rate_NED.setZero();
     _R_prev = matrix::Dcm<float>();
     _vel_pos_innov = {};
     _mag_innov = {};
