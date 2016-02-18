@@ -71,14 +71,14 @@ Ekf::Ekf():
 	_mag_counter(0),
     _baro_at_alignment(0)
 {
-    //_control_status = {};
+    _control_status = {};
     _last_known_posNE.setZero();
 	_earth_rate_NED.setZero();
     _R_prev = matrix::Dcm<float>();
-    //_vel_pos_innov = {};
-    //_mag_innov = {};
-    //_vel_pos_innov_var = {};
-    //_mag_innov_var = {};
+    _vel_pos_innov = {};
+    _mag_innov = {};
+    _vel_pos_innov_var = {};
+    _mag_innov_var = {};
     _delta_angle_corr.setZero();
     _delta_vel_corr.setZero();
     _vel_corr.setZero();
