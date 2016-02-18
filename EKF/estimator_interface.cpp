@@ -47,34 +47,13 @@
 #include <mathlib/mathlib.h>
 
 
-EstimatorInterface::EstimatorInterface():
-    _dt_imu_avg(0.0f),
-    _imu_ticks(0),
-    _imu_updated(false),
-    _initialised(false),
-    _vehicle_armed(false),
-    _in_air(false),
-    _NED_origin_initialised(false),
-    _gps_speed_valid(false),
-    _gps_speed_accuracy(0.0f),
-    _mag_healthy(false),
-    _yaw_test_ratio(0.0f),
-    _time_last_imu(0),
-    _time_last_gps(0),
-    _time_last_mag(0),
-    _time_last_baro(0),
-    _time_last_range(0),
-    _time_last_airspeed(0),
-    _mag_declination_gps(0.0f),
-    _mag_declination_to_save_deg(0.0f)
+EstimatorInterface::EstimatorInterface()
 {
-    _pos_ref = {};
-    _mag_test_ratio = {};
-    _vel_pos_test_ratio = {};
 }
 
 EstimatorInterface::~EstimatorInterface()
 {
+
 }
 
 // Accumulate imu data and store to buffer at desired rate
@@ -107,6 +86,7 @@ void EstimatorInterface::setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, u
 	imu_sample_new.time_us = time_usec;
 	_imu_ticks++;
 
+
 	if (collect_imu(imu_sample_new)) {
 		_imu_buffer.push(imu_sample_new);
 		_imu_ticks = 0;
@@ -116,11 +96,13 @@ void EstimatorInterface::setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, u
 		_imu_updated = false;
 	}
 
+
 	_imu_sample_delayed = _imu_buffer.get_oldest();
 }
 
 void EstimatorInterface::setMagData(uint64_t time_usec, float *data)
 {
+
 	if (time_usec - _time_last_mag > 70000) {
 
 		magSample mag_sample_new = {};
@@ -224,6 +206,7 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, float *data)
 
 bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 {
+
 	if (!(_imu_buffer.allocate(IMU_BUFFER_LENGTH) &&
 	      _gps_buffer.allocate(OBS_BUFFER_LENGTH) &&
 	      _mag_buffer.allocate(OBS_BUFFER_LENGTH) &&
@@ -236,6 +219,7 @@ bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 		unallocate_buffers();
 		return false;
 	}
+
 
 	_dt_imu_avg = 0.0f;
 
@@ -270,6 +254,7 @@ void EstimatorInterface::unallocate_buffers()
 	_airspeed_buffer.unallocate();
 	_flow_buffer.unallocate();
 	_output_buffer.unallocate();
+
 }
 
 bool EstimatorInterface::position_is_valid()
