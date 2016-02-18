@@ -57,11 +57,8 @@ EstimatorInterface::EstimatorInterface():
 	_NED_origin_initialised(false),
 	_gps_speed_valid(false),
 	_gps_speed_accuracy(0.0f),
-	_pos_ref{},
 	_mag_healthy(false),
 	_yaw_test_ratio(0.0f),
-	_mag_test_ratio{},
-	_vel_pos_test_ratio{},
 	_time_last_imu(0),
 	_time_last_gps(0),
 	_time_last_mag(0),
@@ -71,6 +68,9 @@ EstimatorInterface::EstimatorInterface():
 	_mag_declination_gps(0.0f),
 	_mag_declination_to_save_deg(0.0f)
 {
+//S    _pos_ref = {};
+//    _mag_test_ratio = {};
+//    _vel_pos_test_ratio = {};
 }
 
 EstimatorInterface::~EstimatorInterface()

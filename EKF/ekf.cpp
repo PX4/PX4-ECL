@@ -42,7 +42,6 @@
 #include "ekf.h"
 
 Ekf::Ekf():
-	_control_status{},
 	_filter_initialised(false),
 	_earth_rate_initialised(false),
 	_fuse_height(false),
@@ -55,13 +54,8 @@ Ekf::Ekf():
 	_time_last_hgt_fuse(0),
 	_time_last_of_fuse(0),
     _last_disarmed_posD(0.0f),
-    _R_prev{},
-	_vel_pos_innov{},
-	_mag_innov{},
-	_heading_innov{},
-	_vel_pos_innov_var{},
-	_mag_innov_var{},
-	_heading_innov_var{},
+    _heading_innov(0.0f),
+    _heading_innov_var(0.0f),
     _mag_declination(0.0f),
 	_gpsDriftVelN(0.0f),
 	_gpsDriftVelE(0.0f),
@@ -75,18 +69,22 @@ Ekf::Ekf():
 	_baro_counter(0),
 	_baro_sum(0.0f),
 	_mag_counter(0),
-	_mag_sum{},
-	_delVel_sum{},
     _baro_at_alignment(0)
 {
-    _last_known_posNE.setZero(),
+    //_control_status = {};
+    _last_known_posNE.setZero();
 	_earth_rate_NED.setZero();
-	_R_prev = matrix::Dcm<float>();
-	_delta_angle_corr.setZero();
-	_delta_vel_corr.setZero();
-	_vel_corr.setZero();
+    _R_prev = matrix::Dcm<float>();
+    //_vel_pos_innov = {};
+    //_mag_innov = {};
+    //_vel_pos_innov_var = {};
+    //_mag_innov_var = {};
+    _delta_angle_corr.setZero();
+    _delta_vel_corr.setZero();
+    _vel_corr.setZero();
     _q_down_sampled.setZero();
-	_last_known_posNE.setZero();
+    _mag_sum.setZero();
+    _delVel_sum.setZero();
 }
 
 
