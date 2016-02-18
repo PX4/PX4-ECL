@@ -54,13 +54,15 @@ Ekf::Ekf():
 	_time_last_vel_fuse(0),
 	_time_last_hgt_fuse(0),
 	_time_last_of_fuse(0),
+    _last_disarmed_posD(0.0f),
+    _R_prev{},
 	_vel_pos_innov{},
 	_mag_innov{},
 	_heading_innov{},
-	_mag_declination(0.0f),
 	_vel_pos_innov_var{},
 	_mag_innov_var{},
 	_heading_innov_var{},
+    _mag_declination(0.0f),
 	_gpsDriftVelN(0.0f),
 	_gpsDriftVelE(0.0f),
 	_gps_drift_velD(0.0f),
@@ -74,13 +76,16 @@ Ekf::Ekf():
 	_baro_sum(0.0f),
 	_mag_counter(0),
 	_mag_sum{},
-	_delVel_sum{}
+	_delVel_sum{},
+    _baro_at_alignment(0)
 {
+    _last_known_posNE.setZero(),
 	_earth_rate_NED.setZero();
 	_R_prev = matrix::Dcm<float>();
 	_delta_angle_corr.setZero();
 	_delta_vel_corr.setZero();
 	_vel_corr.setZero();
+    _q_down_sampled.setZero();
 	_last_known_posNE.setZero();
 }
 
