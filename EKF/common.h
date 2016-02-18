@@ -34,7 +34,7 @@
 #include "Matrix.hpp"
 
 /**
- * @file estimator_base.h
+ * @file common.h
  * Definition of base class for attitude estimators
  *
  * @author Roman Bast <bapstroman@gmail.com>
@@ -194,8 +194,6 @@ struct parameters {
 		mag_declination_source = 7;
 		mag_fusion_type = 0;
 
-	// these parameters control the strictness of GPS quality checks used to determine uf the GPS is
-	// good enough to set a local origin and commence aiding
 		gps_check_mask = 21;
 		req_hacc = 5.0f;
 		req_vacc = 8.0f;
@@ -210,12 +208,12 @@ struct parameters {
 // Bit locations for mag_declination_source
 #define MASK_USE_GEO_DECL   (1<<0)  // set to true to use the declination from the geo library when the GPS position becomes available, set to false to always use the EKF2_MAG_DECL value
 #define MASK_SAVE_GEO_DECL  (1<<1)  // set to true to set the EKF2_MAG_DECL parameter to the value returned by the geo library
-#define MASK_FUSE_DECL      (1<<2)  // set to true if the declination is always fused as an observation to contrain drift when 3-axis fusion is performed
+#define MASK_FUSE_DECL      (1<<2)  // set to true if the declination is always fused as an observation to constrain drift when 3-axis fusion is performed
 
 // Integer definitions for mag_fusion_type
 #define MAG_FUSE_TYPE_AUTO      0   // The selection of either heading or 3D magnetometer fusion will be automatic
-#define MAG_FUSE_TYPE_HEADING   1   // Magnetic heading fusion will alays be used. This is less accurate, but less affected by earth field distortions
-#define MAG_FUSE_TYPE_3D        2   // Magnetometer 3-axis fusion will always be used. This is more accurate, but more affected by localised earth field distortions
+#define MAG_FUSE_TYPE_HEADING   1   // Magnetic heading fusion will always be used. This is less accurate, but less affected by earth field distortions
+#define MAG_FUSE_TYPE_3D        2   // Magnetometer 3-axis fusion will always be used. This is more accurate, but more affected by localized earth field distortions
 
 struct stateSample {
 	Vector3f    ang_error;      // attitude axis angle error (error state formulation)
