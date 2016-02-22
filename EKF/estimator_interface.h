@@ -195,7 +195,8 @@ protected:
 
 	bool _NED_origin_initialised = false;
 	bool _gps_speed_valid = false;
-	float _gps_speed_accuracy = 0.0f; // GPS receiver reported speed accuracy (m/s)
+	float _gps_speed_accuracy = 0.0f; // GPS receiver reported 1-sigma speed accuracy (m/s)
+	float _gps_hpos_accuracy = 0.0f; // GPS receiver reported 1-sigma horizontal accuracy (m)
 	struct map_projection_reference_s _pos_ref = {};    // Contains WGS-84 position latitude and longitude (radians)
 
 	bool _mag_healthy = false;		// computed by mag innovation test
