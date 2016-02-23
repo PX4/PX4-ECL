@@ -52,7 +52,6 @@ void Ekf::fuseOptFlow()
 	float q1 = _state.quat_nominal(1);
 	float q2 = _state.quat_nominal(2);
 	float q3 = _state.quat_nominal(3);
-	_healthy_optical_flow = false;
 
 	// get latest velocity in earth frame
 	float vn = _state.vel(0);
@@ -242,7 +241,6 @@ void Ekf::fuseOptFlow()
 		}
 		_time_last_of_fuse = _time_last_imu;
 		_gps_check_fail_status.value = 0;
-		_healthy_optical_flow = true;
 		makeSymmetrical();
 		limitCov();
 	}
