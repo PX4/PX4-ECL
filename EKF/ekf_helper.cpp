@@ -230,6 +230,12 @@ void Ekf::get_heading_innov(float *heading_innov)
 	memcpy(heading_innov, &_heading_innov, sizeof(float));
 }
 
+// gets the innovations of the airspeed measnurement
+void Ekf::get_airspeed_innov(float *airspeed_innov)
+{
+	memcpy(airspeed_innov,&_airspeed_innov, sizeof(float));
+}
+
 // gets the innovation variances of velocity and position measurements
 // 0-2 vel, 3-5 pos
 void Ekf::get_vel_pos_innov_var(float vel_pos_innov_var[6])
@@ -247,6 +253,12 @@ void Ekf::get_mag_innov_var(float mag_innov_var[3])
 void Ekf::get_heading_innov_var(float *heading_innov_var)
 {
 	memcpy(heading_innov_var, &_heading_innov_var, sizeof(float));
+}
+
+// gest the innovation variance of the airspeed measurement
+void Ekf::get_airspeed_innov_var(float *airspeed_innov_var)
+{
+	memcpy(airspeed_innov_var, &_airspeed_innov_var, sizeof(float));
 }
 
 // get the state vector at the delayed time horizon
