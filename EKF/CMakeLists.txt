@@ -63,6 +63,7 @@ set(SRCS
 	covariance.cpp
 	vel_pos_fusion.cpp
 	mag_fusion.cpp
+	airspeed_fusion.cpp
 	gps_checks.cpp
 	control.cpp
 	geo.cpp
