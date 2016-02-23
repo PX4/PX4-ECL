@@ -285,12 +285,12 @@ bool EstimatorInterface::global_position_is_valid()
 {
 	// return true if the position estimate is valid
 	// TODO implement proper check based on published GPS accuracy, innovaton consistency checks and timeout status
-	// currently disable global position if using optical flow
-	return (_NED_origin_initialised && (_time_last_imu - _time_last_gps) < 5e6) && !_healthy_optical_flow;
+	// disable global position if only fusing optical flow
+	return (_NED_origin_initialised && (_time_last_imu - _time_last_gps) < 5e6) && _params.fusion_mode != FUSE_OF;
 }
 
 bool EstimatorInterface::local_position_is_valid()
 {
 	// return true if the position estimate is valid
-	return _healthy_optical_flow;
+	return (_time_last_imu - _time_last_optflow) < 5e6) || global_position_is_valid();
 }
