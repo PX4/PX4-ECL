@@ -139,13 +139,13 @@ bool Ekf::update()
 
 	// Only run the filter if IMU data in the buffer has been updated
 	if (_imu_updated) {
-	if (!_filter_initialised) {
-		_filter_initialised = initialiseFilter();
-
 		if (!_filter_initialised) {
-			return false;
+			_filter_initialised = initialiseFilter();
+
+			if (!_filter_initialised) {
+				return false;
+			}
 		}
-	}
 
 		// perform state and covariance prediction
 		predictState();
@@ -271,7 +271,7 @@ bool Ekf::initialiseFilter(void)
 		if (_delVel_sum.norm() > 0.001f) {
 			_delVel_sum.normalize();
 			pitch = asinf(_delVel_sum(0));
-			roll = -asinf(_delVel_sum(1) / cosf(pitch));
+			roll = atan2f(-_delVel_sum(1), -_delVel_sum(2));
 
 		} else {
 			return false;
@@ -353,7 +353,6 @@ bool Ekf::collect_imu(imuSample &imu)
 
 	_imu_down_sampled.delta_ang_dt += imu.delta_ang_dt;
 	_imu_down_sampled.delta_vel_dt += imu.delta_vel_dt;
-
 
 	Quaternion delta_q;
 	delta_q.rotate(imu.delta_ang);
