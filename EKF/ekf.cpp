@@ -117,6 +117,9 @@ bool Ekf::init(uint64_t timestamp)
 
 bool Ekf::update()
 {
+
+	// Only run the filter if IMU data in the buffer has been updated
+	if (_imu_updated) {
 	if (!_filter_initialised) {
 		_filter_initialised = initialiseFilter();
 
@@ -125,8 +128,6 @@ bool Ekf::update()
 		}
 	}
 
-	// Only run the filter if IMU data in the buffer has been updated
-	if (_imu_updated) {
 		// perform state and covariance prediction
 		predictState();
 		predictCovariance();
@@ -208,7 +209,8 @@ bool Ekf::initialiseFilter(void)
 	// Keep accumulating measurements until we have a minimum of 10 samples for the baro and magnetoemter
 
 	// Sum the IMU delta angle measurements
-	_delVel_sum += _imu_down_sampled.delta_vel;
+	imuSample imu_init = _imu_buffer.get_newest();
+	_delVel_sum += imu_init.delta_vel;
 
 	// Sum the magnetometer measurements
 	magSample mag_init = _mag_buffer.get_newest();
