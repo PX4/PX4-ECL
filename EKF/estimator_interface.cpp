@@ -68,9 +68,9 @@ EstimatorInterface::EstimatorInterface():
 	_mag_declination_gps(0.0f),
 	_mag_declination_to_save_deg(0.0f)
 {
-    _pos_ref = {};
-    memset(_mag_test_ratio, 0, sizeof(_mag_test_ratio));
-    memset(_vel_pos_test_ratio, 0, sizeof(_vel_pos_test_ratio));
+	_pos_ref = {};
+	memset(_mag_test_ratio, 0, sizeof(_mag_test_ratio));
+	memset(_vel_pos_test_ratio, 0, sizeof(_vel_pos_test_ratio));
 }
 
 EstimatorInterface::~EstimatorInterface()
