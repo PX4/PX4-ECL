@@ -161,7 +161,10 @@ bool Ekf::update()
 		}
 	}
 
-	if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
+	if (_range_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_range_sample_delayed)) {
+		_fuse_range_data = true;
+		_fuse_height = true;
+	} else if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed) && _params.vdist_sensor_type == VDIST_SENSOR_BARO) {
 		_fuse_height = true;
 	}
 
@@ -172,7 +175,12 @@ bool Ekf::update()
 		_fuse_pos = true;
 		_fuse_vert_vel = true;
 		_fuse_hor_vel = true;
-
+		_fuse_flow = false;
+	} else if(_flow_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_flow_sample_delayed) && _control_status.flags.opt_flow && (_time_last_imu - _time_last_optflow) < 2e5) {
+		_fuse_pos = false;
+		_fuse_vert_vel = false;
+		_fuse_hor_vel = false;
+		_fuse_flow = true;
 	} else if (!_control_status.flags.gps && !_control_status.flags.opt_flow
 		   && ((_time_last_imu - _time_last_fake_gps > 2e5) || _fuse_height)) {
 		_fuse_pos = true;
@@ -180,14 +188,17 @@ bool Ekf::update()
 		_gps_sample_delayed.pos(1) = _last_known_posNE(1);
 		_time_last_fake_gps = _time_last_imu;
 	}
-
+	
 	if (_fuse_height || _fuse_pos || _fuse_hor_vel || _fuse_vert_vel) {
 		fuseVelPosHeight();
 		_fuse_hor_vel = _fuse_vert_vel = _fuse_pos = _fuse_height = false;
 	}
 
-	if (_range_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_range_sample_delayed)) {
-		fuseRange();
+	if (_fuse_flow) {
+		fuseOptFlow();
+		_last_known_posNE(0) = _state.pos(0);
+		_last_known_posNE(1) = _state.pos(1);
+		_fuse_flow = false;
 	}
 
 	if (_airspeed_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_airspeed_sample_delayed)) {
@@ -214,17 +225,23 @@ bool Ekf::initialiseFilter(void)
 		_mag_sum += mag_init.mag;
 	}
 
-	// Sum the barometer measurements
-	// initialize vertical position with newest baro measurement
-	baroSample baro_init = _baro_buffer.get_newest();
-
-	if (baro_init.time_us != 0) {
-		_baro_counter ++;
-		_baro_sum += baro_init.hgt;
+	if (_params.vdist_sensor_type == VDIST_SENSOR_RANGE) {
+		rangeSample range_init = _range_buffer.get_newest();
+		if (range_init.time_us != 0) {
+			_hgt_counter ++;
+			_hgt_sum += range_init.rng;
+		}
+	} else {
+		// initialize vertical position with newest baro measurement
+		baroSample baro_init = _baro_buffer.get_newest();
+		if (baro_init.time_us != 0) {
+			_hgt_counter ++;
+			_hgt_sum += baro_init.hgt;
+		}
 	}
 
 	// check to see if we have enough measruements and return false if not
-	if (_baro_counter < 10 || _mag_counter < 10) {
+	if (_hgt_counter < 10 || _mag_counter < 10) {
 		return false;
 
 	} else {
@@ -265,7 +282,7 @@ bool Ekf::initialiseFilter(void)
 		_control_status.flags.yaw_align = resetMagHeading(mag_init);
 
 		// calculate the averaged barometer reading
-		_baro_at_alignment = _baro_sum / (float)_baro_counter;
+		_hgt_at_alignment = _hgt_sum / (float)_hgt_counter;
 
 		// set the velocity to the GPS measurement (by definition, the initial position and height is at the origin)
 		resetVelocity();
@@ -362,6 +379,34 @@ bool Ekf::collect_imu(imuSample &imu)
 
 	return false;
 }
+
+//TODO:
+// 1. filter gyro and option to set if using onboard gyro
+// 2. more checks to filter out garbage sample
+bool Ekf::collect_opticalflow(uint64_t time_usec, flow_message *flow)
+{
+
+	if (flow->quality == 0) {
+		// sample quality is bad, reject it!
+		return false;
+	} else if (fabsf(_state.pos(2)) < 0.05f) {
+		// we are very close to ground to have reasonable flow data
+		flow->flowdata(0) = 0.0f;
+        flow->flowdata(1) = 0.0f;
+        flow->gyrodata(0) = 0.0f;
+        flow->gyrodata(1) = 0.0f;
+	} else {
+		// convert accumulated flow data to rate measurement
+		float rate = 1e6f/flow->dt;
+
+		flow->flowdata(0) *= rate;
+		flow->flowdata(1) *= rate;
+		flow->gyrodata(0) *= rate;
+		flow->gyrodata(1) *= rate;
+	}
+	return true;
+}
+
 
 void Ekf::calculateOutputStates()
 {

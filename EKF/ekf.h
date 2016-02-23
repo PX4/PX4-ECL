@@ -76,6 +76,12 @@ public:
 	// gets the innovation variance of the heading measurement
 	void get_heading_innov_var(float *heading_innov_var);
 
+	// gets the innovation variance of the flow measurement
+	void get_flow_innov_var(float flow_innov_var[2]);
+
+	// gets the innovation of the flow measurement
+	void get_flow_innov(float flow_innov[2]);
+	
 	// get the state vector at the delayed time horizon
 	void get_state_delayed(float *state);
 
@@ -85,6 +91,7 @@ public:
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	bool collect_gps(uint64_t time_usec, struct gps_message *gps);
 	bool collect_imu(imuSample &imu);
+	bool collect_opticalflow(uint64_t time_usec, flow_message *flow);
 
 	// this is the current status of the filter control modes
 	filter_control_status_u _control_status = {};
@@ -94,6 +101,10 @@ public:
 
 	// get the ekf WGS-84 origin position and height and the system time it was last set
 	void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt);
+
+	void get_vel_var(Vector3f &vel_var);
+
+	void get_pos_var(Vector3f &pos_var);
 
 private:
 
@@ -111,6 +122,7 @@ private:
 	bool _fuse_vert_vel;	// gps vertical velocity measurement should be fused
 
 	uint64_t _time_last_fake_gps;	// last time in us at which we have faked gps measurement for static mode
+	bool _fuse_flow;	// flow measurement should be fused
 
 	uint64_t _time_last_pos_fuse;   // time the last fusion of horizotal position measurements was performed (usec)
 	uint64_t _time_last_vel_fuse;   // time the last fusion of velocity measurements was performed (usec)
@@ -128,10 +140,12 @@ private:
 	float _vel_pos_innov[6];	// innovations: 0-2 vel,  3-5 pos
 	float _mag_innov[3];		// earth magnetic field innovations
 	float _heading_innov;		// heading measurement innovation
+	float _flow_innov[2];		// flow measurement innovation
 
 	float _vel_pos_innov_var[6]; // innovation variances: 0-2 vel, 3-5 pos
 	float _mag_innov_var[3]; // earth magnetic field innovation variance
 	float _heading_innov_var; // heading measurement innovation variance
+	float _flow_innov_var[2]; // flow innovation variance
 
 	float _mag_declination = 0.0f; // magnetic declination used by reset and fusion functions (rad)
 
@@ -150,18 +164,19 @@ private:
 	float _gps_velN_filt = 0.0f;  // GPS filtered North velocity (m/s)
 	float _gps_velE_filt = 0.0f;   // GPS filtered East velocity (m/s)
 	uint64_t _last_gps_fail_us = 0;   // last system time in usec that the GPS failed it's checks
+	bool _fuse_range_data;
 
 	// Variables used to publish the WGS-84 location of the EKF local NED origin
 	uint64_t _last_gps_origin_time_us = 0;              // time the origin was last set (uSec)
 	float _gps_alt_ref = 0.0f;                          // WGS-84 height (m)
 
 	// Variables used to initialise the filter states
-	uint8_t _baro_counter = 0;      // number of baro samples averaged
-	float _baro_sum = 0.0f;         // summed baro measurement
+	uint8_t _hgt_counter = 0;      // number of baro samples averaged
+	float _hgt_sum = 0.0f;         // summed baro measurement
 	uint8_t _mag_counter = 0;       // number of magnetometer samples averaged
 	Vector3f _mag_sum = {};         // summed magnetometer measurement
 	Vector3f _delVel_sum = {};      // summed delta velocity
-	float _baro_at_alignment;       // baro offset relative to alignment position
+	float _hgt_at_alignment;       // baro offset relative to alignment position
 
 	gps_check_fail_status_u _gps_check_fail_status;
 
@@ -204,6 +219,8 @@ private:
 
 	// reset velocity states of the ekf
 	void resetVelocity();
+
+	void fuseOptFlow();
 
 	// reset the heading and magnetic field states using the declination and magnetometer measurements
 	// return true if successful

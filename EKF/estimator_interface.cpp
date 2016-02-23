@@ -187,20 +187,42 @@ void EstimatorInterface::setAirspeedData(uint64_t time_usec, float *data)
 		_airspeed_buffer.push(airspeed_sample_new);
 	}
 }
-
+static float rng;
 // set range data
 void EstimatorInterface::setRangeData(uint64_t time_usec, float *data)
 {
 	if (!collect_range(time_usec, data) || !_initialised) {
 		return;
 	}
+	if (time_usec > _time_last_range) {
+		rangeSample range_sample_new;
+		range_sample_new.rng = *data;
+		rng=*data;
+		range_sample_new.time_us -= _params.range_delay_ms * 1000;
+
+		range_sample_new.time_us = time_usec;
+		_time_last_range = time_usec;
+
+		_range_buffer.push(range_sample_new);
+	}
 }
 
 // set optical flow data
-void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, float *data)
+void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *flow)
 {
-	if (!collect_opticalflow(time_usec, data) || !_initialised) {
+	if (!collect_opticalflow(time_usec, flow) || !_initialised) {
 		return;
+	}
+
+	if(time_usec > _time_last_optflow) {
+		flowSample optflow_sample_new;
+		optflow_sample_new.time_us = time_usec - _params.flow_delay_ms * 1000 - flow->dt/2;
+		optflow_sample_new.quality = flow->quality;
+		optflow_sample_new.flowRadXY = -flow->flowdata;
+		//TODO: proper filtering of gyro data, and option to select if use gyro onboard, probably part of measurement(H) matrix
+		optflow_sample_new.flowRadXYcomp = -flow->flowdata + flow->gyrodata;
+		_time_last_optflow = time_usec;
+		_flow_buffer.push(optflow_sample_new);
 	}
 }
 
@@ -239,6 +261,7 @@ bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 	_time_last_baro = 0;
 	_time_last_range = 0;
 	_time_last_airspeed = 0;
+	_time_last_optflow = 0;
 
 	memset(&_fault_status, 0, sizeof(_fault_status));
 	return true;
@@ -257,9 +280,16 @@ void EstimatorInterface::unallocate_buffers()
 
 }
 
-bool EstimatorInterface::position_is_valid()
+bool EstimatorInterface::global_position_is_valid()
 {
 	// return true if the position estimate is valid
-	// TOTO implement proper check based on published GPS accuracy, innovaton consistency checks and timeout status
-	return _NED_origin_initialised && (_time_last_imu - _time_last_gps) < 5e6;
+	// TODO implement proper check based on published GPS accuracy, innovaton consistency checks and timeout status
+	// disable global position if only fusing optical flow
+	return (_NED_origin_initialised && (_time_last_imu - _time_last_gps) < 5e6) && _params.fusion_mode != FUSE_OF;
+}
+
+bool EstimatorInterface::local_position_is_valid()
+{
+	// return true if the position estimate is valid
+	return ((_time_last_imu - _time_last_optflow) < 5e6) || global_position_is_valid();
 }

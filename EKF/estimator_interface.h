@@ -80,6 +80,15 @@ public:
 
 	virtual void get_covariances(float *covariances) = 0;
 
+	virtual void get_vel_var(Vector3f &vel_var) = 0;
+	virtual void get_pos_var(Vector3f &pos_var) = 0;
+
+	// gets the innovation variance of the flow measurement
+	virtual void get_flow_innov_var(float flow_innov_var[2]) = 0;
+
+	// gets the innovation of the flow measurement
+	virtual void get_flow_innov(float flow_innov[2]) = 0;
+	
 	// get the ekf WGS-84 origin positoin and height and the system time it was last set
 	virtual void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt) = 0;
 
@@ -97,7 +106,7 @@ public:
 
 	virtual bool collect_range(uint64_t time_usec, float *data) { return true; }
 
-	virtual bool collect_opticalflow(uint64_t time_usec, float *data) { return true; }
+	virtual bool collect_opticalflow(uint64_t time_usec, flow_message *flow) { return true; }
 
 	// set delta angle imu data
 	void setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, uint64_t delta_vel_dt, float *delta_ang, float *delta_vel);
@@ -118,7 +127,7 @@ public:
 	void setRangeData(uint64_t time_usec, float *data);
 
 	// set optical flow data
-	void setOpticalFlowData(uint64_t time_usec, float *data);
+	void setOpticalFlowData(uint64_t time_usec, flow_message *flow);
 
 	// return a address to the parameters struct
 	// in order to give access to the application
@@ -130,7 +139,8 @@ public:
 	// set vehicle landed status data
 	void set_in_air_status(bool in_air) {_in_air = in_air;}
 
-	bool position_is_valid();
+	bool global_position_is_valid();
+	bool local_position_is_valid();
 
 
 	void copy_quaternion(float *quat)
@@ -220,7 +230,7 @@ protected:
 	uint64_t _time_last_baro;	// timestamp of last barometer measurement in microseconds
 	uint64_t _time_last_range;	// timestamp of last range measurement in microseconds
 	uint64_t _time_last_airspeed;	// timestamp of last airspeed measurement in microseconds
-
+	uint64_t _time_last_optflow;
 
 	fault_status_t _fault_status;
 
