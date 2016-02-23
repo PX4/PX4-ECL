@@ -52,6 +52,18 @@ void Ekf::controlFusionModes()
 	// optical flow fusion mode selection logic
 	_control_status.flags.opt_flow = false;
 
+	// Check for tilt convergence during initial alignment
+	// filter the tilt error vector using a 1 sec time constant LPF
+	float filt_coef = 1.0f * _imu_sample_delayed.delta_ang_dt;
+	float temp = sqrtf(sq(_tilt_err_vec(0)) + sq(_tilt_err_vec(1)) + sq(_tilt_err_vec(2)));
+	_tilt_err_length_filt = filt_coef * temp + (1.0f - filt_coef) * _tilt_err_length_filt;
+
+	// Once the tilt error has reduced sufficiently, initialise the yaw and magnetic field states
+	if (_tilt_err_length_filt < 0.005f && !_control_status.flags.tilt_align) {
+		_control_status.flags.tilt_align = true;
+		_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+	}
+
 	// GPS fusion mode selection logic
 	// To start using GPS we need tilt and yaw alignment completed, the local NED origin set and fresh GPS data
 	if (!_control_status.flags.gps) {

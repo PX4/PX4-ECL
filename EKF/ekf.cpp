@@ -136,8 +136,6 @@ bool Ekf::init(uint64_t timestamp)
 
 bool Ekf::update()
 {
-	bool ret = false;	// indicates if there has been an update
-
 	if (!_filter_initialised) {
 		_filter_initialised = initialiseFilter();
 
@@ -146,76 +144,82 @@ bool Ekf::update()
 		}
 	}
 
-	//printStates();
-	//printStatesFast();
-	// prediction
+	// Only run the filter if IMU data in the buffer has been updated
 	if (_imu_updated) {
-		ret = true;
+		// perform state and covariance prediction
 		predictState();
 		predictCovariance();
-	}
 
-	// control logic
-	controlFusionModes();
+		// control logic
+		controlFusionModes();
 
-	// measurement updates
+		// measurement updates
 
-	// Fuse magnetometer data using the selected fusion method and only if angular alignment is complete
-	if (_mag_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_mag_sample_delayed)) {
-		if (_control_status.flags.mag_3D && _control_status.flags.yaw_align) {
-			fuseMag();
+		// Fuse magnetometer data using the selected fuson method and only if angular alignment is complete
+		if (_mag_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_mag_sample_delayed)) {
+			if (_control_status.flags.mag_3D && _control_status.flags.yaw_align) {
+				fuseMag();
 
-			if (_control_status.flags.mag_dec) {
-				fuseDeclination();
+				if (_control_status.flags.mag_dec) {
+					fuseDeclination();
+				}
+
+			} else if (_control_status.flags.mag_2D && _control_status.flags.yaw_align) {
+				fuseMag2D();
+
+			} else if (_control_status.flags.mag_hdg && _control_status.flags.yaw_align) {
+				fuseHeading();
+
+			} else {
+				// do no fusion at all
 			}
-
-		} else if (_control_status.flags.mag_2D && _control_status.flags.yaw_align) {
-			fuseMag2D();
-
-		} else if (_control_status.flags.mag_hdg && _control_status.flags.yaw_align) {
-			fuseHeading();
-
-		} else {
-			// do no fusion at all
 		}
+
+		if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
+			_fuse_height = true;
+		}
+
+		// If we are using GPS aiding and data has fallen behind the fusion time horizon then fuse it
+		// if we aren't doing any aiding, fake GPS measurements at the last known position to constrain drift
+		// Coincide fake measurements with baro data for efficiency with a minimum fusion rate of 5Hz
+		if (_gps_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_gps_sample_delayed) && _control_status.flags.gps) {
+			_fuse_pos = true;
+			_fuse_vert_vel = true;
+			_fuse_hor_vel = true;
+
+		} else if (!_control_status.flags.gps && !_control_status.flags.opt_flow
+			   && ((_time_last_imu - _time_last_fake_gps > 2e5) || _fuse_height)) {
+			_fuse_pos = true;
+			_gps_sample_delayed.pos(0) = _last_known_posNE(0);
+			_gps_sample_delayed.pos(1) = _last_known_posNE(1);
+			_time_last_fake_gps = _time_last_imu;
+		}
+
+		if (_fuse_height || _fuse_pos || _fuse_hor_vel || _fuse_vert_vel) {
+			fuseVelPosHeight();
+			_fuse_hor_vel = _fuse_vert_vel = _fuse_pos = _fuse_height = false;
+		}
+
+		if (_range_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_range_sample_delayed)) {
+			fuseRange();
+		}
+
+		if (_airspeed_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_airspeed_sample_delayed)) {
+			fuseAirspeed();
+		}
+
 	}
 
-	if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
-		_fuse_height = true;
-	}
-
-	// If we are using GPS aiding and data has fallen behind the fusion time horizon then fuse it
-	// if we aren't doing any aiding, fake GPS measurements at the last known position to constrain drift
-	// Coincide fake measurements with baro data for efficiency with a minimum fusion rate of 5Hz
-	if (_gps_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_gps_sample_delayed) && _control_status.flags.gps) {
-		_fuse_pos = true;
-		_fuse_vert_vel = true;
-		_fuse_hor_vel = true;
-
-	} else if (!_control_status.flags.gps && !_control_status.flags.opt_flow
-		   && ((_time_last_imu - _time_last_fake_gps > 2e5) || _fuse_height)) {
-		_fuse_pos = true;
-		_gps_sample_delayed.pos(0) = _last_known_posNE(0);
-		_gps_sample_delayed.pos(1) = _last_known_posNE(1);
-		_time_last_fake_gps = _time_last_imu;
-	}
-
-	if (_fuse_height || _fuse_pos || _fuse_hor_vel || _fuse_vert_vel) {
-		fuseVelPosHeight();
-		_fuse_hor_vel = _fuse_vert_vel = _fuse_pos = _fuse_height = false;
-	}
-
-	if (_range_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_range_sample_delayed)) {
-		fuseRange();
-	}
-
-	if (_airspeed_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_airspeed_sample_delayed)) {
-		fuseAirspeed();
-	}
-
+	// the output observer always runs
 	calculateOutputStates();
 
-	return ret;
+	// We don't have valid data to output until tilt and yaw alignment is complete
+	if (_control_status.flags.tilt_align && _control_status.flags.yaw_align) {
+		return true;
+
+	} else {
+		return false;
+	}
 }
 
 bool Ekf::initialiseFilter(void)
@@ -275,13 +279,15 @@ bool Ekf::initialiseFilter(void)
 		matrix::Euler<float> euler_init(roll, pitch, 0.0f);
 		_state.quat_nominal = Quaternion(euler_init);
 		_output_new.quat_nominal = _state.quat_nominal;
-		_control_status.flags.tilt_align = true;
+
+		// initialise the filtered alignment error estimate to a larger starting value
+		_tilt_err_length_filt = 1.0f;
 
 		// calculate the averaged magnetometer reading
 		Vector3f mag_init = _mag_sum * (1.0f / (float(_mag_counter)));
 
 		// calculate the initial magnetic field and yaw alignment
-		_control_status.flags.yaw_align = resetMagHeading(mag_init);
+		resetMagHeading(mag_init);
 
 		// calculate the averaged barometer reading
 		_baro_at_alignment = _baro_sum / (float)_baro_counter;
