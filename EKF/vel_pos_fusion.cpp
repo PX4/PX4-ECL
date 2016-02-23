@@ -141,11 +141,13 @@ void Ekf::fuseVelPosHeight()
 	// record the successful velocity fusion time
 	if (vel_check_pass && _fuse_hor_vel) {
 		_time_last_vel_fuse = _time_last_imu;
+		_tilt_err_vec.setZero();
 	}
 
 	// record the successful position fusion time
 	if (pos_check_pass && _fuse_pos) {
 		_time_last_pos_fuse = _time_last_imu;
+		_tilt_err_vec.setZero();
 	}
 
 	// record the successful height fusion time
@@ -188,6 +190,12 @@ void Ekf::fuseVelPosHeight()
 			for (int row = 22; row <= 23; row++) {
 				Kfusion[row] = 0.0f;
 			}
+		}
+
+		// sum the attitude error from velocity and position fusion only
+		// used as a metric for convergence monitoring
+		if (obs_index != 5) {
+			_tilt_err_vec += _state.ang_error;
 		}
 
 		// by definition the angle error state is zero at the fusion time

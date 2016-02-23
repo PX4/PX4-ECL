@@ -131,6 +131,9 @@ private:
 	float _vel_pos_innov[6];	// innovations: 0-2 vel,  3-5 pos
 	float _mag_innov[3];		// earth magnetic field innovations
 	float _heading_innov;		// heading measurement innovation
+	Vector3f _tilt_err_vec;         // Vector of the most recent attitude error correction from velocity and position fusion
+	float _tilt_err_length_filt;    // filtered length of _tilt_err_vec
+
 
 	float _vel_pos_innov_var[6]; // innovation variances: 0-2 vel, 3-5 pos
 	float _mag_innov_var[3]; // earth magnetic field innovation variance
