@@ -57,9 +57,11 @@ Ekf::Ekf():
 	_vel_pos_innov{},
 	_mag_innov{},
 	_heading_innov{},
+	_airspeed_innov{},
 	_vel_pos_innov_var{},
 	_mag_innov_var{},
-	_heading_innov_var{}
+	_heading_innov_var{},
+	_airspeed_innov_var{}
 {
 	_earth_rate_NED.setZero();
 	_R_prev = matrix::Dcm<float>();
@@ -425,12 +427,6 @@ void Ekf::calculateOutputStates()
 	_delta_vel_corr = (_state.vel - _output_sample_delayed.vel) * imu_new.delta_vel_dt;
 
 	_vel_corr = (_state.pos - _output_sample_delayed.pos);
-
-}
-
-
-void Ekf::fuseAirspeed()
-{
 
 }
 

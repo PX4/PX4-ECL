@@ -66,6 +66,9 @@ public:
 	// gets the innovations of the heading measurement
 	virtual void get_heading_innov(float *heading_innov) = 0;
 
+	// gets the innovation of airspeed measurement
+	virtual void get_airspeed_innov(float *airspeed_innov) = 0;
+
 	// gets the innovation variances of velocity and position measurements
 	// 0-2 vel, 3-5 pos
 	virtual void get_vel_pos_innov_var(float vel_pos_innov_var[6]) = 0;
@@ -75,6 +78,9 @@ public:
 
 	// gets the innovation variance of the heading measurement
 	virtual void get_heading_innov_var(float *heading_innov_var) = 0;
+
+	// gets the innovation variance of the airspeed measurement
+	virtual void get_airspeed_innov_var(float *get_airspeed_innov_var) = 0;
 
 	virtual void get_state_delayed(float *state) = 0;
 
