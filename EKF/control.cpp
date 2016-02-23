@@ -55,8 +55,7 @@ void Ekf::controlFusionModes()
 	// Check for tilt convergence during initial alignment
 	// filter the tilt error vector using a 1 sec time constant LPF
 	float filt_coef = 1.0f * _imu_sample_delayed.delta_ang_dt;
-	float temp = sqrtf(sq(_tilt_err_vec(0)) + sq(_tilt_err_vec(1)) + sq(_tilt_err_vec(2)));
-	_tilt_err_length_filt = filt_coef * temp + (1.0f - filt_coef) * _tilt_err_length_filt;
+	_tilt_err_length_filt = filt_coef * _tilt_err_vec.norm() + (1.0f - filt_coef) * _tilt_err_length_filt;
 
 	// Once the tilt error has reduced sufficiently, initialise the yaw and magnetic field states
 	if (_tilt_err_length_filt < 0.005f && !_control_status.flags.tilt_align) {
