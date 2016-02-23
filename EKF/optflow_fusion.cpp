@@ -198,7 +198,18 @@ void Ekf::fuseOptFlow()
 		}
 		// by definition our error state is zero at the time of fusion
 		_state.ang_error.setZero();
-		
+	    // only update magnetic field states if we are fusing 3-axis observations
+        if (!_control_status.flags.mag_3D) {
+            for (int row = 16; row <= 21; row++) {
+                Kfusion[row] = 0.0f;
+            }
+        }
+        // only update wind states if we are doing wind estimation
+        if (!_control_status.flags.wind) {
+            for (int row = 22; row <= 23; row++) {
+                Kfusion[row] = 0.0f;
+            }
+        }	
         fuse(Kfusion,_flow_innov(index));
 
 		Quaternion q_correction;
