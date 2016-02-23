@@ -66,6 +66,9 @@ public:
 	// gets the innovations of the heading measurement
 	void get_heading_innov(float *heading_innov);
 
+	// gets the innovations of airspeed measurement
+	void get_airspeed_innov(float *airspeed_innov);
+
 	// gets the innovation variances of velocity and position measurements
 	// 0-2 vel, 3-5 pos
 	void get_vel_pos_innov_var(float vel_pos_innov_var[6]);
@@ -75,6 +78,9 @@ public:
 
 	// gets the innovation variance of the heading measurement
 	void get_heading_innov_var(float *heading_innov_var);
+
+	// gets the innovation variance of the airspeed measurement
+	void get_airspeed_innov_var(float *airspeed_innov_var);
 
 	// get the state vector at the delayed time horizon
 	void get_state_delayed(float *state);
@@ -128,10 +134,12 @@ private:
 	float _vel_pos_innov[6];	// innovations: 0-2 vel,  3-5 pos
 	float _mag_innov[3];		// earth magnetic field innovations
 	float _heading_innov;		// heading measurement innovation
+	float _airspeed_innov;		// airspeed measurement innovation
 
 	float _vel_pos_innov_var[6]; // innovation variances: 0-2 vel, 3-5 pos
-	float _mag_innov_var[3]; // earth magnetic field innovation variance
+	float _mag_innov_var[3]; // earth magnetic field measurement innovation variance
 	float _heading_innov_var; // heading measurement innovation variance
+	float _airspeed_innov_var; // airspeed measurement innovation variance
 
 	float _mag_declination = 0.0f; // magnetic declination used by reset and fusion functions (rad)
 
