@@ -76,6 +76,12 @@ public:
 	// gets the innovation variance of the heading measurement
 	void get_heading_innov_var(float *heading_innov_var);
 
+	// gets the innovation variance of the flow measurement
+	void get_flow_innov_var(float flow_innov_var[2]);
+
+	// gets the innovation of the flow measurement
+	void get_flow_innov(float flow_innov[2]);
+	
 	// get the state vector at the delayed time horizon
 	void get_state_delayed(float *state);
 
@@ -137,13 +143,16 @@ private:
 	float _vel_pos_innov[6];	// innovations: 0-2 vel,  3-5 pos
 	float _mag_innov[3];		// earth magnetic field innovations
 	float _heading_innov;		// heading measurement innovation
+
 	Vector3f _tilt_err_vec;         // Vector of the most recent attitude error correction from velocity and position fusion
 	float _tilt_err_length_filt;    // filtered length of _tilt_err_vec
 
+	float _flow_innov[2];		// flow measurement innovation
 
 	float _vel_pos_innov_var[6]; // innovation variances: 0-2 vel, 3-5 pos
 	float _mag_innov_var[3]; // earth magnetic field innovation variance
 	float _heading_innov_var; // heading measurement innovation variance
+	float _flow_innov_var[2]; // flow innovation variance
 
 	float _mag_declination = 0.0f; // magnetic declination used by reset and fusion functions (rad)
 

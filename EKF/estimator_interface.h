@@ -84,6 +84,12 @@ public:
 	virtual void get_vel_var(Vector3f &vel_var) = 0;
 	virtual void get_pos_var(Vector3f &pos_var) = 0;
 
+	// gets the innovation variance of the flow measurement
+	virtual void get_flow_innov_var(float flow_innov_var[2]) = 0;
+
+	// gets the innovation of the flow measurement
+	virtual void get_flow_innov(float flow_innov[2]) = 0;
+	
 	// get the ekf WGS-84 origin positoin and height and the system time it was last set
 	virtual void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt) = 0;
 

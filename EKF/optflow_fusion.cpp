@@ -66,7 +66,7 @@ void Ekf::fuseOptFlow()
 	earth_to_body = earth_to_body.transpose();	// calculate earth to body rot mat
 
 	vel_body = earth_to_body*_state.vel;	// rotate vel in earth frame to sensor/body frame
-	Vector2f _flow_innov;
+	Vector2f flow_innov;
 
     // calculate innovations
 	float range = -pd/earth_to_body(2,2); // absolute distance to the frame region in view 
@@ -80,9 +80,11 @@ void Ekf::fuseOptFlow()
 		return;
 	}
 
-    _flow_innov(0) = vel_body(1)/range - _flow_sample_delayed.flowRadXYcomp(1); //innov in X direction
-	_flow_innov(1) = -vel_body(0)/range + _flow_sample_delayed.flowRadXYcomp(0); //innov in Y direction
-
+    flow_innov(0) = vel_body(1)/range - _flow_sample_delayed.flowRadXYcomp(1); //innov in X direction
+	flow_innov(1) = -vel_body(0)/range + _flow_sample_delayed.flowRadXYcomp(0); //innov in Y direction
+	_flow_innov[0] = flow_innov(0);
+	_flow_innov[1] = flow_innov(1);
+	
 	// TODO: work out the process to take terrain changes into account
 	// constrain height above ground to be above range measured on ground
     float heightAboveGndEst = math::max((terrainState - pd), gndclearance);
@@ -110,9 +112,12 @@ void Ekf::fuseOptFlow()
 	SK_LOS[3] = sq(q0) - sq(q1) + sq(q2) - sq(q3);
 	SK_LOS[4] = SH_LOS[3];
 
+	_flow_innov_var[0] = 1.0f/SK_LOS[0];
+	_flow_innov_var[1] = 1.0f/SK_LOS[1];
+
     // run innovation variance checks
-	float optflow_test_ratio_x = sq(_flow_innov(0)) / (sq(math::max(_params.flow_innov_gate, 3.0f)) * (1/SK_LOS[0]));
-	float optflow_test_ratio_y = sq(_flow_innov(1)) / (sq(math::max(_params.flow_innov_gate, 3.0f)) * (1/SK_LOS[1]));
+	float optflow_test_ratio_x = sq(flow_innov(0)) / (sq(math::max(_params.flow_innov_gate, 3.0f)) * (1/SK_LOS[0]));
+	float optflow_test_ratio_y = sq(flow_innov(1)) / (sq(math::max(_params.flow_innov_gate, 3.0f)) * (1/SK_LOS[1]));
 	if(optflow_test_ratio_x > 1.0f || optflow_test_ratio_y > 1.0f) {
         return;
 	}
@@ -210,7 +215,7 @@ void Ekf::fuseOptFlow()
                 Kfusion[row] = 0.0f;
             }
         }	
-        fuse(Kfusion,_flow_innov(index));
+        fuse(Kfusion,flow_innov(index));
 
 		Quaternion q_correction;
 		q_correction.from_axis_angle(_state.ang_error);
@@ -255,4 +260,15 @@ void Ekf::fuseOptFlow()
 		makeSymmetrical();
 		limitCov();
 	}
+}
+
+void Ekf::get_flow_innov(float flow_innov[2])
+{
+	memcpy(flow_innov,_flow_innov,sizeof(_flow_innov));
+}
+
+
+void Ekf::get_flow_innov_var(float flow_innov_var[2])
+{
+	memcpy(flow_innov_var,_flow_innov_var,sizeof(_flow_innov_var));
 }
