@@ -68,9 +68,9 @@ EstimatorInterface::EstimatorInterface():
 	_mag_declination_gps(0.0f),
 	_mag_declination_to_save_deg(0.0f)
 {
-    _pos_ref = {};
-    memset(_mag_test_ratio, 0, sizeof(_mag_test_ratio));
-    memset(_vel_pos_test_ratio, 0, sizeof(_vel_pos_test_ratio));
+	_pos_ref = {};
+	memset(_mag_test_ratio, 0, sizeof(_mag_test_ratio));
+	memset(_vel_pos_test_ratio, 0, sizeof(_vel_pos_test_ratio));
 }
 
 EstimatorInterface::~EstimatorInterface()
@@ -160,6 +160,7 @@ void EstimatorInterface::setGpsData(uint64_t time_usec, struct gps_message *gps)
 
 		_gps_speed_valid = gps->vel_ned_valid;
 		_gps_speed_accuracy = gps->sacc;
+		_gps_hpos_accuracy = gps->eph;
 
 		float lpos_x = 0.0f;
 		float lpos_y = 0.0f;
@@ -202,7 +203,7 @@ void EstimatorInterface::setAirspeedData(uint64_t time_usec, float *data)
 	if (time_usec > _time_last_airspeed) {
 		airspeedSample airspeed_sample_new;
 		airspeed_sample_new.airspeed = *data;
-		airspeed_sample_new.time_us = time_usec -_params.airspeed_delay_ms * 1000;
+		airspeed_sample_new.time_us = time_usec - _params.airspeed_delay_ms * 1000;
 		airspeed_sample_new.time_us -= FILTER_UPDATE_PERRIOD_MS * 1000 / 2;
 		_time_last_airspeed = time_usec;
 

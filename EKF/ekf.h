@@ -95,6 +95,9 @@ public:
 	// get the ekf WGS-84 origin position and height and the system time it was last set
 	void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt);
 
+	// get the 1-sigma horizontal and vertical position uncertainty of the ekf WGS-84 position
+	void get_ekf_accuracy(float *ekf_eph, float *ekf_epv, bool *dead_reckoning);
+
 private:
 
 	static const uint8_t _k_num_states = 24;
@@ -128,6 +131,9 @@ private:
 	float _vel_pos_innov[6];	// innovations: 0-2 vel,  3-5 pos
 	float _mag_innov[3];		// earth magnetic field innovations
 	float _heading_innov;		// heading measurement innovation
+	Vector3f _tilt_err_vec;         // Vector of the most recent attitude error correction from velocity and position fusion
+	float _tilt_err_length_filt;    // filtered length of _tilt_err_vec
+
 
 	float _vel_pos_innov_var[6]; // innovation variances: 0-2 vel, 3-5 pos
 	float _mag_innov_var[3]; // earth magnetic field innovation variance
