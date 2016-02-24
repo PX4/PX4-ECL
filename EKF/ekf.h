@@ -171,7 +171,7 @@ private:
 	float _gps_velN_filt = 0.0f;  // GPS filtered North velocity (m/s)
 	float _gps_velE_filt = 0.0f;   // GPS filtered East velocity (m/s)
 	uint64_t _last_gps_fail_us = 0;   // last system time in usec that the GPS failed it's checks
-	bool _fuse_range_data;
+	bool _fuse_range_data = false;		// if true then range data will be fused for height
 
 	// Variables used to publish the WGS-84 location of the EKF local NED origin
 	uint64_t _last_gps_origin_time_us = 0;              // time the origin was last set (uSec)
