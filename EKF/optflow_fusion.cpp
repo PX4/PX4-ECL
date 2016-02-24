@@ -84,7 +84,7 @@ void Ekf::fuseOptFlow()
 	flow_innov(1) = -vel_body(0)/range + _flow_sample_delayed.flowRadXYcomp(0); //innov in Y direction
 	_flow_innov[0] = flow_innov(0);
 	_flow_innov[1] = flow_innov(1);
-	
+
 	// TODO: work out the process to take terrain changes into account
 	// constrain height above ground to be above range measured on ground
     float heightAboveGndEst = math::max((terrainState - pd), gndclearance);
@@ -114,6 +114,12 @@ void Ekf::fuseOptFlow()
 
 	_flow_innov_var[0] = 1.0f/SK_LOS[0];
 	_flow_innov_var[1] = 1.0f/SK_LOS[1];
+
+	if(_flow_innov_var[0] < R_LOS || _flow_innov_var[1] < R_LOS) {
+		// we need to reinitialise the covariance matrix and abort this fusion step
+		initialiseCovariance();
+		return;
+	}
 
     // run innovation variance checks
 	float optflow_test_ratio_x = sq(flow_innov(0)) / (sq(math::max(_params.flow_innov_gate, 3.0f)) * (1/SK_LOS[0]));
