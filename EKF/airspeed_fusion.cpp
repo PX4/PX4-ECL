@@ -51,8 +51,8 @@ void Ekf::fuseAirspeed()
 	float vwn; // Wind speed in north direction
 	float vwe; // Wind speed in east direction
 	float v_tas_pred; // Predicted measurement
-	float airspeedMeasurementSigma = 1.4f; // Look into this...
-	float R_TAS = sq(airspeedMeasurementSigma); // Variance for true airspeed measurement - (m/sec)^2
+	float EAS2TAS = 1.0f // Where can I get this from?
+	float R_TAS = sq(ConstrainFloat(_params.eas_noise, 0.5f, 5.0f) * ConstrainFloat(EAS2TAS, 0.9f, 10.0f)); // Variance for true airspeed measurement - (m/sec)^2
 	float SH_TAS[3] = {}; // Varialbe used to optimise calculations of measurement jacobian
 	float H_TAS[24] = {}; // Observation Jacobian
 	float SK_TAS[2] = {}; // Varialbe used to optimise calculations of the Kalman gain vector

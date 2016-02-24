@@ -138,6 +138,7 @@ struct parameters {
 
 	float mag_heading_noise = 1.7e-1f;  // measurement noise used for simple heading fusion
 	float mag_noise = 5.0e-2f;          // measurement noise used for 3-axis magnetoemeter fusion
+	float eas_noise = 1.4f;				// eas measurement noise standard deviation used for airspeed fusion [m/s]
 	float mag_declination_deg = 0.0f;   // magnetic declination in degrees
 	float heading_innov_gate = 3.0f;    // heading fusion innovation consistency gate size in standard deviations
 	float mag_innov_gate = 3.0f;        // magnetometer fusion innovation consistency gate size in standard deviations
