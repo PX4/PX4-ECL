@@ -66,10 +66,15 @@ void Ekf::controlFusionModes()
 		_control_status.flags.gps = false;
 		if (!_control_status.flags.opt_flow) {
 			if (_control_status.flags.tilt_align && (_time_last_imu - _time_last_optflow) < 5e5) {
-				_control_status.flags.opt_flow = true;
-				//use flow if present and 
-				resetPosition();
-				resetVelocity();
+				// Reset the yaw and magnetic field states
+				_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+
+				// If the heading is valid, reset the positon and velocity and start using optical flow aiding
+				if (_control_status.flags.yaw_align) {
+					resetPosition();
+					resetVelocity();
+					_control_status.flags.opt_flow = true;
+				}
 			}
 		}
 	}
