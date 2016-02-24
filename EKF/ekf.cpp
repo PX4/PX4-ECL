@@ -168,11 +168,11 @@ bool Ekf::update()
 		// If we are using GPS aiding and data has fallen behind the fusion time horizon then fuse it
 		// if we aren't doing any aiding, fake GPS measurements at the last known position to constrain drift
 		// Coincide fake measurements with baro data for efficiency with a minimum fusion rate of 5Hz
-		if (_gps_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_gps_sample_delayed) && _control_status.flags.gps) {
+		if (_gps_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_gps_sample_delayed) && _control_status.flags.gps && _params.fusion_mode != FUSE_OF) {
 			_fuse_pos = true;
 			_fuse_vert_vel = true;
 			_fuse_hor_vel = true;
-
+			_fuse_flow = false;
 		} else if(_flow_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_flow_sample_delayed) && _control_status.flags.opt_flow && (_time_last_imu - _time_last_optflow) < 2e5) {
 			_fuse_pos = false;
 			_fuse_vert_vel = false;
@@ -185,7 +185,7 @@ bool Ekf::update()
 			_gps_sample_delayed.pos(1) = _last_known_posNE(1);
 			_time_last_fake_gps = _time_last_imu;
 		}
-
+		
 		if (_fuse_height || _fuse_pos || _fuse_hor_vel || _fuse_vert_vel) {
 			fuseVelPosHeight();
 			_fuse_hor_vel = _fuse_vert_vel = _fuse_pos = _fuse_height = false;
@@ -395,7 +395,6 @@ bool Ekf::collect_imu(imuSample &imu)
 // 2. more checks to filter out garbage sample
 bool Ekf::collect_opticalflow(uint64_t time_usec, flow_message *flow)
 {
-
 	if (flow->quality == 0) {
 		// sample quality is bad, reject it!
 		return false;

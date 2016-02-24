@@ -49,6 +49,17 @@ void Ekf::controlFusionModes()
 	// Get the magnetic declination
 	calcMagDeclination();
 
+	// Check for tilt convergence during initial alignment
+	// filter the tilt error vector using a 1 sec time constant LPF
+	float filt_coef = 1.0f * _imu_sample_delayed.delta_ang_dt;
+	_tilt_err_length_filt = filt_coef * _tilt_err_vec.norm() + (1.0f - filt_coef) * _tilt_err_length_filt;
+
+	// Once the tilt error has reduced sufficiently, initialise the yaw and magnetic field states
+	if (_tilt_err_length_filt < 0.005f && !_control_status.flags.tilt_align) {
+		_control_status.flags.tilt_align = true;
+		_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+	}
+
 	// optical flow fusion mode selection logic
 	if(_params.fusion_mode == FUSE_OF) {
 		// decide when to start using optical flow data
@@ -61,17 +72,6 @@ void Ekf::controlFusionModes()
 				resetVelocity();
 			}
 		}
-	}
-
-	// Check for tilt convergence during initial alignment
-	// filter the tilt error vector using a 1 sec time constant LPF
-	float filt_coef = 1.0f * _imu_sample_delayed.delta_ang_dt;
-	_tilt_err_length_filt = filt_coef * _tilt_err_vec.norm() + (1.0f - filt_coef) * _tilt_err_length_filt;
-
-	// Once the tilt error has reduced sufficiently, initialise the yaw and magnetic field states
-	if (_tilt_err_length_filt < 0.005f && !_control_status.flags.tilt_align) {
-		_control_status.flags.tilt_align = true;
-		_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 	}
 
 	// GPS fusion mode selection logic
