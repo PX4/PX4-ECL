@@ -88,9 +88,6 @@ void Ekf::fuseAirspeed()
 		SK_TAS[0] = 1 / (R_TAS + SH_TAS[2] * (P[3][3] * SH_TAS[2] + P[4][3] * SH_TAS[1] - P[22][3] * SH_TAS[2] - P[23][3] * SH_TAS[1] + P[5][3] * vd *SH_TAS[0]) + SH_TAS[1] * (P[3][4] * SH_TAS[2] + P[4][4] * SH_TAS[1] - P[22][4] * SH_TAS[2] - P[23][4] * SH_TAS[1] + P[5][4] * vd *SH_TAS[0]) - SH_TAS[2] * (P[3][22] * SH_TAS[2] + P[4][22] * SH_TAS[1] - P[22][22] * SH_TAS[2] - P[23][22] * SH_TAS[1] + P[5][22] * vd *SH_TAS[0]) - SH_TAS[1] * (P[3][23] * SH_TAS[2] + P[4][23] * SH_TAS[1] - P[22][23] * SH_TAS[2] - P[23][23] * SH_TAS[1] + P[5][23] * vd *SH_TAS[0]) + vd *SH_TAS[0] * (P[3][5] * SH_TAS[2] + P[4][5] * SH_TAS[1] - P[22][5] * SH_TAS[2] - P[23][5] * SH_TAS[1] + P[5][5] * vd *SH_TAS[0]));
 		SK_TAS[1] = SH_TAS[1];
 
-		// Calculate the innovation variance
-		_airspeed_innov_var = 1.0f / SK_TAS[0];
-
 		Kfusion[0] = SK_TAS[0]*(P[0][3]*SH_TAS[2] - P[0][22]*SH_TAS[2] + P[0][4]*SK_TAS[1] - P[0][23]*SK_TAS[1] + P[0][5]*vd*SH_TAS[0]);
 		Kfusion[1] = SK_TAS[0]*(P[1][3]*SH_TAS[2] - P[1][22]*SH_TAS[2] + P[1][4]*SK_TAS[1] - P[1][23]*SK_TAS[1] + P[1][5]*vd*SH_TAS[0]);
 		Kfusion[2] = SK_TAS[0]*(P[2][3]*SH_TAS[2] - P[2][22]*SH_TAS[2] + P[2][4]*SK_TAS[1] - P[2][23]*SK_TAS[1] + P[2][5]*vd*SH_TAS[0]);
@@ -118,6 +115,9 @@ void Ekf::fuseAirspeed()
 
 		// calculate measurement innovation
 		_airspeed_innov = v_tas_pred - _airspeed_sample_delayed.airspeed; // This is TAS, maybe we should indicate that in some way
+
+		// Calculate the innovation variance
+		_airspeed_innov_var = 1.0f / SK_TAS[0];
 
 		// by definition the angle error state is zero at the fusion time
 		_state.ang_error.setZero();
