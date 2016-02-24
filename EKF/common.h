@@ -101,7 +101,7 @@ struct rangeSample {
 };
 
 struct airspeedSample {
-	float       airspeed;	// airspeed measurement in m/s
+	float       airspeed;	// true airspeed measurement in m/s
 	uint64_t    time_us;	// timestamp in microseconds
 };
 
