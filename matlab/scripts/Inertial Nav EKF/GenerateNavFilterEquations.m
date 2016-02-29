@@ -289,7 +289,7 @@ K_MAGS = (Psimple*transpose(H_MAGS))/(H_MAGS*Psimple*transpose(H_MAGS) + R_DECL)
 %[K_MAGS,SK_MAGS]=OptimiseAlgebra(K_MAGS,'SK_MAGS');
 ccode(K_MAGS,'file','calcK_MAGS.c');
 
-%% derive equations for fusion of yaw measurements
+%% derive equations for fusion of 321 sequence yaw measurement
 
 % rotate X body axis into earth axes
 yawVec = Tbn*[1;0;0];
@@ -305,6 +305,18 @@ ccode(H_YAW,'file','calcH_YAW.c');
 K_YAW = (P*transpose(H_YAW))/(H_YAW*P*transpose(H_YAW) + R_YAW);
 %K_MAGS = simplify(K_MAGS);
 ccode(K_YAW,'file','calcK_YAW.c');
+
+%% derive equations for fusion of 312 sequence yaw measurement
+
+Tnb = transpose(Tbn);
+% Calculate the yaw angle of the projection
+angMeas = atan(-Tnb(2,1)/Tnb(2,2));
+H_YAW2 = jacobian(angMeas,stateVector); % measurement Jacobian
+H_YAW2 = subs(H_YAW2, {'rotErrX', 'rotErrY', 'rotErrZ'}, {0,0,0});
+%ccode(H_YAW2,'file','calcH_YAW2.c');
+% Calculate Kalman gain vector
+K_YAW2 = (P*transpose(H_YAW2))/(H_YAW2*P*transpose(H_YAW2) + R_YAW);
+ccode([K_YAW2;H_YAW2'],'file','calcYAW2.c');
 
 %% derive equations for fusion of synthetic deviation measurement
 % used to keep correct heading when operating without absolute position or
