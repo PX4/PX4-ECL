@@ -187,8 +187,11 @@ private:
 	// ekf sequential fusion of magnetometer measurements
 	void fuseMag();
 
-	// fuse heading measurement (currently uses estimate from magnetometer)
-	void fuseHeading();
+	// fuse the first euler angle from a 321 rotation sequence as the observation (currently measures yaw using the magnetometer)
+	void fuseHeading321();
+
+	// fuse the first euler angle from a 312 rotation sequence as the observation (currently measures yaw using the magnetoemter
+	void fuseHeading312();
 
 	// fuse projecton of magnetometer onto horizontal plane
 	void fuseMag2D();

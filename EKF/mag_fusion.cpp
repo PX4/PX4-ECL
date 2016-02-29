@@ -484,7 +484,7 @@ void Ekf::fuseMag()
 	}
 }
 
-void Ekf::fuseHeading()
+void Ekf::fuseHeading321()
 {
 	// assign intermediate state variables
 	float q0 = _state.quat_nominal(0);
@@ -1003,6 +1003,225 @@ void Ekf::fuseMag2D()
 	for (uint8_t row = 0; row < 16; row++) {
 		for (uint8_t col = 0; col < 16; col++) {
 			P[row][col] -= Kfusion[row] * HP[col];
+		}
+	}
+
+	makeSymmetrical();
+	limitCov();
+}
+
+void Ekf::fuseHeading312()
+{
+	// assign intermediate state variables
+	float q0 = _state.quat_nominal(0);
+	float q1 = _state.quat_nominal(1);
+	float q2 = _state.quat_nominal(2);
+	float q3 = _state.quat_nominal(3);
+
+	float R_YAW = fmaxf(_params.mag_heading_noise, 1.0e-2f);
+	R_YAW = R_YAW * R_YAW;
+
+	// calculate intermediate variables
+	float t2 = q0 * q0;
+	float t3 = q1 * q1;
+	float t4 = q2 * q2;
+	float t5 = q3 * q3;
+	float t6 = t2 - t3 + t4 - t5;
+	float t7 = q0 * q3 * 2.0f;
+	float t10 = q1 * q2 * 2.0f;
+	float t8 = t7 - t10;
+	float t9 = 1.0f / (t6 * t6);
+	float t11 = t8 * t8;
+	float t12 = t9 * t11;
+	float t13 = t12 + 1.0f;
+	float t14 = 1.0f / t13;
+	float t15 = 1.0f / t6;
+	float t16 = q0 * q2 * 2.0f;
+	float t17 = q1 * q3 * 2.0f;
+	float t18 = t16 + t17;
+	float t19 = t15 * t18;
+	float t20 = q0 * q1 * 2.0f;
+	float t28 = q2 * q3 * 2.0f;
+	float t21 = t20 - t28;
+	float t29 = t8 * t9 * t21;
+	float t22 = t19 - t29;
+	float t23 = t2 + t3 - t4 - t5;
+	float t24 = t15 * t23;
+	float t25 = t7 + t10;
+	float t26 = t8 * t9 * t25;
+	float t27 = t24 + t26;
+	float t30 = P[0][0] * t14 * t22;
+	float t31 = P[0][2] * t14 * t22;
+	float t37 = P[2][2] * t14 * t27;
+	float t32 = t31 - t37;
+	float t39 = P[2][0] * t14 * t27;
+	float t33 = t30 - t39;
+	float t34 = t14 * t22 * t33;
+	float t38 = t14 * t27 * t32;
+	float t35 = R_YAW + t34 - t38;
+	_heading_innov_var = t35;
+
+	if (t35 >= R_YAW) {
+		// the innovation variance contribution from the state covariances is not negative, no fault
+		_fault_status.bad_mag_hdg = false;
+
+	} else {
+		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
+		_fault_status.bad_mag_hdg = true;
+
+		// we reinitialise the covariance matrix and abort this fusion step
+		initialiseCovariance();
+		return;
+	}
+
+	float t36 = 1.0f / t35;
+	float t40 = q0;
+	float t41 = q1;
+	float t42 = q2;
+	float t43 = q3;
+	float t44 = t40 * t40;
+	float t45 = t41 * t41;
+	float t46 = t42 * t42;
+	float t47 = t43 * t43;
+	float t48 = t44 - t45 + t46 - t47;
+	float t49 = t40 * t43 * 2.0f;
+	float t53 = t41 * t42 * 2.0f;
+	float t50 = t49 - t53;
+	float t51 = 1.0f / (t48 * t48);
+	float t52 = 1.0f / t48;
+	float t54 = t50 * t50;
+	float t55 = t51 * t54;
+	float t56 = t55 + 1.0f;
+	float t57 = 1.0f / t56;
+
+	// calculate Kalman gains
+	float Kfusion[24] = {};
+	Kfusion[0] = -t36 * (t30 - P[0][2] * t14 * t27);
+	Kfusion[1] = -t36 * (P[1][0] * t14 * t22 - P[1][2] * t14 * t27);
+	Kfusion[2] = t36 * (t37 - P[2][0] * t14 * t22);
+	Kfusion[3] = -t36 * (P[3][0] * t14 * t22 - P[3][2] * t14 * t27);
+	Kfusion[4] = -t36 * (P[4][0] * t14 * t22 - P[4][2] * t14 * t27);
+	Kfusion[5] = -t36 * (P[5][0] * t14 * t22 - P[5][2] * t14 * t27);
+	Kfusion[6] = -t36 * (P[6][0] * t14 * t22 - P[6][2] * t14 * t27);
+	Kfusion[7] = -t36 * (P[7][0] * t14 * t22 - P[7][2] * t14 * t27);
+	Kfusion[8] = -t36 * (P[8][0] * t14 * t22 - P[8][2] * t14 * t27);
+	Kfusion[9] = -t36 * (P[9][0] * t14 * t22 - P[9][2] * t14 * t27);
+	Kfusion[10] = -t36 * (P[10][0] * t14 * t22 - P[10][2] * t14 * t27);
+	Kfusion[11] = -t36 * (P[11][0] * t14 * t22 - P[11][2] * t14 * t27);
+	Kfusion[12] = -t36 * (P[12][0] * t14 * t22 - P[12][2] * t14 * t27);
+	Kfusion[13] = -t36 * (P[13][0] * t14 * t22 - P[13][2] * t14 * t27);
+	Kfusion[14] = -t36 * (P[14][0] * t14 * t22 - P[14][2] * t14 * t27);
+	Kfusion[15] = -t36 * (P[15][0] * t14 * t22 - P[15][2] * t14 * t27);
+
+	/* we won't be using these states because we are doing heading fusion
+	Kfusion[16] = -t36*(P[16][0]*t14*t22-P[16][2]*t14*t27);
+	Kfusion[17] = -t36*(P[17][0]*t14*t22-P[17][2]*t14*t27);
+	Kfusion[18] = -t36*(P[18][0]*t14*t22-P[18][2]*t14*t27);
+	Kfusion[19] = -t36*(P[19][0]*t14*t22-P[19][2]*t14*t27);
+	Kfusion[20] = -t36*(P[20][0]*t14*t22-P[20][2]*t14*t27);
+	Kfusion[21] = -t36*(P[21][0]*t14*t22-P[21][2]*t14*t27);
+	*/
+	// don't adjust these states if we are not using them
+	if (_control_status.flags.wind) {
+		Kfusion[22] = -t36 * (P[22][0] * t14 * t22 - P[22][2] * t14 * t27);
+		Kfusion[23] = -t36 * (P[23][0] * t14 * t22 - P[23][2] * t14 * t27);
+	}
+
+	// calculate observation jacobian
+	float H_YAW[3] = {};
+	H_YAW[0] = -t57 * (t52 * (t40 * t42 * 2.0f + t41 * t43 * 2.0f) - t50 * t51 * (t40 * t41 * 2.0f - t42 * t43 * 2.0f));
+	H_YAW[2] = t57 * (t52 * (t44 + t45 - t46 - t47) + t50 * t51 * (t49 + t53));
+
+	// Calculate the 312 sequence euler angles that rotate from earth to body frame
+	// See http://www.atacolorado.com/eulersequences.doc
+	Vector3f euler312;
+	euler312(1) = asinf(_R_prev(1, 2)); // second rotation (roll)
+	euler312(1) = atan2f(-_R_prev(0, 2) , _R_prev(2, 2)); // third rotation (pitch)
+	euler312(0) = atan2f(-_R_prev(1, 0) , _R_prev(1, 1)); // first rotation (yaw)
+
+	float predicted_hdg = euler312(0); // we will need the predicted heading to calculate the innovation
+
+	// Set the first rotation (yaw) to zero and rotate the measurements into earth frame
+	euler312(0) = 0.0f;
+
+	// Calculate the body to earth frame rotation matrix from the euler angles using a 312 rotation sequence
+	matrix::Dcm<float> R_to_earth;
+	float c2 = cosf(euler312(2));
+	float s2 = sinf(euler312(2));
+	float s1 = sinf(euler312(1));
+	float c1 = cosf(euler312(1));
+	float s0 = sinf(euler312(0));
+	float c0 = cosf(euler312(0));
+
+	R_to_earth(0, 0) = c0 * c2 - s0 * s1 * s2;
+	R_to_earth(1, 1) = c0 * c1;
+	R_to_earth(2, 2) = c2 * c1;
+	R_to_earth(0, 1) = -c1 * s0;
+	R_to_earth(0, 2) = s2 * c0 + c2 * s1 * s0;
+	R_to_earth(1, 0) = c2 * s0 + s2 * s1 * c0;
+	R_to_earth(1, 2) = s0 * s2 - s1 * c0 * c2;
+	R_to_earth(2, 0) = -s2 * c1;
+	R_to_earth(2, 1) = s1;
+
+	matrix::Vector3f mag_earth_pred = R_to_earth * _mag_sample_delayed.mag;
+
+	// Use the difference between the horizontal projection and declination to give the measured heading
+	float measured_hdg = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + _mag_declination;
+
+	// wrap the heading to the interval between +-pi
+	measured_hdg = matrix::wrap_pi(measured_hdg);
+
+	// calculate the innovation
+	_heading_innov = predicted_hdg - measured_hdg;
+
+	// wrap the innovation to the interval between +-pi
+	_heading_innov = matrix::wrap_pi(_heading_innov);
+
+	// innovation test ratio
+	_yaw_test_ratio = sq(_heading_innov) / (sq(math::max(_params.heading_innov_gate, 1.0f)) * _heading_innov_var);
+
+	// set the magnetometer unhealthy if the test fails
+	if (_yaw_test_ratio > 1.0f) {
+		_mag_healthy = false;
+
+		// if we are in air we don't want to fuse the measurement
+		// we allow to use it when on the ground because the large innovation could be caused
+		// by interference or a large initial gyro bias
+		if (_control_status.flags.in_air) {
+			return;
+
+		} else {
+			// constrain the innovation to the maximum set by the gate
+			float gate_limit = sqrtf((sq(math::max(_params.heading_innov_gate, 1.0f)) * _heading_innov_var));
+			_heading_innov = math::constrain(_heading_innov, -gate_limit, gate_limit);
+		}
+
+	} else {
+		_mag_healthy = true;
+	}
+
+	// zero the attitude error states and use the kalman gain vector and innovation to update the states
+	_state.ang_error.setZero();
+	fuse(Kfusion, _heading_innov);
+
+	// correct the nominal quaternion
+	Quaternion dq;
+	dq.from_axis_angle(_state.ang_error);
+	_state.quat_nominal = dq * _state.quat_nominal;
+	_state.quat_nominal.normalize();
+
+	// update the covariance matrix taking advantage of the reduced size of H_YAW
+	float HP[_k_num_states] = {};
+
+	for (unsigned column = 0; column < _k_num_states; column++) {
+		for (unsigned row = 1; row <= 2; row++) {
+			HP[column] += H_YAW[row] * P[row][column];
+		}
+	}
+
+	for (unsigned row = 0; row < _k_num_states; row++) {
+		for (unsigned column = 0; column < _k_num_states; column++) {
+			P[row][column] -= Kfusion[row] * HP[column];
 		}
 	}
 
