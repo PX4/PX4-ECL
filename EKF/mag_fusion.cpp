@@ -1135,9 +1135,9 @@ void Ekf::fuseHeading312()
 	// Calculate the 312 sequence euler angles that rotate from earth to body frame
 	// See http://www.atacolorado.com/eulersequences.doc
 	Vector3f euler312;
-	euler312(1) = asinf(_R_prev(1, 2)); // second rotation (roll)
-	euler312(1) = atan2f(-_R_prev(0, 2) , _R_prev(2, 2)); // third rotation (pitch)
 	euler312(0) = atan2f(-_R_prev(1, 0) , _R_prev(1, 1)); // first rotation (yaw)
+	euler312(1) = asinf(_R_prev(1, 2)); // second rotation (roll)
+	euler312(2) = atan2f(-_R_prev(0, 2) , _R_prev(2, 2)); // third rotation (pitch)
 
 	float predicted_hdg = euler312(0); // we will need the predicted heading to calculate the innovation
 
