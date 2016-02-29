@@ -1030,11 +1030,27 @@ void Ekf::fuseHeading312()
 	float t7 = q0 * q3 * 2.0f;
 	float t10 = q1 * q2 * 2.0f;
 	float t8 = t7 - t10;
-	float t9 = 1.0f / (t6 * t6);
+	float t9;
+
+	if (fabsf(t6) > 1e-3f) {
+		t9 = 1.0f / (t6 * t6);
+
+	} else {
+		return;
+	}
+
 	float t11 = t8 * t8;
 	float t12 = t9 * t11;
 	float t13 = t12 + 1.0f;
-	float t14 = 1.0f / t13;
+	float t14;
+
+	if (fabsf(t13) > 1e-6f) {
+		t14 = 1.0f / t13;
+
+	} else {
+		return;
+	}
+
 	float t15 = 1.0f / t6;
 	float t16 = q0 * q2 * 2.0f;
 	float t17 = q1 * q3 * 2.0f;
