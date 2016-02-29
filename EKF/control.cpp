@@ -131,16 +131,9 @@ void Ekf::controlFusionModes()
 		}
 
 	} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_HEADING) {
-		// always use yaw fusion unless tilt is over 45 deg, otherwise use 2D fusion
-		if (_R_prev(2, 2) > 0.7071f) {
-			_control_status.flags.mag_hdg = true;
-			_control_status.flags.mag_2D = false;
-
-		} else {
-			_control_status.flags.mag_hdg = false;
-			_control_status.flags.mag_2D = true;
-		}
-
+		// always use yaw fusion
+		_control_status.flags.mag_hdg = true;
+		_control_status.flags.mag_2D = false;
 		_control_status.flags.mag_3D = false;
 
 	} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_2D) {
