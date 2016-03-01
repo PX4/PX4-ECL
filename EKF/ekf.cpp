@@ -115,11 +115,11 @@ bool Ekf::init(uint64_t timestamp)
 	_output_new.vel.setZero();
 	_output_new.pos.setZero();
 	_output_new.quat_nominal = matrix::Quaternion<float>();
-    
+
 	_delta_angle_corr.setZero();
 	_delta_vel_corr.setZero();
 	_vel_corr.setZero();
-    
+
 	_imu_down_sampled.delta_ang.setZero();
 	_imu_down_sampled.delta_vel.setZero();
 	_imu_down_sampled.delta_ang_dt = 0.0f;
@@ -180,7 +180,14 @@ bool Ekf::update()
 			fuseMag2D();
 
 		} else if (_control_status.flags.mag_hdg && _control_status.flags.yaw_align) {
-			fuseHeading();
+			// fusion of a Euler yaw angle from either a 321 or 312 rotation sequence
+			// choose the sequence furhtest from it's associate singularity
+			if (fabsf(_R_prev(0, 2)) < fabsf(_R_prev(1, 2))) {
+				fuseHeading321();
+
+			} else {
+				fuseHeading312();
+			}
 
 		} else {
 			// do no fusion at all

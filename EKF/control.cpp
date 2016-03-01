@@ -106,8 +106,8 @@ void Ekf::controlFusionModes()
 	if (_params.mag_fusion_type == MAG_FUSE_TYPE_AUTO) {
 		if (!_control_status.flags.armed) {
 			// always use 2D mag fusion for initial startup
-			_control_status.flags.mag_hdg = false;
-			_control_status.flags.mag_2D = true;
+			_control_status.flags.mag_hdg = true;
+			_control_status.flags.mag_2D = false;
 			_control_status.flags.mag_3D = false;
 
 		} else {
@@ -123,24 +123,17 @@ void Ekf::controlFusionModes()
 				_control_status.flags.mag_3D = true;
 
 			} else {
-				// always use 2D mag fusion when on the ground
-				_control_status.flags.mag_hdg = false;
-				_control_status.flags.mag_2D = true;
+				// always use heading mag fusion when on the ground
+				_control_status.flags.mag_hdg = true;
+				_control_status.flags.mag_2D = false;
 				_control_status.flags.mag_3D = false;
 			}
 		}
 
 	} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_HEADING) {
-		// always use yaw fusion unless tilt is over 45 deg, otherwise use 2D fusion
-		if (_R_prev(2, 2) > 0.7071f) {
-			_control_status.flags.mag_hdg = true;
-			_control_status.flags.mag_2D = false;
-
-		} else {
-			_control_status.flags.mag_hdg = false;
-			_control_status.flags.mag_2D = true;
-		}
-
+		// always use yaw fusion
+		_control_status.flags.mag_hdg = true;
+		_control_status.flags.mag_2D = false;
 		_control_status.flags.mag_3D = false;
 
 	} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_2D) {
