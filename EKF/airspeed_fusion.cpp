@@ -86,7 +86,13 @@ void Ekf::fuseAirspeed()
 		H_TAS[23] = -SH_TAS[1];
 	
 		// intermediate variables - note SK_TAS[0] is 1/(innovation variance)
-		SK_TAS[0] = 1 / (R_TAS + SH_TAS[2] * (P[3][3] * SH_TAS[2] + P[4][3] * SH_TAS[1] - P[22][3] * SH_TAS[2] - P[23][3] * SH_TAS[1] + P[5][3] * vd *SH_TAS[0]) + SH_TAS[1] * (P[3][4] * SH_TAS[2] + P[4][4] * SH_TAS[1] - P[22][4] * SH_TAS[2] - P[23][4] * SH_TAS[1] + P[5][4] * vd *SH_TAS[0]) - SH_TAS[2] * (P[3][22] * SH_TAS[2] + P[4][22] * SH_TAS[1] - P[22][22] * SH_TAS[2] - P[23][22] * SH_TAS[1] + P[5][22] * vd *SH_TAS[0]) - SH_TAS[1] * (P[3][23] * SH_TAS[2] + P[4][23] * SH_TAS[1] - P[22][23] * SH_TAS[2] - P[23][23] * SH_TAS[1] + P[5][23] * vd *SH_TAS[0]) + vd *SH_TAS[0] * (P[3][5] * SH_TAS[2] + P[4][5] * SH_TAS[1] - P[22][5] * SH_TAS[2] - P[23][5] * SH_TAS[1] + P[5][5] * vd *SH_TAS[0]));
+		float temp = (R_TAS + SH_TAS[2] * (P[3][3] * SH_TAS[2] + P[4][3] * SH_TAS[1] - P[22][3] * SH_TAS[2] - P[23][3] * SH_TAS[1] + P[5][3] * vd *SH_TAS[0]) + SH_TAS[1] * (P[3][4] * SH_TAS[2] + P[4][4] * SH_TAS[1] - P[22][4] * SH_TAS[2] - P[23][4] * SH_TAS[1] + P[5][4] * vd *SH_TAS[0]) - SH_TAS[2] * (P[3][22] * SH_TAS[2] + P[4][22] * SH_TAS[1] - P[22][22] * SH_TAS[2] - P[23][22] * SH_TAS[1] + P[5][22] * vd *SH_TAS[0]) - SH_TAS[1] * (P[3][23] * SH_TAS[2] + P[4][23] * SH_TAS[1] - P[22][23] * SH_TAS[2] - P[23][23] * SH_TAS[1] + P[5][23] * vd *SH_TAS[0]) + vd *SH_TAS[0] * (P[3][5] * SH_TAS[2] + P[4][5] * SH_TAS[1] - P[22][5] * SH_TAS[2] - P[23][5] * SH_TAS[1] + P[5][5] * vd *SH_TAS[0]));
+		if (temp >= R_TAS) {
+            SK_TAS[0] = 1 / temp;
+        } else {
+            initialiseCovariance();
+            return;
+        }
 		SK_TAS[1] = SH_TAS[1];
 
 		Kfusion[0] = SK_TAS[0]*(P[0][3]*SH_TAS[2] - P[0][22]*SH_TAS[2] + P[0][4]*SK_TAS[1] - P[0][23]*SK_TAS[1] + P[0][5]*vd*SH_TAS[0]);
