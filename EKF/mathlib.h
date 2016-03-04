@@ -43,7 +43,7 @@
 #ifdef POSIX_SHARED
 // #include <Eigen/Dense>
 // #include <algorithm>
-#include "Limits.hpp"
+// #include "Limits.hpp"
 #define M_PI_F 3.14159265358979323846f
 #define constexpr
 
@@ -52,9 +52,12 @@ namespace math
 // using namespace Eigen;
 using namespace std;
 
+float min(float val1, float val2);
+float max(float val1, float val2);
 float constrain(float &val, float min, float max);
 float radians(float degrees);
 float degrees(float radians);
+
 }
 #else
 #include <mathlib/mathlib.h>
