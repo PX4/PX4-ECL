@@ -95,6 +95,7 @@
 *
 */
 
+#include <stdint.h>
 #include "geo.h"
 
 /** set this always to the sampling in degrees for the table below */
