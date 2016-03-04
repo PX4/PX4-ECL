@@ -85,11 +85,11 @@ void Ekf::fuseAirspeed()
 		H_TAS[22] = -SH_TAS[2];
 		H_TAS[23] = -SH_TAS[1];
 	
-		// intermediate variables - note SK_TAS[0] is 1/(innovation variance)
-		float temp = (R_TAS + SH_TAS[2] * (P[3][3] * SH_TAS[2] + P[4][3] * SH_TAS[1] - P[22][3] * SH_TAS[2] - P[23][3] * SH_TAS[1] + P[5][3] * vd *SH_TAS[0]) + SH_TAS[1] * (P[3][4] * SH_TAS[2] + P[4][4] * SH_TAS[1] - P[22][4] * SH_TAS[2] - P[23][4] * SH_TAS[1] + P[5][4] * vd *SH_TAS[0]) - SH_TAS[2] * (P[3][22] * SH_TAS[2] + P[4][22] * SH_TAS[1] - P[22][22] * SH_TAS[2] - P[23][22] * SH_TAS[1] + P[5][22] * vd *SH_TAS[0]) - SH_TAS[1] * (P[3][23] * SH_TAS[2] + P[4][23] * SH_TAS[1] - P[22][23] * SH_TAS[2] - P[23][23] * SH_TAS[1] + P[5][23] * vd *SH_TAS[0]) + vd *SH_TAS[0] * (P[3][5] * SH_TAS[2] + P[4][5] * SH_TAS[1] - P[22][5] * SH_TAS[2] - P[23][5] * SH_TAS[1] + P[5][5] * vd *SH_TAS[0]));
-		if (temp >= R_TAS) {
-            SK_TAS[0] = 1 / temp;
-        } else {
+		// We don't want to update the innovation variance if the calculation is ill conditioned
+		float _airspeed_innov_var_temp = (R_TAS + SH_TAS[2] * (P[3][3] * SH_TAS[2] + P[4][3] * SH_TAS[1] - P[22][3] * SH_TAS[2] - P[23][3] * SH_TAS[1] + P[5][3] * vd *SH_TAS[0]) + SH_TAS[1] * (P[3][4] * SH_TAS[2] + P[4][4] * SH_TAS[1] - P[22][4] * SH_TAS[2] - P[23][4] * SH_TAS[1] + P[5][4] * vd *SH_TAS[0]) - SH_TAS[2] * (P[3][22] * SH_TAS[2] + P[4][22] * SH_TAS[1] - P[22][22] * SH_TAS[2] - P[23][22] * SH_TAS[1] + P[5][22] * vd *SH_TAS[0]) - SH_TAS[1] * (P[3][23] * SH_TAS[2] + P[4][23] * SH_TAS[1] - P[22][23] * SH_TAS[2] - P[23][23] * SH_TAS[1] + P[5][23] * vd *SH_TAS[0]) + vd *SH_TAS[0] * (P[3][5] * SH_TAS[2] + P[4][5] * SH_TAS[1] - P[22][5] * SH_TAS[2] - P[23][5] * SH_TAS[1] + P[5][5] * vd *SH_TAS[0]));
+		if (_airspeed_innov_var_temp >= R_TAS) { // Check for badly conditioned calculation
+            SK_TAS[0] = 1.0f / _airspeed_innov_var_temp;
+        } else { // Reset the estimator
             initialiseCovariance();
             return;
         }
@@ -111,20 +111,33 @@ void Ekf::fuseAirspeed()
 		Kfusion[13] = SK_TAS[0]*(P[13][3]*SH_TAS[2] - P[13][22]*SH_TAS[2] + P[13][4]*SK_TAS[1] - P[13][23]*SK_TAS[1] + P[13][5]*vd*SH_TAS[0]);
 		Kfusion[14] = SK_TAS[0]*(P[14][3]*SH_TAS[2] - P[14][22]*SH_TAS[2] + P[14][4]*SK_TAS[1] - P[14][23]*SK_TAS[1] + P[14][5]*vd*SH_TAS[0]);
 		Kfusion[15] = SK_TAS[0]*(P[15][3]*SH_TAS[2] - P[15][22]*SH_TAS[2] + P[15][4]*SK_TAS[1] - P[15][23]*SK_TAS[1] + P[15][5]*vd*SH_TAS[0]);
-		Kfusion[16] = SK_TAS[0]*(P[16][3]*SH_TAS[2] - P[16][22]*SH_TAS[2] + P[16][4]*SK_TAS[1] - P[16][23]*SK_TAS[1] + P[16][5]*vd*SH_TAS[0]);
-		Kfusion[17] = SK_TAS[0]*(P[17][3]*SH_TAS[2] - P[17][22]*SH_TAS[2] + P[17][4]*SK_TAS[1] - P[17][23]*SK_TAS[1] + P[17][5]*vd*SH_TAS[0]);
-		Kfusion[18] = SK_TAS[0]*(P[18][3]*SH_TAS[2] - P[18][22]*SH_TAS[2] + P[18][4]*SK_TAS[1] - P[18][23]*SK_TAS[1] + P[18][5]*vd*SH_TAS[0]);
-		Kfusion[19] = SK_TAS[0]*(P[19][3]*SH_TAS[2] - P[19][22]*SH_TAS[2] + P[19][4]*SK_TAS[1] - P[19][23]*SK_TAS[1] + P[19][5]*vd*SH_TAS[0]);
-		Kfusion[20] = SK_TAS[0]*(P[20][3]*SH_TAS[2] - P[20][22]*SH_TAS[2] + P[20][4]*SK_TAS[1] - P[20][23]*SK_TAS[1] + P[20][5]*vd*SH_TAS[0]);
-		Kfusion[21] = SK_TAS[0]*(P[21][3]*SH_TAS[2] - P[21][22]*SH_TAS[2] + P[21][4]*SK_TAS[1] - P[21][23]*SK_TAS[1] + P[21][5]*vd*SH_TAS[0]);
 		Kfusion[22] = SK_TAS[0]*(P[22][3]*SH_TAS[2] - P[22][22]*SH_TAS[2] + P[22][4]*SK_TAS[1] - P[22][23]*SK_TAS[1] + P[22][5]*vd*SH_TAS[0]);
 		Kfusion[23] = SK_TAS[0]*(P[23][3]*SH_TAS[2] - P[23][22]*SH_TAS[2] + P[23][4]*SK_TAS[1] - P[23][23]*SK_TAS[1] + P[23][5]*vd*SH_TAS[0]);
+
+		// Only update the magnetometer states if we are airborne and using 3D mag fusion
+		if(_control_status.flags.mag_3D && _control_status.flags.in_air){
+			Kfusion[16] = SK_TAS[0]*(P[16][3]*SH_TAS[2] - P[16][22]*SH_TAS[2] + P[16][4]*SK_TAS[1] - P[16][23]*SK_TAS[1] + P[16][5]*vd*SH_TAS[0]);
+			Kfusion[17] = SK_TAS[0]*(P[17][3]*SH_TAS[2] - P[17][22]*SH_TAS[2] + P[17][4]*SK_TAS[1] - P[17][23]*SK_TAS[1] + P[17][5]*vd*SH_TAS[0]);
+			Kfusion[18] = SK_TAS[0]*(P[18][3]*SH_TAS[2] - P[18][22]*SH_TAS[2] + P[18][4]*SK_TAS[1] - P[18][23]*SK_TAS[1] + P[18][5]*vd*SH_TAS[0]);
+			Kfusion[19] = SK_TAS[0]*(P[19][3]*SH_TAS[2] - P[19][22]*SH_TAS[2] + P[19][4]*SK_TAS[1] - P[19][23]*SK_TAS[1] + P[19][5]*vd*SH_TAS[0]);
+			Kfusion[20] = SK_TAS[0]*(P[20][3]*SH_TAS[2] - P[20][22]*SH_TAS[2] + P[20][4]*SK_TAS[1] - P[20][23]*SK_TAS[1] + P[20][5]*vd*SH_TAS[0]);
+			Kfusion[21] = SK_TAS[0]*(P[21][3]*SH_TAS[2] - P[21][22]*SH_TAS[2] + P[21][4]*SK_TAS[1] - P[21][23]*SK_TAS[1] + P[21][5]*vd*SH_TAS[0]);
+		}
+		else{
+			for(int i=16; i<=21, i++){
+				Kfusion[i] = 0.0f;
+			}
+		}
+
 
 		// calculate measurement innovation
 		_airspeed_innov = v_tas_pred - _airspeed_sample_delayed.airspeed; // This is TAS, maybe we should indicate that in some way
 
 		// Calculate the innovation variance
 		_airspeed_innov_var = 1.0f / SK_TAS[0];
+
+        // Compute the ratio of innovation to gate size
+        _tas_test_ratio = sq(_airspeed_innov) / (sq(fmaxf(_params.vel_innov_gate, 1.0f)) * _airspeed_innov_var);
 
 		// by definition the angle error state is zero at the fusion time
 		_state.ang_error.setZero();
