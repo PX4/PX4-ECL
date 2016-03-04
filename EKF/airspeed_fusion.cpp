@@ -124,7 +124,8 @@ void Ekf::fuseAirspeed()
 			Kfusion[21] = SK_TAS[0]*(P[21][3]*SH_TAS[2] - P[21][22]*SH_TAS[2] + P[21][4]*SK_TAS[1] - P[21][23]*SK_TAS[1] + P[21][5]*vd*SH_TAS[0]);
 		}
 		else{
-			for(int i=16; i<=21, i++){
+			for (int i = 16; i <= 21, i++)
+			{
 				Kfusion[i] = 0.0f;
 			}
 		}
@@ -136,51 +137,50 @@ void Ekf::fuseAirspeed()
 		// Calculate the innovation variance
 		_airspeed_innov_var = 1.0f / SK_TAS[0];
 
-        // Compute the ratio of innovation to gate size
-        _tas_test_ratio = sq(_airspeed_innov) / (sq(fmaxf(_params.vel_innov_gate, 1.0f)) * _airspeed_innov_var);
+		// Compute the ratio of innovation to gate size
+		_tas_test_ratio = sq(_airspeed_innov) / (sq(fmaxf(_params.tas_innov_gate, 1.0f)) * _airspeed_innov_var);
 
-		// by definition the angle error state is zero at the fusion time
-		_state.ang_error.setZero();
-
-		// Fuse airspeed measurement
-		fuse(Kfusion, _airspeed_innov); //Why calculate angle error when it is always zero?
-
-		// correct the nominal quaternion
-		Quaternion dq;
-		dq.from_axis_angle(_state.ang_error);
-		_state.quat_nominal = dq * _state.quat_nominal;
-		_state.quat_nominal.normalize();
-
-		// update covariance matrix via Pnew = (I - KH)P = P - KHP
-		float KH[_k_num_states][_k_num_states] = {};
-		float KHP[_k_num_states][_k_num_states] = {};
-
-		for (unsigned row = 0; row < _k_num_states; row++)
+		if (_tas_test_ratio < 1.0f)
 		{
-			for (unsigned column = 0; column < _k_num_states; column++) { // Here it will be a lot of zeros, should optimize that...
-				KH[row][column] = Kfusion[row] * H_TAS[column];
+			// by definition the angle error state is zero at the fusion time
+			_state.ang_error.setZero();
+
+			// Fuse airspeed measurement
+			fuse(Kfusion, _airspeed_innov); //Why calculate angle error when it is always zero?
+
+			// correct the nominal quaternion
+			Quaternion dq;
+			dq.from_axis_angle(_state.ang_error);
+			_state.quat_nominal = dq * _state.quat_nominal;
+			_state.quat_nominal.normalize();
+
+			// update covariance matrix via Pnew = (I - KH)P = P - KHP
+			float KH[_k_num_states][_k_num_states] = {};
+			float KHP[_k_num_states][_k_num_states] = {};
+
+			for (unsigned row = 0; row < _k_num_states; row++) {
+				for (unsigned column = 0; column < _k_num_states; column++) { // Here it will be a lot of zeros, should optimize that...
+					KH[row][column] = Kfusion[row] * H_TAS[column];
+				}
 			}
-		}
 
-		for (unsigned row = 0; row < _k_num_states; row++)
-		{
-			for (unsigned column = 0; column < _k_num_states; column++) {
-				for (unsigned i = 0; i < _k_num_states; i++) { // Check if this is correct matrix multiplication!
-					KHP[row][column] += KH[row][i] * P[i][column];
+			for (unsigned row = 0; row < _k_num_states; row++) {
+				for (unsigned column = 0; column < _k_num_states; column++) {
+					for (unsigned i = 0; i < _k_num_states; i++) { // Check if this is correct matrix multiplication!
+						KHP[row][column] += KH[row][i] * P[i][column];
+					}
+				}
+			}
+
+			for (unsigned row = 0; row < _k_num_states; row++) {
+				for (unsigned column = 0; column < _k_num_states; column++) {
+					P[row][column] = P[row][column] - KHP[row][column];
 				}
 			}
 		}
 
-		for (unsigned row = 0; row < _k_num_states; row++)
-		{
-			for (unsigned column = 0; column < _k_num_states; column++) {
-				P[row][column] = P[row][column] - KHP[row][column];
-			}
-		}
-
-		makeSymmetrical();
+		makeSymmetrical(); 
 		limitCov();
-
 	}
-
+	// Do we want to force and limit the covariance matrx even if v_tas_pred < X ?
 }

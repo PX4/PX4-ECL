@@ -135,6 +135,7 @@ struct parameters {
 	float baro_innov_gate = 3.0f;       // barometric height innovation consistency gate size in standard deviations
 	float posNE_innov_gate = 3.0f;      // GPS horizontal position innovation consistency gate size in standard deviations
 	float vel_innov_gate = 3.0f;        // GPS velocity innovation consistency gate size in standard deviations
+	float tas_innov_gate = 3.0f;		// True Airspeed Innovation consistency gate size in standard deciation [WHAT SHALL THIS VALUE BE?]
 
 	float mag_heading_noise = 1.7e-1f;  // measurement noise used for simple heading fusion
 	float mag_noise = 5.0e-2f;          // measurement noise used for 3-axis magnetoemeter fusion
