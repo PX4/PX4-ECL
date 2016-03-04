@@ -124,7 +124,7 @@ void Ekf::fuseAirspeed()
 			Kfusion[21] = SK_TAS[0]*(P[21][3]*SH_TAS[2] - P[21][22]*SH_TAS[2] + P[21][4]*SK_TAS[1] - P[21][23]*SK_TAS[1] + P[21][5]*vd*SH_TAS[0]);
 		}
 		else{
-			for (int i = 16; i <= 21, i++)
+			for (int i = 16; i <= 21; i++)
 			{
 				Kfusion[i] = 0.0f;
 			}
