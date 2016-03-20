@@ -155,13 +155,13 @@ struct extVisionSample {
 #define MASK_USE_GPS    (1<<0)  // set to true to use GPS data
 #define MASK_USE_OF     (1<<1)  // set to true to use optical flow data
 #define MASK_USE_EVPOS	(1<<2)  // set to true to use external vision NED position data
-#define MASK_USE_EVYAW  (2<<3)	// set to true to use exernal vision quaternion data for yaw
 
 // Integer definitions for mag_fusion_type
 #define MAG_FUSE_TYPE_AUTO      0   // The selection of either heading or 3D magnetometer fusion will be automatic
 #define MAG_FUSE_TYPE_HEADING   1   // Simple yaw angle fusion will always be used. This is less accurate, but less affected by earth field distortions. It should not be used for pitch angles outside the range from -60 to +60 deg
 #define MAG_FUSE_TYPE_3D        2   // Magnetometer 3-axis fusion will always be used. This is more accurate, but more affected by localised earth field distortions
 #define MAG_FUSE_TYPE_2D        3   // A 2D fusion that uses the horizontal projection of the magnetic fields measurement will alays be used. This is less accurate, but less affected by earth field distortions.
+#define USE_EV_YAW		4   // Fuse yaw angle from external vision system
 
 // Maximum sensor intervals in usec
 #define GPS_MAX_INTERVAL	5e5
