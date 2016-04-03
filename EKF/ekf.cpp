@@ -306,8 +306,8 @@ bool Ekf::update()
 			_fuse_flow = false;
 		}
 
-		// TODO This is just to get the logic inside but we will only start fusion once we tested this again
-		if (_airspeed_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_airspeed_sample_delayed) && false) {
+		// Fuse airspeed if the data has fallen behind the fusion time horizon, we are airborne and the measured airspeed is above a defined threshold, now hardcoded to 5 m/s
+		if (_airspeed_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_airspeed_sample_delayed) && _in_air && _airspeed_sample_delayed.airspeed > 5.0f) {
 			fuseAirspeed();
 		}
 	}
