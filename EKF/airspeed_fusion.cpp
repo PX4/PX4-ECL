@@ -184,5 +184,4 @@ void Ekf::fuseAirspeed()
 		makeSymmetrical(); 
 		limitCov();
 	}
-	// Do we want to force and limit the covariance matrx even if v_tas_pred < X ?
 }
