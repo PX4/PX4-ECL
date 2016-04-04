@@ -42,6 +42,8 @@
 #include "ekf.h"
 #include "mathlib.h"
 
+#define MIN_AIRSPEED_MEAS 5.0f // We don't want to fuse airspeed if the measured airspeed is below this value, since the sensor is not accurate
+
 Ekf::Ekf():
 	_filter_initialised(false),
 	_earth_rate_initialised(false),
@@ -306,8 +308,8 @@ bool Ekf::update()
 			_fuse_flow = false;
 		}
 
-		// TODO This is just to get the logic inside but we will only start fusion once we tested this again
-		if (_airspeed_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_airspeed_sample_delayed) && false) {
+		// Fuse airspeed if the data has fallen behind the fusion time horizon, we are airborne and the measured airspeed is above a defined threshold
+		if (_airspeed_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_airspeed_sample_delayed) && _in_air && _airspeed_sample_delayed.true_airspeed > MIN_AIRSPEED_MEAS) {
 			fuseAirspeed();
 		}
 	}

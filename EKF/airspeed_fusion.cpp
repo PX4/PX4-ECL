@@ -70,10 +70,10 @@ void Ekf::fuseAirspeed()
 	v_tas_pred = sqrtf((ve - vwe) * (ve - vwe) + (vn - vwn) * (vn - vwn) + vd * vd);
 
 	// Perform fusion of True Airspeed measurement
-	if (v_tas_pred > 3.0f) {
+	if (v_tas_pred > 1.0f) {
 		// Calculate the observation jacobian
 		// intermediate variable from algebraic optimisation
-		SH_TAS[0] = 1 / (sqrt(sq(ve - vwe) + sq(vn - vwn) + sq(vd)));
+		SH_TAS[0] = 1 / v_tas_pred;
 		SH_TAS[1] = (SH_TAS[0] * (2 * ve - 2 * vwe)) / 2.0f;
 		SH_TAS[2] = (SH_TAS[0] * (2 * vn - 2 * vwn)) / 2.0f;
 
@@ -89,7 +89,9 @@ void Ekf::fuseAirspeed()
 		float _airspeed_innov_var_temp = (R_TAS + SH_TAS[2] * (P[3][3] * SH_TAS[2] + P[4][3] * SH_TAS[1] - P[22][3] * SH_TAS[2] - P[23][3] * SH_TAS[1] + P[5][3] * vd *SH_TAS[0]) + SH_TAS[1] * (P[3][4] * SH_TAS[2] + P[4][4] * SH_TAS[1] - P[22][4] * SH_TAS[2] - P[23][4] * SH_TAS[1] + P[5][4] * vd *SH_TAS[0]) - SH_TAS[2] * (P[3][22] * SH_TAS[2] + P[4][22] * SH_TAS[1] - P[22][22] * SH_TAS[2] - P[23][22] * SH_TAS[1] + P[5][22] * vd *SH_TAS[0]) - SH_TAS[1] * (P[3][23] * SH_TAS[2] + P[4][23] * SH_TAS[1] - P[22][23] * SH_TAS[2] - P[23][23] * SH_TAS[1] + P[5][23] * vd *SH_TAS[0]) + vd *SH_TAS[0] * (P[3][5] * SH_TAS[2] + P[4][5] * SH_TAS[1] - P[22][5] * SH_TAS[2] - P[23][5] * SH_TAS[1] + P[5][5] * vd *SH_TAS[0]));
 		if (_airspeed_innov_var_temp >= R_TAS) { // Check for badly conditioned calculation
             SK_TAS[0] = 1.0f / _airspeed_innov_var_temp;
+            _fault_status.bad_airspeed = false;
         } else { // Reset the estimator
+        	_fault_status.bad_airspeed = true;
             initialiseCovariance();
             return;
         }
@@ -132,7 +134,7 @@ void Ekf::fuseAirspeed()
 
 
 		// calculate measurement innovation
-		_airspeed_innov = v_tas_pred - _airspeed_sample_delayed.airspeed; // This is TAS, maybe we should indicate that in some way
+		_airspeed_innov = v_tas_pred - _airspeed_sample_delayed.true_airspeed; // This is TAS, maybe we should indicate that in some way
 
 		// Calculate the innovation variance
 		_airspeed_innov_var = 1.0f / SK_TAS[0];
@@ -182,5 +184,4 @@ void Ekf::fuseAirspeed()
 		makeSymmetrical(); 
 		limitCov();
 	}
-	// Do we want to force and limit the covariance matrx even if v_tas_pred < X ?
 }
