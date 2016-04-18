@@ -362,6 +362,12 @@ void Ekf::get_covariances(float *covariances)
 	}
 }
 
+// get the accelerometer bias for the body z axis
+void Ekf::get_accel_bias(float *bias)
+{
+	*bias = _state.accel_z_bias;
+}
+
 // get the position and height of the ekf origin in WGS-84 coordinates and time the origin was set
 void Ekf::get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt)
 {
