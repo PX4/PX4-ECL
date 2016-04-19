@@ -71,6 +71,13 @@ struct flow_message {
 	uint32_t dt;				// integration time of flow samples
 };
 
+struct ext_vision_message {
+	Vector3f posNED;  // measured NED position relative to the local origin (m)
+	Quaternion quat;  // measured quaternion orientation defining rotation from NED to body frame
+	float posErr;     // 1-Sigma spherical position accuracy (m)
+	float angErr;     // 1-Sigma angular error (rad)
+};
+
 struct outputSample {
 	Quaternion  quat_nominal;	// nominal quaternion describing vehicle attitude
 	Vector3f    vel;	// NED velocity estimate in earth frame in m/s
@@ -126,10 +133,19 @@ struct flowSample {
 	uint64_t time_us; // timestamp in microseconds of the integration period mid-point
 };
 
+struct extVisionSample {
+	Vector3f posNED;  // measured NED position relative to the local origin (m)
+	Quaternion quat;  // measured quaternion orientation defining rotation from NED to body frame
+	float posErr;     // 1-Sigma spherical position accuracy (m)
+	float angErr;     // 1-Sigma angular error (rad)
+	uint64_t time_us; // timestamp of the measurement in microseconds
+};
+
 // Integer definitions for vdist_sensor_type
 #define VDIST_SENSOR_BARO  0	// Use baro height
 #define VDIST_SENSOR_GPS   1	// Use GPS height
 #define VDIST_SENSOR_RANGE 2	// Use range finder height
+#define VDIST_SENSOR_EV    3    // USe external vision
 
 // Bit locations for mag_declination_source
 #define MASK_USE_GEO_DECL   (1<<0)  // set to true to use the declination from the geo library when the GPS position becomes available, set to false to always use the EKF2_MAG_DECL value
@@ -139,17 +155,20 @@ struct flowSample {
 // Bit locations for fusion_mode
 #define MASK_USE_GPS    (1<<0)  // set to true to use GPS data
 #define MASK_USE_OF     (1<<1)  // set to true to use optical flow data
+#define MASK_USE_EVPOS	(1<<2)  // set to true to use external vision NED position data
 
 // Integer definitions for mag_fusion_type
 #define MAG_FUSE_TYPE_AUTO      0   // The selection of either heading or 3D magnetometer fusion will be automatic
 #define MAG_FUSE_TYPE_HEADING   1   // Simple yaw angle fusion will always be used. This is less accurate, but less affected by earth field distortions. It should not be used for pitch angles outside the range from -60 to +60 deg
 #define MAG_FUSE_TYPE_3D        2   // Magnetometer 3-axis fusion will always be used. This is more accurate, but more affected by localised earth field distortions
 #define MAG_FUSE_TYPE_2D        3   // A 2D fusion that uses the horizontal projection of the magnetic fields measurement will alays be used. This is less accurate, but less affected by earth field distortions.
+#define USE_EV_YAW		4   // Fuse yaw angle from external vision system
 
 // Maximum sensor intervals in usec
 #define GPS_MAX_INTERVAL	5e5
 #define BARO_MAX_INTERVAL	2e5
 #define RNG_MAX_INTERVAL	2e5
+#define EV_MAX_INTERVAL		2e5
 
 struct parameters {
 	// measurement source control
@@ -163,6 +182,7 @@ struct parameters {
 	float airspeed_delay_ms;	// airspeed measurement delay relative to the IMU (msec)
 	float flow_delay_ms;		// optical flow measurement delay relative to the IMU (msec) - this is to the middle of the optical flow integration interval
 	float range_delay_ms;		// range finder measurement delay relative to the IMU (msec)
+	float ev_delay_ms;		// off-board vision measurement delay relative to the IMU (msec)
 
 	// input noise
 	float gyro_noise;		// IMU angular rate noise used for covariance prediction (rad/sec)
@@ -244,6 +264,7 @@ struct parameters {
 		airspeed_delay_ms = 200.0f;
 		flow_delay_ms = 5.0f;
 		range_delay_ms = 5.0f;
+		ev_delay_ms = 170.0f;
 
 		// input noise
 		gyro_noise = 6.0e-2f;
@@ -370,7 +391,9 @@ union filter_control_status_u {
 		uint16_t wind        : 1; // 10 - true when wind velocity is being estimated
 		uint16_t baro_hgt    : 1; // 11 - true when baro height is being fused as a primary height reference
 		uint16_t rng_hgt     : 1; // 12 - true when range finder height is being fused as a primary height reference
-		uint16_t gps_hgt     : 1; // 15 - true when range finder height is being fused as a primary height reference
+		uint16_t gps_hgt     : 1; // 13 - true when range finder height is being fused as a primary height reference
+		uint16_t ev_pos      : 1; // 14 - true when local position data from external vision is being fused
+		uint16_t ev_yaw      : 1; // 15 - true when yaw data from external vision measurements is being fused
 	} flags;
 	uint16_t value;
 };

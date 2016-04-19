@@ -62,6 +62,46 @@ void Ekf::controlFusionModes()
 		_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 	}
 
+	// external vision position aiding selection logic
+	if ((_params.fusion_mode & MASK_USE_EVPOS) && !_control_status.flags.ev_pos && _control_status.flags.tilt_align && _control_status.flags.yaw_align) {
+		// check for a exernal vision measurement that has fallen behind the fusion time horizon
+		if (_time_last_imu - _time_last_ext_vision < 2 * EV_MAX_INTERVAL) {
+			// turn on use of external vision measurements for position
+			_control_status.flags.ev_pos = true;
+			// reset the position, height and velocity
+			resetPosition();
+			resetVelocity();
+			resetHeight();
+		}
+	}
+
+	// external vision yaw aiding selection logic
+	if ((_params.mag_fusion_type == USE_EV_YAW) && !_control_status.flags.ev_yaw && _control_status.flags.tilt_align) {
+		// check for a exernal vision measurement that has fallen behind the fusion time horizon
+		if (_time_last_imu - _time_last_ext_vision < 2 * EV_MAX_INTERVAL) {
+			// reset the yaw angle to the value from the observaton quaternion
+			// get the roll, pitch, yaw estimates from the quaternion states
+			matrix::Quaternion<float> q_init(_state.quat_nominal(0), _state.quat_nominal(1), _state.quat_nominal(2),
+						    _state.quat_nominal(3));
+			matrix::Euler<float> euler_init(q_init);
+
+			// get initial yaw from the observation quaternion
+			extVisionSample ev_newest = _ext_vision_buffer.get_newest();
+			matrix::Quaternion<float> q_obs(ev_newest.quat(0), ev_newest.quat(1), ev_newest.quat(2), ev_newest.quat(3));
+			matrix::Euler<float> euler_obs(q_obs);
+			euler_init(2) = euler_obs(2);
+
+			// calculate initial quaternion states for the ekf
+			_state.quat_nominal = Quaternion(euler_init);
+
+			// flag the yaw as aligned
+			_control_status.flags.yaw_align = true;
+
+			// turn on fusion of external vision yaw measurements
+			_control_status.flags.ev_yaw = true;
+		}
+	}
+
 	// optical flow fusion mode selection logic
 	// to start using optical flow data we need angular alignment complete, and fresh optical flow and height above terrain data
 	if ((_params.fusion_mode & MASK_USE_OF) && !_control_status.flags.opt_flow && _control_status.flags.tilt_align
