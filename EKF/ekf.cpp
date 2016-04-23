@@ -292,6 +292,27 @@ bool Ekf::update()
 
 		}
 
+		// If we are using external vision aiding and data has fallen behind the fusion time horizon then fuse it
+		if (_ext_vision_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_ev_sample_delayed)) {
+			// use external vision posiiton and height observations
+			if (_control_status.flags.ev_pos) {
+				_fuse_pos = true;
+				_fuse_height = true;
+				
+				// correct position and height for offset relative to IMU
+				Vector3f pos_offset_body = _params.ev_pos_body - _params.imu_pos_body;
+				Vector3f pos_offset_earth = _R_to_earth * pos_offset_body;
+				warnx("pos_offset_earth %lf %lf %lf", (double)pos_offset_earth(0)*100, (double)pos_offset_earth(1)*100, (double)pos_offset_earth(2)*100);
+				_ev_sample_delayed.posNED(0) -= pos_offset_earth(0);
+				_ev_sample_delayed.posNED(1) -= pos_offset_earth(1);
+				_ev_sample_delayed.posNED(2) -= pos_offset_earth(2);
+			}
+			// use external vision yaw observation
+			if (_control_status.flags.ev_yaw) {
+				fuseHeading();
+			}
+		}
+
 		// If we are using optical flow aiding and data has fallen behind the fusion time horizon, then fuse it
 		if (_flow_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_flow_sample_delayed)
 		    && _control_status.flags.opt_flow && (_time_last_imu - _time_last_optflow) < 2e5
@@ -304,8 +325,6 @@ bool Ekf::update()
 		if (!_control_status.flags.gps && !_control_status.flags.opt_flow
 		    && ((_time_last_imu - _time_last_fake_gps > 2e5) || _fuse_height)) {
 			_fuse_pos = true;
-			_gps_sample_delayed.pos(0) = _last_known_posNE(0);
-			_gps_sample_delayed.pos(1) = _last_known_posNE(1);
 			_time_last_fake_gps = _time_last_imu;
 		}
 
@@ -377,9 +396,15 @@ bool Ekf::initialiseFilter(void)
 		}
 	}
 
+	// warnx("_params.fusion_mode & MASK_USE_EVPOS %d", (int)(_params.fusion_mode & MASK_USE_EVPOS));
+	// warnx("_primary_hgt_source == VDIST_SENSOR_EV %d", (int)(_primary_hgt_source == VDIST_SENSOR_EV));
 	// set the default height source from the adjustable parameter
 	if (_hgt_counter == 0) {
-		_primary_hgt_source = _params.vdist_sensor_type;
+		if (_params.fusion_mode & MASK_USE_EVPOS) {
+			_primary_hgt_source = VDIST_SENSOR_EV;
+		} else {
+			_primary_hgt_source = _params.vdist_sensor_type;
+		}
 	}
 
 	if (_primary_hgt_source == VDIST_SENSOR_RANGE) {
@@ -398,7 +423,7 @@ bool Ekf::initialiseFilter(void)
 			}
 		}
 
-	} else if (_primary_hgt_source == VDIST_SENSOR_BARO || _primary_hgt_source == VDIST_SENSOR_GPS) {
+	} else if (_primary_hgt_source == VDIST_SENSOR_BARO || _primary_hgt_source == VDIST_SENSOR_GPS || _primary_hgt_source == VDIST_SENSOR_EV) {
 		// if the user parameter specifies use of GPS for height we use baro height initially and switch to GPS
 		// later when it passes checks.
 		if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
