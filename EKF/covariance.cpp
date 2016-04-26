@@ -125,25 +125,27 @@ void Ekf::predictCovariance()
 	float q2 = _state.quat_nominal(2);
 	float q3 = _state.quat_nominal(3);
 
-	float dax = _imu_sample_delayed.delta_ang(0);
-	float day = _imu_sample_delayed.delta_ang(1);
-	float daz = _imu_sample_delayed.delta_ang(2);
-
 	float dvx = _imu_sample_delayed.delta_vel(0);
 	float dvy = _imu_sample_delayed.delta_vel(1);
 	float dvz = _imu_sample_delayed.delta_vel(2);
 
-	float dax_b = _state.gyro_bias(0);
-	float day_b = _state.gyro_bias(1);
-	float daz_b = _state.gyro_bias(2);
-
-	float dax_s = _state.gyro_scale(0);
-	float day_s = _state.gyro_scale(1);
-	float daz_s = _state.gyro_scale(2);
-
 	float dvz_b = _state.accel_z_bias;
 
 	float dt = _imu_sample_delayed.delta_vel_dt;
+
+	// Zero these values as a temporary workaround to prevent high spin rates causing
+	// corrections being applied out of plane due to lineraisation errors
+	float dax = 0.0f;//_imu_sample_delayed.delta_ang(0);
+	float day = 0.0f;//_imu_sample_delayed.delta_ang(1);
+	float daz = 0.0f;//_imu_sample_delayed.delta_ang(2);
+
+	float dax_b = 0.0f;//_state.gyro_bias(0);
+	float day_b = 0.0f;//_state.gyro_bias(1);
+	float daz_b = 0.0f;//_state.gyro_bias(2);
+
+	float dax_s = 0.0f;//_state.gyro_scale(0);
+	float day_s = 0.0f;//_state.gyro_scale(1);
+	float daz_s = 0.0f;//_state.gyro_scale(2);
 
 	// compute process noise
 	float process_noise[_k_num_states] = {};
