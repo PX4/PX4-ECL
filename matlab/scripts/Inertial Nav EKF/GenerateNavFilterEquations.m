@@ -103,7 +103,7 @@ Tbn = Quat2Tbn(truthQuat);
 % define the truth delta angle
 % ignore coning compensation as these effects are negligible in terms of 
 % covariance growth for our application and grade of sensor
-dAngTruth = dAngMeas.*dAngScale - dAngBias - [daxNoise;dayNoise;dazNoise];
+dAngTruth = dAngMeas.*dAngScale - dAngBias;
 
 % define the attitude update equations
 % use a first order expansion of rotation to calculate the quaternion increment
@@ -122,7 +122,7 @@ errRotNew = 2 * [errQuatNew(2);errQuatNew(3);errQuatNew(4)];
 % Define the truth delta velocity -ignore sculling and transport rate
 % corrections as these negligible are in terms of covariance growth for our
 % application and grade of sensor
-dVelTruth = dVelMeas - dVelBias - [dvxNoise;dvyNoise;dvzNoise];
+dVelTruth = dVelMeas - dVelBias;
 
 % define the velocity update equations
 % ignore coriolis terms for linearisation purposes
@@ -187,8 +187,10 @@ save 'StatePrediction.mat';
 % have sensor bias accounted for in the state equations.
 distVector = [daxNoise;dayNoise;dazNoise;dvxNoise;dvyNoise;dvzNoise];
 
-% derive the control(disturbance) influence matrix
-G = jacobian(newStateVector, distVector);
+% derive the control(disturbance) influence matrix from IMU noise to state
+% noise
+% use negative sign because noise is oppisite sign to measurement
+G = -jacobian(newStateVector, [dAngMeas;dVelMeas]);
 G = subs(G, {'rotErrX', 'rotErrY', 'rotErrZ'}, {0,0,0});
 [G,SG]=OptimiseAlgebra(G,'SG');
 
