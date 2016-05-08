@@ -136,7 +136,7 @@ void Ekf::fuseAirspeed()
 		// Compute the ratio of innovation to gate size
 		_tas_test_ratio = sq(_airspeed_innov) / (sq(fmaxf(_params.tas_innov_gate, 1.0f)) * _airspeed_innov_var);
 
-		// If the innovation consistency check fails then don't fuse the sample and indicate bad airspeed health
+		// if the innocation consistency check fails then don't fuse the sample and indicate bad airspeed health
 		if (_tas_test_ratio > 1.0f) {
 			_airspeed_healthy = false;
 			return;

@@ -68,7 +68,7 @@ void Ekf::fuseOptFlow()
 	// constrain height above ground to be above minimum height when sitting on ground
 	float heightAboveGndEst = math::max((_terrain_vpos - _state.pos(2)), gndclearance);
 
-	// get rotation nmatrix from earth to body
+	// get rotation matrix from earth to body
 	matrix::Dcm<float> earth_to_body(_state.quat_nominal);
 	earth_to_body = earth_to_body.transpose();
 

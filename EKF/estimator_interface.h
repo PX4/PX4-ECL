@@ -63,8 +63,11 @@ public:
 	// gets the innovations of the earth magnetic field measurements
 	virtual void get_mag_innov(float mag_innov[3]) = 0;
 
-	// gets the innovation of airspeed measurement
+	// gets the innovation of the airspeed measurement
  	virtual void get_airspeed_innov(float *airspeed_innov) = 0;
+
+	// gets the innovation of the syntetic sideslip measurement
+ 	virtual void get_beta_innov(float *beta_innov) = 0;
 
 	// gets the innovations of the heading measurement
 	virtual void get_heading_innov(float *heading_innov) = 0;
@@ -78,6 +81,9 @@ public:
 
 	// gets the innovation variance of the airspeed measurement
  	virtual void get_airspeed_innov_var(float *get_airspeed_innov_var) = 0;
+
+ 	// gets the innovation variance of the syntetic sideslip measurement
+ 	virtual void get_beta_innov_var(float *get_beta_innov_var) = 0;
 
 	// gets the innovation variance of the heading measurement
 	virtual void get_heading_innov_var(float *heading_innov_var) = 0;
@@ -268,6 +274,7 @@ protected:
 	float _mag_test_ratio[3];       // magnetometer XYZ innovation consistency check ratios
 	float _vel_pos_test_ratio[6];   // velocity and position innovation consistency check ratios
 	float _tas_test_ratio;			// tas innovation consistency check ratio
+	float _beta_test_ratio;			// sideslip innovation consistency check ratio
 
 	// data buffer instances
 	RingBuffer<imuSample> _imu_buffer;

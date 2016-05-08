@@ -76,6 +76,8 @@ Ekf::Ekf():
 	_last_dt_overrun(0.0f),
 	_airspeed_innov(0.0f),
 	_airspeed_innov_var(0.0f),
+	_beta_innov(0.0f),
+	_beta_innov_var(0.0f),
 	_heading_innov(0.0f),
 	_heading_innov_var(0.0f),
 	_delta_time_of(0.0f),

@@ -79,6 +79,12 @@ public:
 	// gets the innovation variance of the airspeed measurement
 	void get_airspeed_innov_var(float *airspeed_innov_var);
 
+	// gets the innovations of syntetic sideslip measurement
+	void get_beta_innov(float *beta_innov);
+
+	// gets the innovation variance of the syntetic sideslip measurement
+	void get_beta_innov_var(float *beta_innov_var);
+
 	// gets the innovation variance of the heading measurement
 	void get_heading_innov_var(float *heading_innov_var);
 
@@ -178,6 +184,9 @@ private:
 	float _airspeed_innov;		// airspeed measurement innovation
 	float _airspeed_innov_var;	// airspeed measurement innovation variance
 
+	float _beta_innov;		// syntetic sideslip measurement innovation
+	float _beta_innov_var;	// syntetic sideslip measurement innovation variance
+
 	float _heading_innov;		// heading measurement innovation
 	float _heading_innov_var;	// heading measurement innovation variance
 
@@ -271,6 +280,9 @@ private:
 
 	// fuse airspeed measurement
 	void fuseAirspeed();
+
+	// fuse sideslip measurement
+	void fuseSideslip();
 
 	// fuse velocity and position measurements (also barometer height)
 	void fuseVelPosHeight();
