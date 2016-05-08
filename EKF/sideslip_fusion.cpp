@@ -167,7 +167,7 @@ void Ekf::fuseSideslip()
         // Compute the ratio of innovation to gate size
 		_beta_test_ratio = sq(_beta_innov) / (sq(fmaxf(_params.beta_innov_gate, 1.0f)) * _beta_innov_var);
 
-		// if the innovation consistency check fails then don't fuse the sample and indicate bad airspeed health
+		// if the innovation consistency check fails then don't fuse the sample and indicate bad beta health
 		if (_beta_test_ratio > 1.0f) {
 			_beta_healthy = false;
 			return;
@@ -176,7 +176,7 @@ void Ekf::fuseSideslip()
 		// by definition the angle error state is zero at the fusion time
 		_state.ang_error.setZero();
 
-		// Fuse airspeed measurement
+		// Fuse syntetic sideslip measurement
 		fuse(Kfusion, _beta_innov); //Why calculate angle error when it is always zero?
 
 		// correct the nominal quaternion
