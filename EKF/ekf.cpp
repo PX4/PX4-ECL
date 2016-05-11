@@ -41,6 +41,8 @@
 
 #include "ekf.h"
 
+const float Ekf::_k_earth_rate = 0.000072921f;
+
 Ekf::Ekf():
 	_filter_initialised(false),
 	_earth_rate_initialised(false),

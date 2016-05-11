@@ -42,8 +42,8 @@
  * @author Anton Babushkin <anton.babushkin@me.com>
  */
 #ifdef POSIX_SHARED
-#include <unistd.h>
-#include <pthread.h>
+//#include <unistd.h>
+//#include <pthread.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdbool.h>

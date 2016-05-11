@@ -45,6 +45,10 @@
 // #include <algorithm>
 #define M_PI_F 3.14159265358979323846f
 
+#ifndef M_PI
+#define M_PI (3.14159265358979323846f)
+#endif
+
 namespace math
 {
 // using namespace Eigen;
