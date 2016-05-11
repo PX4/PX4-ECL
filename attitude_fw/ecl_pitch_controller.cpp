@@ -66,7 +66,6 @@ float ECL_PitchController::control_attitude(const struct ECL_ControlData &ctl_da
 	      PX4_ISFINITE(ctl_data.roll) &&
 	      PX4_ISFINITE(ctl_data.pitch) &&
 	      PX4_ISFINITE(ctl_data.airspeed))) {
-		perf_count(_nonfinite_input_perf);
 		warnx("not controlling pitch");
 		return _rate_setpoint;
 	}
@@ -102,7 +101,6 @@ float ECL_PitchController::control_bodyrate(const struct ECL_ControlData &ctl_da
 	      PX4_ISFINITE(ctl_data.airspeed_min) &&
 	      PX4_ISFINITE(ctl_data.airspeed_max) &&
 	      PX4_ISFINITE(ctl_data.scaler))) {
-		perf_count(_nonfinite_input_perf);
 		return math::constrain(_last_output, -1.0f, 1.0f);
 	}
 
@@ -181,12 +179,12 @@ float ECL_PitchController::control_bodyrate(const struct ECL_ControlData &ctl_da
 			id = math::min(id, 0.0f);
 		}
 
-		_integrator += id;
+		_integrator += id * _k_i;
 	}
 
 	/* integrator limit */
 	//xxx: until start detection is available: integral part in control signal is limited here
-	float integrator_constrained = math::constrain(_integrator * _k_i, -_integrator_max, _integrator_max);
+	float integrator_constrained = math::constrain(_integrator, -_integrator_max, _integrator_max);
 
 	/* Apply PI rate controller and store non-limited output */
 	_last_output = _bodyrate_setpoint * _k_ff * ctl_data.scaler +

@@ -63,6 +63,9 @@ public:
 	// gets the innovations of the earth magnetic field measurements
 	virtual void get_mag_innov(float mag_innov[3]) = 0;
 
+	// gets the innovation of airspeed measurement
+ 	virtual void get_airspeed_innov(float *airspeed_innov) = 0;
+
 	// gets the innovations of the heading measurement
 	virtual void get_heading_innov(float *heading_innov) = 0;
 
@@ -73,6 +76,9 @@ public:
 	// gets the innovation variances of the earth magnetic field measurements
 	virtual void get_mag_innov_var(float mag_innov_var[3]) = 0;
 
+	// gets the innovation variance of the airspeed measurement
+ 	virtual void get_airspeed_innov_var(float *get_airspeed_innov_var) = 0;
+
 	// gets the innovation variance of the heading measurement
 	virtual void get_heading_innov_var(float *heading_innov_var) = 0;
 
@@ -81,6 +87,22 @@ public:
 	virtual void get_covariances(float *covariances) = 0;
 
 	// get the ekf WGS-84 origin position and height and the system time it was last set
+	virtual void get_vel_var(Vector3f &vel_var) = 0;
+	virtual void get_pos_var(Vector3f &pos_var) = 0;
+
+	// gets the innovation variance of the flow measurement
+	virtual void get_flow_innov_var(float flow_innov_var[2]) = 0;
+
+	// gets the innovation of the flow measurement
+	virtual void get_flow_innov(float flow_innov[2]) = 0;
+
+	// gets the innovation variance of the HAGL measurement
+	virtual void get_hagl_innov_var(float *flow_innov_var) = 0;
+
+	// gets the innovation of the HAGL measurement
+	virtual void get_hagl_innov(float *flow_innov_var) = 0;
+
+	// get the ekf WGS-84 origin positoin and height and the system time it was last set
 	virtual void get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt) = 0;
 
 	// get the 1-sigma horizontal and vertical position uncertainty of the ekf WGS-84 position
@@ -95,11 +117,11 @@ public:
 
 	virtual bool collect_baro(uint64_t time_usec, float *data) { return true; }
 
-	virtual bool collect_airspeed(uint64_t time_usec, float *data) { return true; }
+	virtual bool collect_airspeed(uint64_t time_usec, float *true_airspeed, float *eas2tas) { return true; }
 
 	virtual bool collect_range(uint64_t time_usec, float *data) { return true; }
 
-	virtual bool collect_opticalflow(uint64_t time_usec, float *data) { return true; }
+	virtual bool collect_opticalflow(uint64_t time_usec, flow_message *flow) { return true; }
 
 	// set delta angle imu data
 	void setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, uint64_t delta_vel_dt, float *delta_ang, float *delta_vel);
@@ -115,25 +137,30 @@ public:
 	void setBaroData(uint64_t time_usec, float *data);
 
 	// set airspeed data
-	void setAirspeedData(uint64_t time_usec, float *data);
+	void setAirspeedData(uint64_t time_usec, float *true_airspeed, float *eas2tas);
 
 	// set range data
 	void setRangeData(uint64_t time_usec, float *data);
 
 	// set optical flow data
-	void setOpticalFlowData(uint64_t time_usec, float *data);
+	void setOpticalFlowData(uint64_t time_usec, flow_message *flow);
 
 	// return a address to the parameters struct
 	// in order to give access to the application
 	parameters *getParamHandle() {return &_params;}
 
-	// set vehicle arm status data
-	void set_arm_status(bool data) { _vehicle_armed = data; }
-
 	// set vehicle landed status data
-	void set_in_air_status(bool in_air) {_in_air = in_air;}
+	void set_in_air_status(bool in_air) {_control_status.flags.in_air = in_air;}
 
-	bool position_is_valid();
+	// return true if the global position estimate is valid
+	virtual bool global_position_is_valid() = 0;
+
+	// return true if the estimate is valid
+	// return the estimated terrain vertical position relative to the NED origin
+	virtual bool get_terrain_vert_pos(float *ret) = 0;
+
+	// return true if the local position estimate is valid
+	bool local_position_is_valid();
 
 
 	void copy_quaternion(float *quat)
@@ -142,16 +169,30 @@ public:
 			quat[i] = _output_new.quat_nominal(i);
 		}
 	}
-	void copy_velocity(float *vel)
+	// get the velocity of the body frame origin in local NED earth frame
+	void get_velocity(float *vel)
 	{
+		// calculate the average angular rate across the last IMU update
+		Vector3f ang_rate = _imu_sample_new.delta_ang * (1.0f/_imu_sample_new.delta_ang_dt);
+		// calculate the velocity of the relative to the body origin
+		// Note % operator has been overloaded to performa cross product
+		Vector3f vel_imu_rel_body = cross_product(ang_rate , _params.imu_pos_body);
+		// rotate the relative velocty into earth frame and subtract from the EKF velocity
+		// (which is at the IMU) to get velocity of the body origin
+		Vector3f vel_earth = _output_new.vel - _R_to_earth_now * vel_imu_rel_body;
+		// copy to output
 		for (unsigned i = 0; i < 3; i++) {
-			vel[i] = _output_new.vel(i);
+			vel[i] = vel_earth(i);
 		}
 	}
-	void copy_position(float *pos)
+	// get the position of the body frame origin in local NED earth frame
+	void get_position(float *pos)
 	{
+		// rotate the position of the IMU relative to the boy origin into earth frame
+		Vector3f pos_offset_earth = _R_to_earth_now * _params.imu_pos_body;
+		// subtract from the EKF position (which is at the IMU) to get position at the body origin
 		for (unsigned i = 0; i < 3; i++) {
-			pos[i] = _output_new.pos(i);
+			pos[i] = _output_new.pos(i) - pos_offset_earth(i);
 		}
 	}
 	void copy_timestamp(uint64_t *time_us)
@@ -164,6 +205,26 @@ public:
 	{
 		*val = _mag_declination_to_save_deg;
 	}
+
+	virtual void get_accel_bias(float bias[3]) = 0;
+
+	// get EKF mode status
+	void get_control_mode(uint16_t *val)
+	{
+		*val = _control_status.value;
+	}
+
+	// get EKF internal fault status
+	void get_filter_fault_status(uint16_t *val)
+	{
+		*val = _fault_status.value;
+	}
+
+	// get GPS check status
+	virtual void get_gps_check_status(uint16_t *val) = 0;
+
+	// return the amount the local vertical position changed in the last height reset and the time of the reset
+	virtual void get_vert_pos_reset(float *delta, uint64_t *time_us) = 0;
 
 protected:
 
@@ -188,27 +249,25 @@ protected:
 	outputSample _output_sample_delayed;	// filter output on the delayed time horizon
 	outputSample _output_new;	// filter output on the non-delayed time horizon
 	imuSample _imu_sample_new;	// imu sample capturing the newest imu data
+	Matrix3f _R_to_earth_now; // rotation matrix from body to earth frame at current time
 
 	uint64_t _imu_ticks;	// counter for imu updates
 
 	bool _imu_updated;      // true if the ekf should update (completed downsampling process)
 	bool _initialised;      // true if the ekf interface instance (data buffering) is initialized
-	bool _vehicle_armed;    // vehicle arm status used to turn off functionality used on the ground
-	bool _in_air;           // we assume vehicle is in the air, set by the given landing detector
 
-	bool _NED_origin_initialised;
-	bool _gps_speed_valid;
-	float _gps_speed_accuracy;                  // GPS receiver reported speed accuracy (m/s)
-	struct map_projection_reference_s _pos_ref; // Contains WGS-84 position latitude and longitude (radians)
-	float _gps_hpos_accuracy; // GPS receiver reported 1-sigma horizontal accuracy (m)
-	float _gps_origin_eph; // horizontal position uncertainty of the GPS origin
-	float _gps_origin_epv; // vertical position uncertainty of the GPS origin
+	bool _NED_origin_initialised = false;
+	bool _gps_speed_valid = false;
+	float _gps_origin_eph = 0.0f; // horizontal position uncertainty of the GPS origin
+	float _gps_origin_epv = 0.0f; // vertical position uncertainty of the GPS origin
+	struct map_projection_reference_s _pos_ref = {};    // Contains WGS-84 position latitude and longitude (radians)
 
 	bool _mag_healthy;              // computed by mag innovation test
+	bool _airspeed_healthy;			// computed by airspeed innovation test
 	float _yaw_test_ratio;          // yaw innovation consistency check ratio
 	float _mag_test_ratio[3];       // magnetometer XYZ innovation consistency check ratios
-
 	float _vel_pos_test_ratio[6];   // velocity and position innovation consistency check ratios
+	float _tas_test_ratio;			// tas innovation consistency check ratio
 
 	// data buffer instances
 	RingBuffer<imuSample> _imu_buffer;
@@ -226,8 +285,9 @@ protected:
 	uint64_t _time_last_baro;	// timestamp of last barometer measurement in microseconds
 	uint64_t _time_last_range;	// timestamp of last range measurement in microseconds
 	uint64_t _time_last_airspeed;	// timestamp of last airspeed measurement in microseconds
+	uint64_t _time_last_optflow;
 
-	fault_status_t _fault_status;
+	fault_status_u _fault_status;
 
 	// allocate data buffers and intialise interface variables
 	bool initialise_interface(uint64_t timestamp);
@@ -237,4 +297,17 @@ protected:
 
 	float _mag_declination_gps;         // magnetic declination returned by the geo library using the last valid GPS position (rad)
 	float _mag_declination_to_save_deg; // magnetic declination to save to EKF2_MAG_DECL (deg)
+
+	// this is the current status of the filter control modes
+	filter_control_status_u _control_status;
+
+	// this is the previous status of the filter control modes - used to detect mode transitions
+	filter_control_status_u _control_status_prev;
+
+	// perform a vector cross product
+	Vector3f cross_product(const Vector3f &vecIn1, const Vector3f &vecIn2);
+
+	// calculate the inverse rotation matrix from a quaternion rotation
+	Matrix3f quat_to_invrotmat(const Quaternion quat);
+
 };

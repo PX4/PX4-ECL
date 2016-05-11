@@ -49,22 +49,24 @@
 
 // Reset the velocity states. If we have a recent and valid
 // gps measurement then use for velocity initialisation
-void Ekf::resetVelocity()
+bool Ekf::resetVelocity()
 {
 	// if we have a valid GPS measurement use it to initialise velocity states
 	gpsSample gps_newest = _gps_buffer.get_newest();
 
 	if (_time_last_imu - gps_newest.time_us < 400000) {
 		_state.vel = gps_newest.vel;
+		return true;
 
 	} else {
-		_state.vel.setZero();
+		// XXX use the value of the last known velocity
+		return false;
 	}
 }
 
 // Reset position states. If we have a recent and valid
 // gps measurement then use for position initialisation
-void Ekf::resetPosition()
+bool Ekf::resetPosition()
 {
 	// if we have a fresh GPS measurement, use it to initialise position states and correct the position for the measurement delay
 	gpsSample gps_newest = _gps_buffer.get_newest();
@@ -74,40 +76,178 @@ void Ekf::resetPosition()
 	if (time_delay < 0.4f) {
 		_state.pos(0) = gps_newest.pos(0) + gps_newest.vel(0) * time_delay;
 		_state.pos(1) = gps_newest.pos(1) + gps_newest.vel(1) * time_delay;
+		return true;
 
 	} else {
 		// XXX use the value of the last known position
+		return false;
 	}
 }
 
-// Reset height state using the last baro measurement
+// Reset height state using the last height measurement
 void Ekf::resetHeight()
 {
-	// if we have a valid GPS measurement use it to initialise the vertical velocity state
+	// Get the most recent GPS data
 	gpsSample gps_newest = _gps_buffer.get_newest();
 
-	if (_time_last_imu - gps_newest.time_us < 400000) {
+	// store the current vertical position and velocity for reference so we can calculate and publish the reset amount
+	float old_vert_pos = _state.pos(2);
+	bool vert_pos_reset = false;
+	float old_vert_vel = _state.vel(2);
+	bool vert_vel_reset = false;
+
+	// reset the vertical position
+	if (_control_status.flags.rng_hgt) {
+		rangeSample range_newest = _range_buffer.get_newest();
+
+		if (_time_last_imu - range_newest.time_us < 2 * RNG_MAX_INTERVAL) {
+			// calculate the new vertical position using range sensor
+			float new_pos_down = _hgt_sensor_offset - range_newest.rng;
+
+			// update the state and assoicated variance
+			_state.pos(2) = new_pos_down;
+
+			// reset the associated covariance values
+			zeroRows(P, 9, 9);
+			zeroCols(P, 9, 9);
+
+			// the state variance is the same as the observation
+			P[9][9] = sq(_params.range_noise);
+
+			vert_pos_reset = true;
+
+		} else {
+			// TODO: reset to last known range based estimate
+		}
+
+		// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
+		baroSample baro_newest = _baro_buffer.get_newest();
+		_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+
+	} else if (_control_status.flags.baro_hgt) {
+		// initialize vertical position with newest baro measurement
+		baroSample baro_newest = _baro_buffer.get_newest();
+
+		if (_time_last_imu - baro_newest.time_us < 2 * BARO_MAX_INTERVAL) {
+			_state.pos(2) = _hgt_sensor_offset - baro_newest.hgt + _baro_hgt_offset;
+
+			// reset the associated covariance values
+			zeroRows(P, 9, 9);
+			zeroCols(P, 9, 9);
+
+			// the state variance is the same as the observation
+			P[9][9] = sq(_params.baro_noise);
+
+			vert_pos_reset = true;
+
+		} else {
+			// TODO: reset to last known baro based estimate
+		}
+
+	} else if (_control_status.flags.gps_hgt) {
+		// initialize vertical position and velocity with newest gps measurement
+		if (_time_last_imu - gps_newest.time_us < 2 * GPS_MAX_INTERVAL) {
+			_state.pos(2) = _hgt_sensor_offset - gps_newest.hgt + _gps_alt_ref;
+
+			// reset the associated covarince values
+			zeroRows(P, 9, 9);
+			zeroCols(P, 9, 9);
+
+			// the state variance is the same as the observation
+			P[9][9] = sq(gps_newest.hacc);
+
+			vert_pos_reset = true;
+
+		} else {
+			// TODO: reset to last known gps based estimate
+		}
+
+		// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
+		baroSample baro_newest = _baro_buffer.get_newest();
+		_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+	}
+
+	// reset the vertical velocity covariance values
+	zeroRows(P, 6, 6);
+	zeroCols(P, 6, 6);
+
+	// reset the vertical velocity state
+	if (_control_status.flags.gps && (_time_last_imu - gps_newest.time_us < 2 * GPS_MAX_INTERVAL)) {
+		// If we are using GPS, then use it to reset the vertical velocity
 		_state.vel(2) = gps_newest.vel(2);
 
+		// the state variance is the same as the observation
+		P[6][6] = sq(1.5f * gps_newest.sacc);
+
 	} else {
+		// we don't know what the vertical velocity is, so set it to zero
 		_state.vel(2) = 0.0f;
+
+		// Set the variance to a value large enough to allow the state to converge quickly
+		// that does not destabilise the filter
+		P[6][6] = 10.0f;
+
+	}
+	vert_vel_reset = true;
+
+	// store the reset amount and time to be published
+	if (vert_pos_reset) {
+		_vert_pos_reset_delta = _state.pos(2) - old_vert_pos;
+		_time_vert_pos_reset = _time_last_imu;
 	}
 
-	// if we have a valid height measurement, use it to initialise the vertical position state
-	baroSample baro_newest = _baro_buffer.get_newest();
-
-	if (_time_last_imu - baro_newest.time_us < 200000) {
-		// use baro as the default
-		_state.pos(2) = _baro_at_alignment - baro_newest.hgt;
-
-	} else if (_time_last_imu - gps_newest.time_us < 400000) {
-		// use GPS as a backup
-		_state.pos(2) = _gps_alt_ref - gps_newest.hgt;
-
-	} else {
-		// Do not modify the state as there are no measurements to use
+	if (vert_vel_reset) {
+		_vert_vel_reset_delta = _state.vel(2) - old_vert_vel;
+		_time_vert_vel_reset = _time_last_imu;
 	}
 
+	// add the reset amount to the output observer states
+	_output_new.pos(2) += _vert_pos_reset_delta;
+	_output_new.vel(2) += _vert_vel_reset_delta;
+
+	// add the reset amount to the output observer buffered data
+	outputSample output_states;
+	unsigned output_length = _output_buffer.get_length();
+	for (unsigned i=0; i < output_length; i++) {
+		output_states = _output_buffer.get_from_index(i);
+
+		if (vert_pos_reset) {
+			output_states.pos(2) += _vert_pos_reset_delta;
+		}
+
+		if (vert_vel_reset) {
+			output_states.vel(2) += _vert_vel_reset_delta;
+		}
+
+		_output_buffer.push_to_index(i,output_states);
+
+	}
+
+}
+
+// align output filter states to match EKF states at the fusion time horizon
+void Ekf::alignOutputFilter()
+{
+	// calculate the quaternion delta between the output and EKF quaternions at the EKF fusion time horizon
+	Quaternion quat_inv = _state.quat_nominal.inversed();
+	Quaternion q_delta =  _output_sample_delayed.quat_nominal * quat_inv;
+	q_delta.normalize();
+
+	// calculate the velocity and posiiton deltas between the output and EKF at the EKF fusion time horizon
+	Vector3f vel_delta = _state.vel - _output_sample_delayed.vel;
+	Vector3f pos_delta = _state.pos - _output_sample_delayed.pos;
+
+	// loop through the output filter state history and add the deltas
+	outputSample output_states;
+	unsigned output_length = _output_buffer.get_length();
+	for (unsigned i=0; i < output_length; i++) {
+		output_states = _output_buffer.get_from_index(i);
+		output_states.quat_nominal *= q_delta;
+		output_states.quat_nominal.normalize();
+		output_states.vel += vel_delta;
+		output_states.pos += pos_delta;
+		_output_buffer.push_to_index(i,output_states);
+	}
 }
 
 // Reset heading and magnetic field states
@@ -133,11 +273,11 @@ bool Ekf::resetMagHeading(Vector3f &mag_init)
 	// we don't change the output attitude to avoid jumps
 	_state.quat_nominal = Quaternion(euler_init);
 
-	// reset the angle error variances because the yaw angle could have changed by a significant amount
+	// reset the quaternion variances because the yaw angle could have changed by a significant amount
 	// by setting them to zero we avoid 'kicks' in angle when 3-D fusion starts and the imu process noise
 	// will grow them again.
-	zeroRows(P, 0, 2);
-	zeroCols(P, 0, 2);
+	zeroRows(P, 0, 3);
+	zeroCols(P, 0, 3);
 
 	// calculate initial earth magnetic field states
 	matrix::Dcm<float> R_to_earth(euler_init);
@@ -177,21 +317,21 @@ void Ekf::calcMagDeclination()
 }
 
 // This function forces the covariance matrix to be symmetric
-void Ekf::makeSymmetrical()
+void Ekf::makeSymmetrical(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last)
 {
-	for (unsigned row = 0; row < _k_num_states; row++) {
+	for (unsigned row = first; row <= last; row++) {
 		for (unsigned column = 0; column < row; column++) {
-			float tmp = (P[row][column] + P[column][row]) / 2;
-			P[row][column] = tmp;
-			P[column][row] = tmp;
+			float tmp = (cov_mat[row][column] + cov_mat[column][row]) / 2;
+			cov_mat[row][column] = tmp;
+			cov_mat[column][row] = tmp;
 		}
 	}
 }
 
 void Ekf::constrainStates()
 {
-	for (int i = 0; i < 3; i++) {
-		_state.ang_error(i) = math::constrain(_state.ang_error(i), -1.0f, 1.0f);
+	for (int i = 0; i < 4; i++) {
+		_state.quat_nominal(i) = math::constrain(_state.quat_nominal(i), -1.0f, 1.0f);
 	}
 
 	for (int i = 0; i < 3; i++) {
@@ -207,10 +347,8 @@ void Ekf::constrainStates()
 	}
 
 	for (int i = 0; i < 3; i++) {
-		_state.gyro_scale(i) = math::constrain(_state.gyro_scale(i), 0.95f, 1.05f);
+		_state.accel_bias(i) = math::constrain(_state.accel_bias(i), -1.0f * _dt_imu_avg, 1.0f * _dt_imu_avg);
 	}
-
-	_state.accel_z_bias = math::constrain(_state.accel_z_bias, -1.0f * _dt_imu_avg, 1.0f * _dt_imu_avg);
 
 	for (int i = 0; i < 3; i++) {
 		_state.mag_I(i) = math::constrain(_state.mag_I(i), -1.0f, 1.0f);
@@ -246,6 +384,12 @@ void Ekf::get_mag_innov(float mag_innov[3])
 	memcpy(mag_innov, _mag_innov, 3 * sizeof(float));
 }
 
+// gets the innovations of the airspeed measnurement
+void Ekf::get_airspeed_innov(float *airspeed_innov)
+{
+	memcpy(airspeed_innov,&_airspeed_innov, sizeof(float));
+}
+
 // gets the innovations of the heading measurement
 void Ekf::get_heading_innov(float *heading_innov)
 {
@@ -265,36 +409,46 @@ void Ekf::get_mag_innov_var(float mag_innov_var[3])
 	memcpy(mag_innov_var, _mag_innov_var, sizeof(float) * 3);
 }
 
+// gest the innovation variance of the airspeed measurement
+void Ekf::get_airspeed_innov_var(float *airspeed_innov_var)
+{
+	memcpy(airspeed_innov_var, &_airspeed_innov_var, sizeof(float));
+}
+
 // gets the innovation variance of the heading measurement
 void Ekf::get_heading_innov_var(float *heading_innov_var)
 {
 	memcpy(heading_innov_var, &_heading_innov_var, sizeof(float));
 }
 
+// get GPS check status
+void Ekf::get_gps_check_status(uint16_t *val)
+{
+	*val = _gps_check_fail_status.value;
+}
+
 // get the state vector at the delayed time horizon
 void Ekf::get_state_delayed(float *state)
 {
-	for (int i = 0; i < 3; i++) {
-		state[i] = _state.ang_error(i);
+	for (int i = 0; i < 4; i++) {
+		state[i] = _state.quat_nominal(i);
 	}
 
 	for (int i = 0; i < 3; i++) {
-		state[i + 3] = _state.vel(i);
+		state[i + 4] = _state.vel(i);
 	}
 
 	for (int i = 0; i < 3; i++) {
-		state[i + 6] = _state.pos(i);
+		state[i + 7] = _state.pos(i);
 	}
 
 	for (int i = 0; i < 3; i++) {
-		state[i + 9] = _state.gyro_bias(i);
+		state[i + 10] = _state.gyro_bias(i);
 	}
 
 	for (int i = 0; i < 3; i++) {
-		state[i + 12] = _state.gyro_scale(i);
+		state[i + 13] = _state.accel_bias(i);
 	}
-
-	state[15] = _state.accel_z_bias;
 
 	for (int i = 0; i < 3; i++) {
 		state[i + 16] = _state.mag_I(i);
@@ -307,6 +461,16 @@ void Ekf::get_state_delayed(float *state)
 	for (int i = 0; i < 2; i++) {
 		state[i + 22] = _state.wind_vel(i);
 	}
+}
+
+// get the accelerometer bias
+void Ekf::get_accel_bias(float bias[3])
+{
+	float temp[3];
+	temp[0] = _state.accel_bias(0) /_dt_ekf_avg;
+	temp[1] = _state.accel_bias(1) /_dt_ekf_avg;
+	temp[2] = _state.accel_bias(2) /_dt_ekf_avg;
+	memcpy(bias, temp, 3 * sizeof(float));
 }
 
 // get the diagonal elements of the covariance matrix
@@ -330,8 +494,8 @@ void Ekf::get_ekf_accuracy(float *ekf_eph, float *ekf_epv, bool *dead_reckoning)
 {
 	// report absolute accuracy taking into account the uncertainty in location of the origin
 	// TODO we a need a way to allow for baro drift error
-	float temp1 = sqrtf(P[6][6] + P[7][7] + sq(_gps_origin_eph));
-	float temp2 = sqrtf(P[8][8] + sq(_gps_origin_epv));
+	float temp1 = sqrtf(P[7][7] + P[8][8] + sq(_gps_origin_eph));
+	float temp2 = sqrtf(P[9][9] + sq(_gps_origin_epv));
 	memcpy(ekf_eph, &temp1, sizeof(float));
 	memcpy(ekf_epv, &temp2, sizeof(float));
 
@@ -343,27 +507,26 @@ void Ekf::get_ekf_accuracy(float *ekf_eph, float *ekf_epv, bool *dead_reckoning)
 // fuse measurement
 void Ekf::fuse(float *K, float innovation)
 {
+	for (unsigned i = 0; i < 4; i++) {
+		_state.quat_nominal(i) = _state.quat_nominal(i) - K[i] * innovation;
+	}
+	_state.quat_nominal.normalize();
+
 	for (unsigned i = 0; i < 3; i++) {
-		_state.ang_error(i) = _state.ang_error(i) - K[i] * innovation;
+		_state.vel(i) = _state.vel(i) - K[i + 4] * innovation;
 	}
 
 	for (unsigned i = 0; i < 3; i++) {
-		_state.vel(i) = _state.vel(i) - K[i + 3] * innovation;
+		_state.pos(i) = _state.pos(i) - K[i + 7] * innovation;
 	}
 
 	for (unsigned i = 0; i < 3; i++) {
-		_state.pos(i) = _state.pos(i) - K[i + 6] * innovation;
+		_state.gyro_bias(i) = _state.gyro_bias(i) - K[i + 10] * innovation;
 	}
 
 	for (unsigned i = 0; i < 3; i++) {
-		_state.gyro_bias(i) = _state.gyro_bias(i) - K[i + 9] * innovation;
+		_state.accel_bias(i) = _state.accel_bias(i) - K[i + 13] * innovation;
 	}
-
-	for (unsigned i = 0; i < 3; i++) {
-		_state.gyro_scale(i) = _state.gyro_scale(i) - K[i + 12] * innovation;
-	}
-
-	_state.accel_z_bias -= K[15] * innovation;
 
 	for (unsigned i = 0; i < 3; i++) {
 		_state.mag_I(i) = _state.mag_I(i) - K[i + 16] * innovation;
@@ -396,4 +559,49 @@ void Ekf::zeroCols(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first
 	for (row = 0; row <= 23; row++) {
 		memset(&cov_mat[row][first], 0, sizeof(cov_mat[0][0]) * (1 + last - first));
 	}
+}
+
+bool Ekf::global_position_is_valid()
+{
+	// return true if the position estimate is valid
+	// TODO implement proper check based on published GPS accuracy, innovation consistency checks and timeout status
+	return (_NED_origin_initialised && ((_time_last_imu - _time_last_gps) < 5e6) && _control_status.flags.gps);
+}
+
+// perform a vector cross product
+Vector3f EstimatorInterface::cross_product(const Vector3f &vecIn1, const Vector3f &vecIn2)
+{
+	Vector3f vecOut;
+	vecOut(0) = vecIn1(1)*vecIn2(2) - vecIn1(2)*vecIn2(1);
+	vecOut(1) = vecIn1(2)*vecIn2(0) - vecIn1(0)*vecIn2(2);
+	vecOut(2) = vecIn1(0)*vecIn2(1) - vecIn1(1)*vecIn2(0);
+	return vecOut;
+}
+
+// calculate the inverse rotation matrix from a quaternion rotation
+Matrix3f EstimatorInterface::quat_to_invrotmat(const Quaternion quat)
+{
+	float q00 = quat(0) * quat(0);
+	float q11 = quat(1) * quat(1);
+	float q22 = quat(2) * quat(2);
+	float q33 = quat(3) * quat(3);
+	float q01 = quat(0) * quat(1);
+	float q02 = quat(0) * quat(2);
+	float q03 = quat(0) * quat(3);
+	float q12 = quat(1) * quat(2);
+	float q13 = quat(1) * quat(3);
+	float q23 = quat(2) * quat(3);
+
+	Matrix3f dcm;
+	dcm(0,0) = q00 + q11 - q22 - q33;
+	dcm(1,1) = q00 - q11 + q22 - q33;
+	dcm(2,2) = q00 - q11 - q22 + q33;
+	dcm(0,1) = 2.0f * (q12 - q03);
+	dcm(0,2) = 2.0f * (q13 + q02);
+	dcm(1,0) = 2.0f * (q12 + q03);
+	dcm(1,2) = 2.0f * (q23 - q01);
+	dcm(2,0) = 2.0f * (q13 - q02);
+	dcm(2,1) = 2.0f * (q23 + q01);
+
+	return dcm;
 }

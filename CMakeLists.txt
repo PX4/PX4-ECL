@@ -37,7 +37,7 @@ endif()
 
 px4_add_module(
 	MODULE lib__ecl
-	STACK 6000
+	STACK_MAIN 6000
 	COMPILE_FLAGS ${MODULE_CFLAGS} -Os
 	SRCS
 		attitude_fw/ecl_controller.cpp
@@ -54,8 +54,11 @@ px4_add_module(
 		EKF/covariance.cpp
 		EKF/vel_pos_fusion.cpp
 		EKF/mag_fusion.cpp
-               EKF/gps_checks.cpp
+		EKF/gps_checks.cpp
+		EKF/airspeed_fusion.cpp
+		EKF/optflow_fusion.cpp
 		EKF/control.cpp
+		EKF/terrain_estimator.cpp
 	DEPENDS
 		platforms__common
 	)

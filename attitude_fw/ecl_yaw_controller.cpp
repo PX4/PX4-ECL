@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2013 Estimation and Control Library (ECL). All rights reserved.
+ *   Copyright (c) 2013-2016 Estimation and Control Library (ECL). All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -108,7 +108,6 @@ float ECL_YawController::control_attitude_impl_openloop(const struct ECL_Control
 	      PX4_ISFINITE(ctl_data.speed_body_w) &&
 	      PX4_ISFINITE(ctl_data.roll_rate_setpoint) &&
 	      PX4_ISFINITE(ctl_data.pitch_rate_setpoint))) {
-		perf_count(_nonfinite_input_perf);
 		return _rate_setpoint;
 	}
 
@@ -160,7 +159,6 @@ float ECL_YawController::control_bodyrate_impl(const struct ECL_ControlData &ctl
 	      PX4_ISFINITE(ctl_data.yaw_rate) && PX4_ISFINITE(ctl_data.pitch_rate_setpoint) &&
 	      PX4_ISFINITE(ctl_data.airspeed_min) && PX4_ISFINITE(ctl_data.airspeed_max) &&
 	      PX4_ISFINITE(ctl_data.scaler))) {
-		perf_count(_nonfinite_input_perf);
 		return math::constrain(_last_output, -1.0f, 1.0f);
 	}
 
@@ -217,12 +215,12 @@ float ECL_YawController::control_bodyrate_impl(const struct ECL_ControlData &ctl
 			id = math::min(id, 0.0f);
 		}
 
-		_integrator += id;
+		_integrator += id * _k_i;
 	}
 
 	/* integrator limit */
 	//xxx: until start detection is available: integral part in control signal is limited here
-	float integrator_constrained = math::constrain(_integrator * _k_i, -_integrator_max, _integrator_max);
+	float integrator_constrained = math::constrain(_integrator, -_integrator_max, _integrator_max);
 
 	/* Apply PI rate controller and store non-limited output */
 	_last_output = (_bodyrate_setpoint * _k_ff + _rate_error * _k_p + integrator_constrained) * ctl_data.scaler *

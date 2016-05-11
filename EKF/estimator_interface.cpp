@@ -52,15 +52,12 @@ EstimatorInterface::EstimatorInterface():
 	_imu_ticks(0),
 	_imu_updated(false),
 	_initialised(false),
-	_vehicle_armed(false),
-	_in_air(false),
 	_NED_origin_initialised(false),
 	_gps_speed_valid(false),
-	_gps_speed_accuracy(0.0f),
-	_gps_hpos_accuracy(0.0f),
 	_gps_origin_eph(0.0f),
 	_gps_origin_epv(0.0f),
 	_mag_healthy(false),
+	_airspeed_healthy(false),
 	_yaw_test_ratio(0.0f),
 	_time_last_imu(0),
 	_time_last_gps(0),
@@ -145,12 +142,8 @@ void EstimatorInterface::setMagData(uint64_t time_usec, float *data)
 
 void EstimatorInterface::setGpsData(uint64_t time_usec, struct gps_message *gps)
 {
-	if (!collect_gps(time_usec, gps) || !_initialised) {
-		return;
-	}
-
-	// Only use GPS data if we have a 3D fix and limit the GPS data rate to a maximum of 14Hz
-	if (time_usec - _time_last_gps > 70000 && gps->fix_type >= 3) {
+	// Limit the GPS data rate to a maximum of 14Hz
+	if (time_usec - _time_last_gps > 65000) {
 		gpsSample gps_sample_new = {};
 		gps_sample_new.time_us = gps->time_usec - _params.gps_delay_ms * 1000;
 
@@ -162,15 +155,24 @@ void EstimatorInterface::setGpsData(uint64_t time_usec, struct gps_message *gps)
 		memcpy(gps_sample_new.vel._data[0], gps->vel_ned, sizeof(gps_sample_new.vel._data));
 
 		_gps_speed_valid = gps->vel_ned_valid;
-		_gps_speed_accuracy = gps->sacc;
-		_gps_hpos_accuracy = gps->eph;
+		gps_sample_new.sacc = gps->sacc;
+		gps_sample_new.hacc = gps->eph;
+		gps_sample_new.vacc = gps->epv;
 
-		float lpos_x = 0.0f;
-		float lpos_y = 0.0f;
-		map_projection_project(&_pos_ref, (gps->lat / 1.0e7), (gps->lon / 1.0e7), &lpos_x, &lpos_y);
-		gps_sample_new.pos(0) = lpos_x;
-		gps_sample_new.pos(1) = lpos_y;
-		gps_sample_new.hgt = gps->alt / 1e3f;
+		gps_sample_new.hgt = (float)gps->alt * 1e-3f;
+
+		// Only calculate the relative position if the WGS-84 location of the origin is set
+		if (collect_gps(time_usec, gps)) {
+			float lpos_x = 0.0f;
+			float lpos_y = 0.0f;
+			map_projection_project(&_pos_ref, (gps->lat / 1.0e7), (gps->lon / 1.0e7), &lpos_x, &lpos_y);
+			gps_sample_new.pos(0) = lpos_x;
+			gps_sample_new.pos(1) = lpos_y;
+
+		} else {
+			gps_sample_new.pos(0) = 0.0f;
+			gps_sample_new.pos(1) = 0.0f;
+		}
 
 		_gps_buffer.push(gps_sample_new);
 	}
@@ -182,7 +184,7 @@ void EstimatorInterface::setBaroData(uint64_t time_usec, float *data)
 		return;
 	}
 
-	if (time_usec - _time_last_baro > 70000) {
+	if (time_usec - _time_last_baro > 68000) {
 
 		baroSample baro_sample_new;
 		baro_sample_new.hgt = *data;
@@ -197,36 +199,88 @@ void EstimatorInterface::setBaroData(uint64_t time_usec, float *data)
 	}
 }
 
-void EstimatorInterface::setAirspeedData(uint64_t time_usec, float *data)
+void EstimatorInterface::setAirspeedData(uint64_t time_usec, float *true_airspeed, float *eas2tas)
 {
-	if (!collect_airspeed(time_usec, data) || !_initialised) {
+	if (!collect_airspeed(time_usec, true_airspeed, eas2tas) || !_initialised) {
 		return;
 	}
 
-	if (time_usec > _time_last_airspeed) {
+	if (time_usec - _time_last_airspeed > 80000) {
 		airspeedSample airspeed_sample_new;
-		airspeed_sample_new.airspeed = *data;
+		airspeed_sample_new.true_airspeed = *true_airspeed;
+		airspeed_sample_new.eas2tas = *eas2tas;
 		airspeed_sample_new.time_us = time_usec - _params.airspeed_delay_ms * 1000;
-		airspeed_sample_new.time_us -= FILTER_UPDATE_PERRIOD_MS * 1000 / 2;
+		airspeed_sample_new.time_us -= FILTER_UPDATE_PERRIOD_MS * 1000 / 2; //typo PeRRiod
 		_time_last_airspeed = time_usec;
 
 		_airspeed_buffer.push(airspeed_sample_new);
 	}
 }
-
+static float rng;
 // set range data
 void EstimatorInterface::setRangeData(uint64_t time_usec, float *data)
 {
 	if (!collect_range(time_usec, data) || !_initialised) {
 		return;
 	}
+
+	if (time_usec - _time_last_range > 45000) {
+		rangeSample range_sample_new;
+		range_sample_new.rng = *data;
+		rng = *data;
+		range_sample_new.time_us -= _params.range_delay_ms * 1000;
+
+		range_sample_new.time_us = time_usec;
+		_time_last_range = time_usec;
+
+		_range_buffer.push(range_sample_new);
+	}
 }
 
 // set optical flow data
-void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, float *data)
+void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *flow)
 {
-	if (!collect_opticalflow(time_usec, data) || !_initialised) {
+	if (!collect_opticalflow(time_usec, flow) || !_initialised) {
 		return;
+	}
+
+	// if data passes checks, push to buffer
+	if (time_usec - _time_last_optflow > 40000) {
+		// check if enough integration time
+		float delta_time = 1e-6f * (float)flow->dt;
+		bool delta_time_good = (delta_time >= 0.05f);
+
+		// check magnitude is within sensor limits
+		float flow_rate_magnitude;
+		bool flow_magnitude_good = false;
+
+		if (delta_time_good) {
+			flow_rate_magnitude = flow->flowdata.norm() / delta_time;
+			flow_magnitude_good = (flow_rate_magnitude <= _params.flow_rate_max);
+		}
+
+		// check quality metric
+		bool flow_quality_good = (flow->quality >= _params.flow_qual_min);
+
+		if (delta_time_good && flow_magnitude_good && flow_quality_good) {
+			flowSample optflow_sample_new;
+			// calculate the system time-stamp for the mid point of the integration period
+			optflow_sample_new.time_us = time_usec - _params.flow_delay_ms * 1000 - flow->dt / 2;
+			// copy the quality metric returned by the PX4Flow sensor
+			optflow_sample_new.quality = flow->quality;
+			// NOTE: the EKF uses the reverse sign convention to the flow sensor. EKF assumes positive LOS rate is produced by a RH rotation of the image about the sensor axis.
+			// copy the optical and gyro measured delta angles
+			optflow_sample_new.flowRadXY = - flow->flowdata;
+			optflow_sample_new.gyroXYZ = - flow->gyrodata;
+			// compensate for body motion to give a LOS rate
+			optflow_sample_new.flowRadXYcomp(0) = optflow_sample_new.flowRadXY(0) - optflow_sample_new.gyroXYZ(0);
+			optflow_sample_new.flowRadXYcomp(1) = optflow_sample_new.flowRadXY(1) - optflow_sample_new.gyroXYZ(1);
+			// convert integration interval to seconds
+			optflow_sample_new.dt = 1e-6f * (float)flow->dt;
+			_time_last_optflow = time_usec;
+			// push to buffer
+			_flow_buffer.push(optflow_sample_new);
+		}
 	}
 }
 
@@ -241,11 +295,34 @@ bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 	      _airspeed_buffer.allocate(OBS_BUFFER_LENGTH) &&
 	      _flow_buffer.allocate(OBS_BUFFER_LENGTH) &&
 	      _output_buffer.allocate(IMU_BUFFER_LENGTH))) {
-		printf("Estimator Buffer Allocation failed!");
+		printf("EKF buffer allocation failed!");
 		unallocate_buffers();
 		return false;
 	}
 
+	// zero the data in the observation buffers
+	for (int index=0; index < OBS_BUFFER_LENGTH; index++) {
+		gpsSample gps_sample_init = {};
+		_gps_buffer.push(gps_sample_init);
+		magSample mag_sample_init = {};
+		_mag_buffer.push(mag_sample_init);
+		baroSample baro_sample_init = {};
+		_baro_buffer.push(baro_sample_init);
+		rangeSample range_sample_init = {};
+		_range_buffer.push(range_sample_init);
+		airspeedSample airspeed_sample_init = {};
+		_airspeed_buffer.push(airspeed_sample_init);
+		flowSample flow_sample_init = {};
+		_flow_buffer.push(flow_sample_init);
+	}
+
+	// zero the data in the imu data and output observer state buffers
+	for (int index=0; index < IMU_BUFFER_LENGTH; index++) {
+		imuSample imu_sample_init = {};
+		_imu_buffer.push(imu_sample_init);
+		outputSample output_sample_init = {};
+		_output_buffer.push(output_sample_init);
+	}
 
 	_dt_imu_avg = 0.0f;
 
@@ -265,8 +342,9 @@ bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 	_time_last_baro = 0;
 	_time_last_range = 0;
 	_time_last_airspeed = 0;
+	_time_last_optflow = 0;
 
-	memset(&_fault_status, 0, sizeof(_fault_status));
+	memset(&_fault_status.flags, 0, sizeof(_fault_status.flags));
 	return true;
 }
 
@@ -283,9 +361,8 @@ void EstimatorInterface::unallocate_buffers()
 
 }
 
-bool EstimatorInterface::position_is_valid()
+bool EstimatorInterface::local_position_is_valid()
 {
 	// return true if the position estimate is valid
-	// TOTO implement proper check based on published GPS accuracy, innovaton consistency checks and timeout status
-	return _NED_origin_initialised && (_time_last_imu - _time_last_gps) < 5e6;
+	return (((_time_last_imu - _time_last_optflow) < 5e6) && _control_status.flags.opt_flow) || global_position_is_valid();
 }
