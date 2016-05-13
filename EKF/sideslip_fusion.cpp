@@ -197,7 +197,7 @@ void Ekf::fuseSideslip()
 			}
 		}
 
-		makeSymmetrical();
-		limitCov();
+        // correct the covariance marix for gross errors
+        fixCovarianceErrors();
     }
 }
