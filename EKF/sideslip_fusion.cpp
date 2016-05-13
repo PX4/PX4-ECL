@@ -173,17 +173,8 @@ void Ekf::fuseSideslip()
 			return;
 		}
 
-		// by definition the angle error state is zero at the fusion time
-		_state.ang_error.setZero();
-
 		// Fuse syntetic sideslip measurement
 		fuse(Kfusion, _beta_innov); //Why calculate angle error when it is always zero?
-
-		// correct the nominal quaternion
-		Quaternion dq;
-		dq.from_axis_angle(_state.ang_error);
-		_state.quat_nominal = dq * _state.quat_nominal;
-		_state.quat_nominal.normalize();
 
 		// update covariance matrix via Pnew = (I - KH)P = P - KHP
 		for (unsigned row = 0; row < _k_num_states; row++) {
