@@ -270,6 +270,7 @@ protected:
 
 	bool _mag_healthy;              // computed by mag innovation test
 	bool _airspeed_healthy;			// computed by airspeed innovation test
+	bool _beta_healthy;				// computed by beta innovation test
 	float _yaw_test_ratio;          // yaw innovation consistency check ratio
 	float _mag_test_ratio[3];       // magnetometer XYZ innovation consistency check ratios
 	float _vel_pos_test_ratio[6];   // velocity and position innovation consistency check ratios
