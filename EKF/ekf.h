@@ -83,16 +83,16 @@ public:
 	void get_heading_innov_var(float *heading_innov_var);
 
 	// gets the innovation variance of the flow measurement
-	void get_flow_innov_var(float flow_innov_var[2]) {}; //******************************addded definition to get it to compile. Jared W.
+	void get_flow_innov_var(float flow_innov_var[2]);
 
 	// gets the innovation of the flow measurement
-	void get_flow_innov(float flow_innov[2]) {}; //******************************addded definition to get it to compile. Jared W.
+	void get_flow_innov(float flow_innov[2]);
 
 	// gets the innovation variance of the HAGL measurement
-	void get_hagl_innov_var(float *hagl_innov_var) {}; //******************************addded definition to get it to compile. Jared W.
+	void get_hagl_innov_var(float *hagl_innov_var);
 
 	// gets the innovation of the HAGL measurement
-	void get_hagl_innov(float *hagl_innov) {}; //******************************addded definition to get it to compile. Jared W.
+	void get_hagl_innov(float *hagl_innov);
 
 	// get the state vector at the delayed time horizon
 	void get_state_delayed(float *state);
@@ -119,7 +119,7 @@ public:
 
 	// return true if the etimate is valid
 	// return the estimated terrain vertical position relative to the NED origin
-	bool get_terrain_vert_pos(float *ret) { return false; }; //******************************addded definition to get it to compile. Jared W.
+	bool get_terrain_vert_pos(float *ret);
 
 	// get the accerometer bias in m/s/s
 	void get_accel_bias(float bias[3]);
@@ -134,7 +134,7 @@ private:
 
 	static const uint8_t _k_num_states = 24;
 	static const float _k_earth_rate;
-	const float _gravity_mss = 9.80665f;
+	static const float _gravity_mss;
 
 	float _dt_ekf_avg;		// average update rate of the ekf
 
@@ -270,7 +270,7 @@ private:
 	void fuseDeclination();
 
 	// fuse airspeed measurement
-	void fuseAirspeed() {}; //******************************addded definition to get it to compile. Jared W.
+	void fuseAirspeed();
 
 	// fuse velocity and position measurements (also barometer height)
 	void fuseVelPosHeight();
@@ -279,20 +279,20 @@ private:
 	bool resetVelocity();
 
 	// fuse optical flow line of sight rate measurements
-	void fuseOptFlow() {}; //******************************addded definition to get it to compile. Jared W.
+	void fuseOptFlow();
 
 	// calculate optical flow bias errors
-	void calcOptFlowBias() {}; //******************************addded definition to get it to compile. Jared W.
+	void calcOptFlowBias();
 
 	// initialise the terrain vertical position estimator
 	// return true if the initialisation is successful
-	bool initHagl() { return false; }; //******************************addded definition to get it to compile. Jared W.
+	bool initHagl();
 
 	// predict the terrain vertical position state and variance
-	void predictHagl() {}; //******************************addded definition to get it to compile. Jared W.
+	void predictHagl();
 
 	// update the terrain vertical position estimate using a height above ground measurement from the range finder
-	void fuseHagl() {}; //******************************addded definition to get it to compile. Jared W.
+	void fuseHagl();
 
 	// reset the heading and magnetic field states using the declination and magnetometer measurements
 	// return true if successful
@@ -345,6 +345,6 @@ private:
 	void zeroCols(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last);
 
 	// calculate the measurement variance for the optical flow sensor
-	float calcOptFlowMeasVar() { int temp = 0.0; return temp; }; //******************************addded definition to get it to compile. Jared W.
+	float calcOptFlowMeasVar();
 
 };
