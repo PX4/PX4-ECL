@@ -42,8 +42,8 @@
  * @author Anton Babushkin <anton.babushkin@me.com>
  */
 #ifdef POSIX_SHARED
-#include <unistd.h>
-#include <pthread.h>
+//#include <unistd.h>
+//#include <pthread.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdbool.h>
@@ -95,6 +95,7 @@
 *
 */
 
+#include <stdint.h>
 #include "geo.h"
 
 /** set this always to the sampling in degrees for the table below */
@@ -708,7 +709,7 @@ float mavlink_wpm_distance_to_point_local(float x_now, float y_now, float z_now,
 float _wrap_pi(float bearing)
 {
 	/* value is inf or NaN */
-	if (!math::isfinite(bearing)) {
+	if (!isfinite(bearing)) {
 		return bearing;
 	}
 
@@ -738,7 +739,7 @@ float _wrap_pi(float bearing)
 float _wrap_2pi(float bearing)
 {
 	/* value is inf or NaN */
-	if (!math::isfinite(bearing)) {
+	if (!isfinite(bearing)) {
 		return bearing;
 	}
 
@@ -768,7 +769,7 @@ float _wrap_2pi(float bearing)
 float _wrap_180(float bearing)
 {
 	/* value is inf or NaN */
-	if (!math::isfinite(bearing)) {
+	if (!isfinite(bearing)) {
 		return bearing;
 	}
 
@@ -798,7 +799,7 @@ float _wrap_180(float bearing)
 float _wrap_360(float bearing)
 {
 	/* value is inf or NaN */
-	if (!math::isfinite(bearing)) {
+	if (!isfinite(bearing)) {
 		return bearing;
 	}
 
