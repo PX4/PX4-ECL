@@ -183,7 +183,7 @@ void Ekf::fuseSideslip()
 		}
 
 		// Fuse syntetic sideslip measurement
-		fuse(Kfusion, _beta_innov); //Why calculate angle error when it is always zero?
+		fuse(Kfusion, _beta_innov);
 
 		// update covariance matrix via Pnew = (I - KH)P = P - KHP
 		for (unsigned row = 0; row < _k_num_states; row++) {
@@ -194,7 +194,7 @@ void Ekf::fuseSideslip()
 
 		for (unsigned row = 0; row < _k_num_states; row++) {
 			for (unsigned column = 0; column < _k_num_states; column++) {
-				for (unsigned i = 0; i < _k_num_states; i++) { // Check if this is correct matrix multiplication!
+				for (unsigned i = 0; i < _k_num_states; i++) {
 					KHP[row][column] += KH[row][i] * P[i][column];
 				}
 			}
