@@ -58,6 +58,7 @@ EstimatorInterface::EstimatorInterface():
 	_gps_origin_epv(0.0f),
 	_mag_healthy(false),
 	_airspeed_healthy(false),
+	_beta_healthy(false),
 	_yaw_test_ratio(0.0f),
 	_time_last_imu(0),
 	_time_last_gps(0),
