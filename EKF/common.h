@@ -383,6 +383,8 @@ union filter_control_status_u {
 		uint16_t baro_hgt    : 1; // 9 - true when baro height is being fused as a primary height reference
 		uint16_t rng_hgt     : 1; // 10 - true when range finder height is being fused as a primary height reference
 		uint16_t gps_hgt     : 1; // 11 - true when range finder height is being fused as a primary height reference
+		uint16_t fuse_airspeed : 1; // 12 - true when we want to fuse airspeed sensor data
+		uint16_t fuse_beta : 1; // 13 - true when we want to fuse syntetic sideslip measurements
 	} flags;
 	uint16_t value;
 };
