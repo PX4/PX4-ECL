@@ -407,7 +407,7 @@ void Ekf::controlHeightSensorTimeouts()
 				_control_status.flags.ev_hgt = false;
 				// request a reset
 				reset_height = true;
-				printf("EKF gps hgt timeout - reset to GPS\n");
+				ECL_INFO("EKF gps hgt timeout - reset to GPS");
 			} else {
 				// we have nothing to reset to
 				reset_height = false;

@@ -178,7 +178,7 @@ void Ekf::fuseSideslip()
 
 		// if the innovation consistency check fails then don't fuse the sample and indicate bad beta health
 		if (_beta_test_ratio > 1.0f) {
-			_beta_healthy = false;
+			// add check report
 			return;
 		}
 

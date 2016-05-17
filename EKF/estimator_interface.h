@@ -284,7 +284,7 @@ protected:
 	float _gps_origin_epv; // vertical position uncertainty of the GPS origin
 	struct map_projection_reference_s _pos_ref;    // Contains WGS-84 position latitude and longitude (radians)
 	// innovation consistency check monitoring ratios
-		float _yaw_test_ratio;          // yaw innovation consistency check ratio
+	float _yaw_test_ratio;          // yaw innovation consistency check ratio
 	float _mag_test_ratio[3];       // magnetometer XYZ innovation consistency check ratios
 	float _vel_pos_test_ratio[6];   // velocity and position innovation consistency check ratios
 	float _tas_test_ratio;			// tas innovation consistency check ratio
@@ -309,7 +309,7 @@ protected:
 	uint64_t _time_last_range;	// timestamp of last range measurement in microseconds
 	uint64_t _time_last_airspeed;	// timestamp of last airspeed measurement in microseconds
 	uint64_t _time_last_ext_vision; // timestamp of last external vision measurement in microseconds
-	uint64_t _time_last_optflow;
+	uint64_t _time_last_optflow;	// timestamp of last optical flow measurement in microseconds
 	fault_status_u _fault_status;
 
 	// allocate data buffers and intialise interface variables
