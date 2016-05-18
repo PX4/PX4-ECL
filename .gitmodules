@@ -1,0 +1,3 @@
+[submodule "matrix"]
+	path = matrix
+	url = git@github.com:inertialsense/Matrix.git
