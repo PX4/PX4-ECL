@@ -158,7 +158,7 @@ public:
 	// set flag if airspeed data should be fused
  	void set_fuse_airspeed_flag(bool fuse_airspeed) {_control_status.flags.fuse_airspeed = fuse_airspeed;}
 
- 	// set flag if syntetic sideslip measurement should be fused
+ 	// set flag if synthetic sideslip measurement should be fused
  	void set_fuse_beta_flag(bool fuse_beta) {_control_status.flags.fuse_beta = fuse_beta;}
 
 	// return true if the global position estimate is valid
