@@ -195,7 +195,6 @@ private:
 	bool _fuse_vert_vel;		// gps vertical velocity measurement should be fused
 	bool _fuse_flow;		// flow measurement should be fused
 	bool _fuse_hagl_data;		// if true then range data will be fused to estimate terrain height
-	bool _fuse_beta;		// syntetic sideslip measurement should be fused
 
 	uint64_t _time_last_fake_gps;	// last time in us at which we have faked gps measurement for static mode
 

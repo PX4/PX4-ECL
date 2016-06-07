@@ -152,6 +152,9 @@ public:
 	// set vehicle landed status data
 	void set_in_air_status(bool in_air) {_control_status.flags.in_air = in_air;}
 
+	// set flag if synthetic sideslip measurement should be fused
+	void set_fuse_beta_flag(bool fuse_beta) {_control_status.flags.fuse_beta = fuse_beta;}
+
 	// return true if the global position estimate is valid
 	virtual bool global_position_is_valid() = 0;
 
