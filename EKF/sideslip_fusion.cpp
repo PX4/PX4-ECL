@@ -184,9 +184,6 @@ void Ekf::fuseSideslip()
         // synthetic sideslip measurement sample has passed check so record it
         _time_last_beta_fuse = _time_last_imu;
 
-		// Fuse synthetic sideslip measurement
-		fuse(Kfusion, _beta_innov); //Why calculate angle error when it is always zero?
-
 		// update covariance matrix via Pnew = (I - KH)P = P - KHP
 		for (unsigned row = 0; row < _k_num_states; row++) {
 			for (unsigned column = 0; column < _k_num_states; column++) { // Here it will be a lot of zeros, should optimize that...
@@ -196,7 +193,7 @@ void Ekf::fuseSideslip()
 
 		for (unsigned row = 0; row < _k_num_states; row++) {
 			for (unsigned column = 0; column < _k_num_states; column++) {
-				for (unsigned i = 0; i < _k_num_states; i++) { // Check if this is correct matrix multiplication!
+				for (unsigned i = 0; i < _k_num_states; i++) { 
 					KHP[row][column] += KH[row][i] * P[i][column];
 				}
 			}
@@ -207,8 +204,41 @@ void Ekf::fuseSideslip()
 				P[row][column] = P[row][column] - KHP[row][column];
 			}
 		}
+        
+        // if the covariance correction will result in a negative variance, then
+        // the covariance marix is unhealthy and must be corrected
+        bool healthy = true;
+        _fault_status.flags.bad_sideslip = false;
+        for (int i = 0; i < _k_num_states; i++) {
+            if (P[i][i] < KHP[i][i]) {
+                // zero rows and columns
+                zeroRows(P,i,i);
+                zeroCols(P,i,i);
 
-        // correct the covariance marix for gross errors
-        fixCovarianceErrors();
+                //flag as unhealthy
+                healthy = false;
+
+                // update individual measurement health status
+                _fault_status.flags.bad_sideslip = true;
+
+            }
+        }
+
+        // only apply covariance and state corrrections if healthy
+        if (healthy) {
+            // apply the covariance corrections
+            for (unsigned row = 0; row < _k_num_states; row++) {
+                for (unsigned column = 0; column < _k_num_states; column++) {
+                    P[row][column] = P[row][column] - KHP[row][column];
+                }
+            }
+
+            // correct the covariance marix for gross errors
+            fixCovarianceErrors();
+
+            // apply the state corrections
+            fuse(Kfusion, _beta_innov);
+
+        }
     }
 }
