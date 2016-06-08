@@ -66,7 +66,7 @@ public:
 	// gets the innovation of the airspeed measurement
  	virtual void get_airspeed_innov(float *airspeed_innov) = 0;
 
-	// gets the innovation of the syntetic sideslip measurement
+	// gets the innovation of the synthetic sideslip measurement
  	virtual void get_beta_innov(float *beta_innov) = 0;
 
 	// gets the innovations of the heading measurement
@@ -82,7 +82,7 @@ public:
 	// gets the innovation variance of the airspeed measurement
  	virtual void get_airspeed_innov_var(float *get_airspeed_innov_var) = 0;
 
- 	// gets the innovation variance of the syntetic sideslip measurement
+ 	// gets the innovation variance of the synthetic sideslip measurement
  	virtual void get_beta_innov_var(float *get_beta_innov_var) = 0;
 
 	// gets the innovation variance of the heading measurement
