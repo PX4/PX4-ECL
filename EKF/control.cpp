@@ -628,4 +628,12 @@ void Ekf::controlMagAiding()
 	} else {
 		_control_status.flags.wind = true;
 	}
+
+	// if the synthetic sideslip measurements have timed out for 10 seconds we declare the wind estimate to be invalid
+	if (_time_last_imu - _time_last_beta_fuse > 10e6 || _time_last_beta_fuse == 0) {
+		_control_status.flags.wind = false;
+	} else {
+		_control_status.flags.wind = true;
+	}
+
 }
