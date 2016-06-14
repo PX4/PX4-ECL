@@ -66,7 +66,7 @@ float ECL_PitchController::control_attitude(const struct ECL_ControlData &ctl_da
 	      PX4_ISFINITE(ctl_data.roll) &&
 	      PX4_ISFINITE(ctl_data.pitch) &&
 	      PX4_ISFINITE(ctl_data.airspeed))) {
-		warnx("not controlling pitch");
+		px4_warnx("not controlling pitch");
 		return _rate_setpoint;
 	}
 
@@ -190,7 +190,7 @@ float ECL_PitchController::control_bodyrate(const struct ECL_ControlData &ctl_da
 	_last_output = _bodyrate_setpoint * _k_ff * ctl_data.scaler +
 		       _rate_error * _k_p * ctl_data.scaler * ctl_data.scaler
 		       + integrator_constrained;  //scaler is proportional to 1/airspeed
-//	warnx("pitch: _integrator: %.4f, _integrator_max: %.4f, airspeed %.4f, _k_i %.4f, _k_p: %.4f", (double)_integrator, (double)_integrator_max, (double)airspeed, (double)_k_i, (double)_k_p);
-//	warnx("roll: _last_output %.4f", (double)_last_output);
+//	px4_warnx("pitch: _integrator: %.4f, _integrator_max: %.4f, airspeed %.4f, _k_i %.4f, _k_p: %.4f", (double)_integrator, (double)_integrator_max, (double)airspeed, (double)_k_i, (double)_k_p);
+//	px4_warnx("roll: _last_output %.4f", (double)_last_output);
 	return math::constrain(_last_output, -1.0f, 1.0f);
 }

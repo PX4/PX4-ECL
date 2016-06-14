@@ -71,7 +71,7 @@ float ECL_YawController::control_attitude(const struct ECL_ControlData &ctl_data
 		static hrt_abstime last_print = 0;
 
 		if (ecl_elapsed_time(&last_print) > 5e6) {
-			warnx("invalid param setting FW_YCO_METHOD");
+			px4_warnx("invalid param setting FW_YCO_METHOD");
 			last_print = ecl_absolute_time();
 		}
 	}
@@ -90,7 +90,7 @@ float ECL_YawController::control_bodyrate(const struct ECL_ControlData &ctl_data
 		static hrt_abstime last_print = 0;
 
 		if (ecl_elapsed_time(&last_print) > 5e6) {
-			warnx("invalid param setting FW_YCO_METHOD");
+			px4_warnx("invalid param setting FW_YCO_METHOD");
 			last_print = ecl_absolute_time();
 		}
 	}
@@ -126,11 +126,11 @@ float ECL_YawController::control_attitude_impl_openloop(const struct ECL_Control
 					  ctl_data.speed_body_u * ctl_data.pitch_rate_setpoint * sinf(ctl_data.roll)) /
 					 denumerator;
 
-//			warnx("yaw: speed_body_u %.f speed_body_w %1.f roll %.1f pitch %.1f denumerator %.1f _rate_setpoint %.1f", speed_body_u, speed_body_w, denumerator, _rate_setpoint);
+//			px4_warnx("yaw: speed_body_u %.f speed_body_w %1.f roll %.1f pitch %.1f denumerator %.1f _rate_setpoint %.1f", speed_body_u, speed_body_w, denumerator, _rate_setpoint);
 		}
 
 //		if(counter % 20 == 0) {
-//			warnx("denumerator: %.4f, speed_body_u: %.4f, speed_body_w: %.4f, cosf(roll): %.4f, cosf(pitch): %.4f, sinf(pitch): %.4f", (double)denumerator, (double)speed_body_u, (double)speed_body_w, (double)cosf(roll), (double)cosf(pitch), (double)sinf(pitch));
+//			px4_warnx("denumerator: %.4f, speed_body_u: %.4f, speed_body_w: %.4f, cosf(roll): %.4f, cosf(pitch): %.4f, sinf(pitch): %.4f", (double)denumerator, (double)speed_body_u, (double)speed_body_w, (double)cosf(roll), (double)cosf(pitch), (double)sinf(pitch));
 //		}
 	}
 
@@ -145,7 +145,7 @@ float ECL_YawController::control_attitude_impl_openloop(const struct ECL_Control
 //	counter++;
 
 	if (!PX4_ISFINITE(_rate_setpoint)) {
-		warnx("yaw rate sepoint not finite");
+		px4_warnx("yaw rate sepoint not finite");
 		_rate_setpoint = 0.0f;
 	}
 
