@@ -75,10 +75,13 @@ Ekf::Ekf():
 	_time_last_hgt_fuse(0),
 	_time_last_of_fuse(0),
 	_time_last_arsp_fuse(0),
+	_time_last_beta_fuse(0),
 	_last_disarmed_posD(0.0f),
 	_last_dt_overrun(0.0f),
 	_airspeed_innov(0.0f),
 	_airspeed_innov_var(0.0f),
+	_beta_innov(0.0f),
+	_beta_innov_var(0.0f),
 	_heading_innov(0.0f),
 	_heading_innov_var(0.0f),
 	_delta_time_of(0.0f),
@@ -368,6 +371,11 @@ bool Ekf::update()
 		// If we are using airspeed measurements and data has fallen behind the fusion time horizon then fuse it
 		if (_airspeed_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_airspeed_sample_delayed)) {
 			fuseAirspeed();
+		}
+
+		bool beta_fusion_time_triggered = _time_last_imu - _time_last_beta_fuse > _params.beta_avg_ft_ms;
+		if(beta_fusion_time_triggered && _control_status.flags.fuse_beta && _control_status.flags.in_air){
+			fuseSideslip();
 		}
 	}
 
