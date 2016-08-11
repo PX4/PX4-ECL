@@ -564,7 +564,7 @@ void Ekf::predictCovariance()
 	// Don't do covariance prediction on wind states unless we are using them
 	if (_control_status.flags.wind) {
 		// Check if we have just transitioned to using wind states and set the variances accordingly
-		if (!_control_status_prev.flags.wind) {
+		if (_control_status_prev.flags.wind) {
 			// simple initialisation of wind states: calculate wind component along the forward axis
 			// of the plane.
 			
@@ -572,35 +572,27 @@ void Ekf::predictCovariance()
 			float heading = euler(2);
 
 			// ground speed component in the xy plane projected onto the directon the plane is heading to
-			float ground_speed_xy_nose = _output_new.vel(0) * cosf(heading) + _output_new.vel(1) * sinf(heading);
 			airspeedSample tmp = _airspeed_buffer.get_newest();
-			float airspeed = tmp.true_airspeed;
+			gpsSample tmp_gps =_gps_buffer.get_newest();
 
-			// check if the calculation is well conditioned:
-			// our airspeed measurement is at least as hight as our down velocity and the plane is moving forward
-			if (airspeed > fabsf(_output_new.vel(2)) && ground_speed_xy_nose > 0) {
-	
-				float ground_speed = sqrtf(_output_new.vel(0) * _output_new.vel(0) + _output_new.vel(1) * _output_new.vel(1) + _output_new.vel(2) * _output_new.vel(2));
-				
-				// wind magnitude in the direction the plane is
-				float wind_magnitude = ground_speed_xy_nose -  sqrtf(airspeed *  airspeed - _output_new.vel(2) * _output_new.vel(2));
+			// Airspeed x/y
+			float airspeed_x = cosf(heading) * tmp.true_airspeed;
+			float airspeed_y = sinf(heading) *tmp.true_airspeed;
 
-				// determine direction of wind
-				float wind_sign = 1;
-				if (airspeed < ground_speed) {
-					// wind is in nose direction
-					wind_sign = 1;
-				} else {
-					wind_sign = -1;
-				}
+			static float wind_speed_x;
+			static float wind_speed_y;
+			// Smooth it out. Derived from: wind_speed_x = tmp_gps.vel(0) - airspeed_x
+			wind_speed_x += ((tmp_gps.vel(0) - airspeed_x) - wind_speed_x)*0.001f;
+			wind_speed_y += ((tmp_gps.vel(1) - airspeed_y) - wind_speed_y)*0.001f;
 
-				_state.wind_vel(0) = cosf(heading) * wind_magnitude * wind_sign;
-				_state.wind_vel(1) = sinf(heading) * wind_magnitude * wind_sign;
+			//warnx("Air(%2.2f)/gnd() speed: X: %2.2f/%2.2f(%2.2f), Y: %2.2f/%2.2f(%2.2f), heading: %d ",
+			//      (double)airspeed,
+			//      (double)airspeed_x, (double)tmp_gps.vel(0), (double)wind_speed_x,
+			//      (double)airspeed_y, (double)tmp_gps.vel(1), (double)wind_speed_y,
+			//      (int)(heading*M_RAD_TO_DEG_F));
 
-			} else {
-				// calculation is badly conditioned, just set wind states to zero
-				_state.wind_vel.setZero();
-			}
+			_state.wind_vel(0) = wind_speed_x;
+			_state.wind_vel(1) = wind_speed_y;
 
 			// initialise diagonal of covariance matrix for the wind velocity states
 			for (uint8_t index = 22; index <= 23; index++) {
