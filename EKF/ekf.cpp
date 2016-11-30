@@ -184,6 +184,7 @@ bool Ekf::init(uint64_t timestamp)
 	_terrain_initialised = false;
 	_sin_tilt_rng = sinf(_params.rng_sens_pitch);
 	_cos_tilt_rng = cosf(_params.rng_sens_pitch);
+	_range_data_continuous = false;
 
 	_control_status.value = 0;
 	_control_status_prev.value = 0;
@@ -215,6 +216,7 @@ bool Ekf::update()
 		predictCovariance();
 
 		// perform state and variance prediction for the terrain estimator
+		checkRangeDataContinuity();
 		if (!_terrain_initialised) {
 			_terrain_initialised = initHagl();
 
