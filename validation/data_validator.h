@@ -173,7 +173,7 @@ private:
 	DataValidator *_sibling;		/**< sibling in the group */
 	static const constexpr unsigned NORETURN_ERRCOUNT = 10000;	/**< if the error count reaches this value, return sensor as invalid */
 	static const constexpr float ERROR_DENSITY_WINDOW = 100.0f; 	/**< window in measurement counts for errors */
-	static const constexpr unsigned VALUE_EQUAL_COUNT_MAX = 100;	/**< if the sensor value is the same (accumulated also between axes) this many times, flag it */
+	static const constexpr unsigned VALUE_EQUAL_COUNT_MAX = 1000;	/**< if the sensor value is the same (accumulated also between axes) this many times, flag it */
 
 	/* we don't want this class to be copied */
 	DataValidator(const DataValidator&) = delete;
