@@ -234,6 +234,8 @@ struct parameters {
 	float range_noise;		// observation noise for range finder measurements (m)
 	float range_innov_gate;		// range finder fusion innovation consistency gate size (STD)
 	float rng_gnd_clearance;	// minimum valid value for range when on ground (m)
+	float rng_sens_pitch;		// Pitch offset of the range sensor (rad). Sensor points out along Z axis when offset is zero. Positive rotation is RH about Y axis.
+	float range_noise_scaler;	// scaling from range measurement to noise (m/m)
 
 	// vision position fusion
 	float ev_innov_gate;		// vision estimator fusion innovation consistency gate size (STD)
@@ -337,6 +339,8 @@ struct parameters {
 		range_noise = 0.1f;
 		range_innov_gate = 5.0f;
 		rng_gnd_clearance = 0.1f;
+		rng_sens_pitch = 0.0f;
+		range_noise_scaler = 0.0f;
 
 		// optical flow fusion
 		flow_noise = 0.15f;

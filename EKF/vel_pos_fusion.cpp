@@ -155,14 +155,13 @@ void Ekf::fuseVelPosHeight()
 			// innovation gate size
 			gate_size[5] = fmaxf(_params.baro_innov_gate, 1.0f);
 
-		} else if (_control_status.flags.rng_hgt && (_R_to_earth(2, 2) > 0.7071f)) {
+		} else if (_control_status.flags.rng_hgt && (_R_rng_to_earth_2_2 > 0.7071f)) {
 			fuse_map[5] = true;
 			// use range finder with tilt correction
-			_vel_pos_innov[5] = _state.pos(2) - (-math::max(_range_sample_delayed.rng * _R_to_earth(2, 2),
+			_vel_pos_innov[5] = _state.pos(2) - (-math::max(_range_sample_delayed.rng * _R_rng_to_earth_2_2,
 							     _params.rng_gnd_clearance));
 			// observation variance - user parameter defined
-			R[5] = fmaxf(_params.range_noise, 0.01f);
-			R[5] = R[5] * R[5];
+			R[5] = fmaxf((sq(_params.range_noise) + sq(_params.range_noise_scaler * _range_sample_delayed.rng)) * sq(_R_rng_to_earth_2_2), 0.01f);
 			// innovation gate size
 			gate_size[5] = fmaxf(_params.range_innov_gate, 1.0f);
 		} else if (_control_status.flags.ev_hgt) {

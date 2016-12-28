@@ -41,15 +41,16 @@
 
 #include "ekf.h"
 #include "mathlib.h"
+#include <drivers/drv_hrt.h>
 
 bool Ekf::initHagl()
 {
 	// get most recent range measurement from buffer
 	rangeSample latest_measurement = _range_buffer.get_newest();
 
-	if ((_time_last_imu - latest_measurement.time_us) < 2e5 && _R_to_earth(2,2) > 0.7071f) {
+	if ((_time_last_imu - latest_measurement.time_us) < 2e5 && _R_rng_to_earth_2_2 > 0.7071f) {
 		// if we have a fresh measurement, use it to initialise the terrain estimator
-		_terrain_vpos = _state.pos(2) + latest_measurement.rng * _R_to_earth(2, 2);
+		_terrain_vpos = _state.pos(2) + latest_measurement.rng * _R_rng_to_earth_2_2;
 		// initialise state variance to variance of measurement
 		_terrain_var = sq(_params.range_noise);
 		// success
@@ -69,28 +70,43 @@ bool Ekf::initHagl()
 	}
 }
 
-void Ekf::predictHagl()
+void Ekf::runTerrainEstimator()
 {
-	// predict the state variance growth
-	// the state is the vertical position of the terrain underneath the vehicle
+	// Perform a continuity check on range finder data
+	checkRangeDataContinuity();
 
-	// process noise due to errors in vehicle height estimate
-	_terrain_var += sq(_imu_sample_delayed.delta_vel_dt * _params.terrain_p_noise);
+	// Perform initialisation check
+	if (!_terrain_initialised) {
+		_terrain_initialised = initHagl();
 
-	// process noise due to terrain gradient
-	_terrain_var += sq(_imu_sample_delayed.delta_vel_dt * _params.terrain_gradient) * (sq(_state.vel(0)) + sq(_state.vel(
-				1)));
+	} else {
 
-	// limit the variance to prevent it becoming badly conditioned
-	_terrain_var = math::constrain(_terrain_var, 0.0f, 1e4f);
+		// predict the state variance growth where the state is the vertical position of the terrain underneath the vehicle
+
+		// process noise due to errors in vehicle height estimate
+		_terrain_var += sq(_imu_sample_delayed.delta_vel_dt * _params.terrain_p_noise);
+
+		// process noise due to terrain gradient
+		_terrain_var += sq(_imu_sample_delayed.delta_vel_dt * _params.terrain_gradient) * (sq(_state.vel(0)) + sq(_state.vel(
+					1)));
+
+		// limit the variance to prevent it becoming badly conditioned
+		_terrain_var = math::constrain(_terrain_var, 0.0f, 1e4f);
+
+		// Fuse range finder data if available
+		if (_range_data_ready) {
+			fuseHagl();
+
+		}
+	}
 }
 
 void Ekf::fuseHagl()
 {
 	// If the vehicle is excessively tilted, do not try to fuse range finder observations
-	if (_R_to_earth(2, 2) > 0.7071f) {
+	if (_R_rng_to_earth_2_2 > 0.7071f) {
 		// get a height above ground measurement from the range finder assuming a flat earth
-		float meas_hagl = _range_sample_delayed.rng * _R_to_earth(2, 2);
+		float meas_hagl = _range_sample_delayed.rng * _R_rng_to_earth_2_2;
 
 		// predict the hagl from the vehicle position and terrain height
 		float pred_hagl = _terrain_vpos - _state.pos(2);
@@ -98,8 +114,8 @@ void Ekf::fuseHagl()
 		// calculate the innovation
 		_hagl_innov = pred_hagl - meas_hagl;
 
-		// calculate the observation variance adding the variance of the vehicles own height uncertainty and factoring in the effect of tilt on measurement error
-		float obs_variance = fmaxf(P[9][9], 0.0f) + sq(_params.range_noise / _R_to_earth(2, 2));
+		// calculate the observation variance adding the variance of the vehicles own height uncertainty
+		float obs_variance = fmaxf(P[9][9], 0.0f) + sq(_params.range_noise) + sq(_params.range_noise_scaler * _range_sample_delayed.rng);
 
 		// calculate the innovation variance - limiting it to prevent a badly conditioned fusion
 		_hagl_innov_var = fmaxf(_terrain_var + obs_variance, obs_variance);
@@ -135,10 +151,7 @@ bool Ekf::get_terrain_vert_pos(float *ret)
 {
 	memcpy(ret, &_terrain_vpos, sizeof(float));
 
-	// The height is useful if the uncertainty in terrain height is significantly smaller than than the estimated height above terrain
-	bool accuracy_useful = (sqrtf(_terrain_var) < 0.2f * fmaxf((_terrain_vpos - _state.pos(2)), _params.rng_gnd_clearance));
-
-	if (_time_last_imu - _time_last_hagl_fuse < 1e6 || accuracy_useful) {
+	if (_terrain_initialised && _range_data_continuous) {
 		return true;
 
 	} else {
@@ -155,4 +168,28 @@ void Ekf::get_hagl_innov(float *hagl_innov)
 void Ekf::get_hagl_innov_var(float *hagl_innov_var)
 {
 	memcpy(hagl_innov_var, &_hagl_innov_var, sizeof(_hagl_innov_var));
+}
+
+// check that the range finder data is continuous
+void Ekf::checkRangeDataContinuity()
+{
+	// update range data continuous flag (2Hz ie 500 ms)
+	/* Timing in micro seconds */
+	static hrt_abstime t = 0;
+	static hrt_abstime t_prev = 0;
+	static float dt = 0.0f;
+	t = hrt_absolute_time();
+	dt = t_prev != 0 ? (t - t_prev) * 1.0f : 0.0f;
+	t_prev = t;
+	dt = math::min(dt, 1.0f);
+
+	static float range_update_interval = 0.0f;
+	/* Apply a 1.0 sec low pass filter to the time delta from the last range finder updates */
+	range_update_interval = range_update_interval * (1.0f - dt) + dt * (_time_last_imu - _time_last_range);
+
+	if (range_update_interval < 5e5f) {
+		_range_data_continuous = true;
+	} else {
+		_range_data_continuous = false;
+	}
 }

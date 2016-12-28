@@ -182,6 +182,9 @@ bool Ekf::init(uint64_t timestamp)
 
 	_filter_initialised = false;
 	_terrain_initialised = false;
+	_sin_tilt_rng = sinf(_params.rng_sens_pitch);
+	_cos_tilt_rng = cosf(_params.rng_sens_pitch);
+	_range_data_continuous = false;
 
 	_control_status.value = 0;
 	_control_status_prev.value = 0;
@@ -212,13 +215,8 @@ bool Ekf::update()
 		predictState();
 		predictCovariance();
 
-		// perform state and variance prediction for the terrain estimator
-		if (!_terrain_initialised) {
-			_terrain_initialised = initHagl();
-
-		} else {
-			predictHagl();
-		}
+		// run a separate filter for terrain estimation
+		runTerrainEstimator();
 
 		// control fusion of observation data
 		controlFusionModes();
@@ -399,7 +397,7 @@ bool Ekf::initialiseFilter(void)
 			// so it can be used as a backup ad set the initial height using the range finder
 			baroSample baro_newest = _baro_buffer.get_newest();
 			_baro_hgt_offset = baro_newest.hgt;
-			_state.pos(2) = -math::max(_rng_filt_state * _R_to_earth(2, 2),_params.rng_gnd_clearance);
+			_state.pos(2) = -math::max(_rng_filt_state * _R_rng_to_earth_2_2,_params.rng_gnd_clearance);
 			ECL_INFO("EKF using range finder height - commencing alignment");
 
 		} else if (_control_status.flags.ev_hgt) {
