@@ -187,7 +187,4 @@ private:
 	data_type *_buffer;
 	unsigned _head, _tail, _size;
 	bool _first_write;
-
-	// debug
-	uint64_t _time_last;
 };
