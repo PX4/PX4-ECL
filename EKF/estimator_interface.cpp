@@ -62,6 +62,7 @@ EstimatorInterface::EstimatorInterface():
 	_yaw_test_ratio(0.0f),
 	_tas_test_ratio(0.0f),
 	_terr_test_ratio(0.0f),
+	_beta_test_ratio(0.0f),
 	_time_last_imu(0),
 	_time_last_gps(0),
 	_time_last_mag(0),
@@ -69,9 +70,45 @@ EstimatorInterface::EstimatorInterface():
 	_time_last_range(0),
 	_time_last_airspeed(0),
 	_time_last_ext_vision(0),
+	_time_last_optflow(0),
 	_mag_declination_gps(0.0f),
 	_mag_declination_to_save_deg(0.0f)
 {
+	_mag_sample_delayed.time_us = 0;
+	_mag_sample_delayed.mag.setZero();
+
+	_baro_sample_delayed.time_us = 0;
+	_baro_sample_delayed.hgt = 0;
+
+	_gps_sample_delayed.time_us = 0;
+	_gps_sample_delayed.pos.setZero();
+	_gps_sample_delayed.hgt = 0;
+	_gps_sample_delayed.vel.setZero();
+	_gps_sample_delayed.hacc = 0;
+	_gps_sample_delayed.vacc = 0;
+	_gps_sample_delayed.sacc = 0;
+
+	_range_sample_delayed.time_us = 0;
+	_range_sample_delayed.rng = 0;
+
+	_airspeed_sample_delayed.time_us = 0;
+	_airspeed_sample_delayed.true_airspeed = 0;
+	_airspeed_sample_delayed.eas2tas = 0;
+
+	_flow_sample_delayed.time_us = 0;
+	_flow_sample_delayed.quality = 0;
+	_flow_sample_delayed.flowRadXY.setZero();
+	_flow_sample_delayed.flowRadXYcomp.setZero();
+	_flow_sample_delayed.gyroXYZ.setZero();
+	_flow_sample_delayed.dt = 0;
+
+	_ev_sample_delayed.time_us = 0;
+	_ev_sample_delayed.posNED.setZero();
+	_ev_sample_delayed.quat.setZero();
+	_ev_sample_delayed.quat(0) = 1.0f;
+	_ev_sample_delayed.posErr = 0;
+	_ev_sample_delayed.angErr = 0;
+
 	_pos_ref = {};
 	memset(_mag_test_ratio, 0, sizeof(_mag_test_ratio));
 	memset(_vel_pos_test_ratio, 0, sizeof(_vel_pos_test_ratio));

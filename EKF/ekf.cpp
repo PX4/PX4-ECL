@@ -62,6 +62,7 @@ const float Ekf::_k_earth_rate = 0.000072921f;
 const float Ekf::_gravity_mss = 9.80665f;
 
 Ekf::Ekf():
+	_dt_ekf_avg(0.001f * (float)(FILTER_UPDATE_PERIOD_MS)),
 	_filter_initialised(false),
 	_earth_rate_initialised(false),
 	_fuse_height(false),
@@ -114,9 +115,11 @@ Ekf::Ekf():
 	_hagl_innov(0.0f),
 	_hagl_innov_var(0.0f),
 	_time_last_hagl_fuse(0),
+	_terrain_initialised(false),
 	_baro_hgt_faulty(false),
 	_gps_hgt_faulty(false),
 	_rng_hgt_faulty(false),
+	_primary_hgt_source(VDIST_SENSOR_BARO),
 	_time_bad_vert_accel(0)
 {
 	_state = {};
@@ -180,13 +183,8 @@ bool Ekf::init(uint64_t timestamp)
 	_NED_origin_initialised = false;
 	_gps_speed_valid = false;
 
-	_filter_initialised = false;
-	_terrain_initialised = false;
-
 	_control_status.value = 0;
 	_control_status_prev.value = 0;
-
-	_dt_ekf_avg = 0.001f * (float)(FILTER_UPDATE_PERIOD_MS);
 
 	_fault_status.value = 0;
 	_innov_check_fail_status.value = 0;
@@ -521,7 +519,6 @@ bool Ekf::collect_imu(imuSample &imu)
 		imu.delta_vel     = _imu_down_sampled.delta_vel;
 		imu.delta_ang_dt  = _imu_down_sampled.delta_ang_dt;
 		imu.delta_vel_dt  = _imu_down_sampled.delta_vel_dt;
-		imu.time_us       = imu.time_us;
 
 		_imu_down_sampled.delta_ang.setZero();
 		_imu_down_sampled.delta_vel.setZero();
