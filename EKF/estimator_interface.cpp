@@ -52,6 +52,13 @@ EstimatorInterface::EstimatorInterface():
 	_imu_buffer_length(30),
 	_min_obs_interval_us(0),
 	_dt_imu_avg(0.0f),
+	_mag_sample_delayed{},
+	_baro_sample_delayed{},
+	_gps_sample_delayed{},
+	_range_sample_delayed{},
+	_airspeed_sample_delayed{},
+	_flow_sample_delayed{},
+	_ev_sample_delayed{},
 	_imu_ticks(0),
 	_imu_updated(false),
 	_initialised(false),
@@ -59,9 +66,14 @@ EstimatorInterface::EstimatorInterface():
 	_gps_speed_valid(false),
 	_gps_origin_eph(0.0f),
 	_gps_origin_epv(0.0f),
+	_pos_ref{},
 	_yaw_test_ratio(0.0f),
+	_mag_test_ratio{},
+	_vel_pos_test_ratio{},
 	_tas_test_ratio(0.0f),
 	_terr_test_ratio(0.0f),
+	_beta_test_ratio(0.0f),
+	_vibe_metrics{},
 	_time_last_imu(0),
 	_time_last_gps(0),
 	_time_last_mag(0),
@@ -69,15 +81,12 @@ EstimatorInterface::EstimatorInterface():
 	_time_last_range(0),
 	_time_last_airspeed(0),
 	_time_last_ext_vision(0),
+	_time_last_optflow(0),
 	_mag_declination_gps(0.0f),
 	_mag_declination_to_save_deg(0.0f)
 {
-	_pos_ref = {};
-	memset(_mag_test_ratio, 0, sizeof(_mag_test_ratio));
-	memset(_vel_pos_test_ratio, 0, sizeof(_vel_pos_test_ratio));
 	_delta_ang_prev.setZero();
 	_delta_vel_prev.setZero();
-	memset(_vibe_metrics, 0, sizeof(_vibe_metrics));
 }
 
 EstimatorInterface::~EstimatorInterface()
@@ -106,8 +115,8 @@ void EstimatorInterface::setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, u
 
 	// copy data
 	imuSample imu_sample_new = {};
-	memcpy(&imu_sample_new.delta_ang._data[0], delta_ang, sizeof(imu_sample_new.delta_ang._data));
-	memcpy(&imu_sample_new.delta_vel._data[0], delta_vel, sizeof(imu_sample_new.delta_vel._data));
+	memcpy(&imu_sample_new.delta_ang, delta_ang, sizeof(imu_sample_new.delta_ang));
+	memcpy(&imu_sample_new.delta_vel, delta_vel, sizeof(imu_sample_new.delta_vel));
 
 	// convert time from us to secs
 	imu_sample_new.delta_ang_dt = delta_ang_dt / 1e6f;
@@ -160,7 +169,7 @@ void EstimatorInterface::setMagData(uint64_t time_usec, float *data)
 		_time_last_mag = time_usec;
 
 
-		memcpy(&mag_sample_new.mag._data[0], data, sizeof(mag_sample_new.mag._data));
+		memcpy(&mag_sample_new.mag, data, sizeof(mag_sample_new.mag));
 
 		_mag_buffer.push(mag_sample_new);
 	}
@@ -183,7 +192,7 @@ void EstimatorInterface::setGpsData(uint64_t time_usec, struct gps_message *gps)
 
 		gps_sample_new.time_us = math::max(gps_sample_new.time_us, _imu_sample_delayed.time_us);
 
-		memcpy(gps_sample_new.vel._data[0], gps->vel_ned, sizeof(gps_sample_new.vel._data));
+		memcpy(&gps_sample_new.vel._data[0], gps->vel_ned, sizeof(gps_sample_new.vel._data));
 
 		_gps_speed_valid = gps->vel_ned_valid;
 		gps_sample_new.sacc = gps->sacc;

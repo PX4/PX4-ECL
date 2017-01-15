@@ -114,9 +114,11 @@ Ekf::Ekf():
 	_hagl_innov(0.0f),
 	_hagl_innov_var(0.0f),
 	_time_last_hagl_fuse(0),
+	_terrain_initialised(false),
 	_baro_hgt_faulty(false),
 	_gps_hgt_faulty(false),
 	_rng_hgt_faulty(false),
+	_primary_hgt_source(VDIST_SENSOR_BARO),
 	_time_bad_vert_accel(0)
 {
 	_state = {};
@@ -141,6 +143,7 @@ Ekf::Ekf():
 	_imu_del_ang_of = {};
 	_gps_check_fail_status.value = 0;
 	_state_reset_status = {};
+	_dt_ekf_avg = 0.001f * (float)(FILTER_UPDATE_PERIOD_MS);
 }
 
 Ekf::~Ekf()
@@ -521,7 +524,6 @@ bool Ekf::collect_imu(imuSample &imu)
 		imu.delta_vel     = _imu_down_sampled.delta_vel;
 		imu.delta_ang_dt  = _imu_down_sampled.delta_ang_dt;
 		imu.delta_vel_dt  = _imu_down_sampled.delta_vel_dt;
-		imu.time_us       = imu.time_us;
 
 		_imu_down_sampled.delta_ang.setZero();
 		_imu_down_sampled.delta_vel.setZero();
