@@ -43,6 +43,7 @@
 #include <ecl/ecl.h>
 
 DataValidator::DataValidator(DataValidator *prev_sibling) :
+	_value{0.0f},
 	_error_mask(ERROR_FLAG_NO_ERROR),
 	_timeout_interval(20000),
 	_time_last(0),
@@ -54,7 +55,6 @@ DataValidator::DataValidator(DataValidator *prev_sibling) :
 	_lp{0.0f},
 	_M2{0.0f},
 	_rms{0.0f},
-	_value{0.0f},
 	_vibe{0.0f},
 	_value_equal_count(0),
 	_value_equal_count_threshold(VALUE_EQUAL_COUNT_DEFAULT),
@@ -116,6 +116,7 @@ DataValidator::put(uint64_t timestamp, float val[dimensions], uint64_t error_cou
 		_lp[i] = _lp[i] * 0.99f + 0.01f * val[i];
 
 		_value[i] = val[i];
+		complex_error_update();
 	}
 
 	_time_last = timestamp;
@@ -134,6 +135,11 @@ DataValidator::confidence(uint64_t timestamp)
 	/* timed out - that's it */
 	} else if (timestamp - _time_last > _timeout_interval) {
 		_error_mask |= ERROR_FLAG_TIMEOUT;
+		ret = 0.0f;
+
+	/* A complex error is detected, data no longer useful */
+	} else if (complex_error_state()) {
+		_error_mask |= ERROR_FLAG_COMPLEX_ERROR;
 		ret = 0.0f;
 
 	/* we got the exact same sensor value N times in a row */

@@ -85,6 +85,18 @@ public:
 	uint64_t		error_count() { return _error_count; }
 
 	/**
+	 * Update complex error check with new values
+	 * @return		True if an error is detected
+	 */
+	virtual void		complex_error_update() { }
+
+	/**
+	 * Check the state of the complex error checking
+	 * @return		True if an error is detected
+	 */
+	virtual bool		complex_error_state() { return false; }
+
+	/**
 	 * Get the values of this validator
 	 * @return		the stored value
 	 */
@@ -129,7 +141,7 @@ public:
 	 * Print the validator value
 	 *
 	 */
-	void			print();
+	virtual void		print();
 
 	/**
 	 * Set the timeout value
@@ -161,7 +173,10 @@ public:
 	static constexpr uint32_t ERROR_FLAG_TIMEOUT 	   	= (0x00000001U << 2);
 	static constexpr uint32_t ERROR_FLAG_HIGH_ERRCOUNT 	= (0x00000001U << 3);
 	static constexpr uint32_t ERROR_FLAG_HIGH_ERRDENSITY 	= (0x00000001U << 4);
+	static constexpr uint32_t ERROR_FLAG_COMPLEX_ERROR	= (0x00000001U << 5);
 
+protected:
+	float _value[dimensions];		/**< last value */
 private:
 	uint32_t _error_mask;			/**< sensor error state */
 	uint32_t _timeout_interval;		/**< interval in which the datastream times out in us */
@@ -174,7 +189,6 @@ private:
 	float _lp[dimensions];			/**< low pass value */
 	float _M2[dimensions];			/**< RMS component value */
 	float _rms[dimensions];			/**< root mean square error */
-	float _value[dimensions];		/**< last value */
 	float _vibe[dimensions];		/**< vibration level, in sensor unit */
 	float _value_equal_count;		/**< equal values in a row */
 	float _value_equal_count_threshold; /**< when to consider an equal count as a problem */
