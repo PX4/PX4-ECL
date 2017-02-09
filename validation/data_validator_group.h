@@ -45,10 +45,16 @@
 
 class __EXPORT DataValidatorGroup {
 public:
+	enum data_type_t {
+		STANDARD,
+		MAGNETOMETER,
+		DATA_TYPE_MAX
+	};
+
 	/**
 	 * @param siblings initial number of DataValidator's. Must be > 0.
 	 */
-	DataValidatorGroup(unsigned siblings);
+	DataValidatorGroup(unsigned siblings, data_type_t type = STANDARD);
 	virtual ~DataValidatorGroup();
 
 	/**
@@ -139,6 +145,7 @@ private:
 	int _prev_best;		/**< the previous best index */
 	uint64_t _first_failover_time;	/**< timestamp where the first failover occured or zero if none occured */
 	unsigned _toggle_count;		/**< number of back and forth switches between two sensors */
+	const data_type_t _type;	/**< data type for the validator */
 	static constexpr float MIN_REGULAR_CONFIDENCE = 0.9f;
 
 	/* we don't want this class to be copied */
