@@ -43,20 +43,20 @@
 #include <ecl/ecl.h>
 #include <cfloat>
 
-DataValidatorGroup::DataValidatorGroup(unsigned siblings) :
+#include "mag_validator.h"
+
+DataValidatorGroup::DataValidatorGroup(unsigned siblings, data_type_t type) :
 	_first(nullptr),
 	_curr_best(-1),
 	_prev_best(-1),
 	_first_failover_time(0),
-	_toggle_count(0)
+	_toggle_count(0),
+	_type(type)
 {
-	DataValidator *next = _first;
-
 	for (unsigned i = 0; i < siblings; i++) {
-		next = new DataValidator(next);
+		add_new_validator();
 	}
 
-	_first = next;
 	_timeout_interval_us = _first->get_timeout();
 }
 
@@ -71,7 +71,18 @@ DataValidatorGroup::~DataValidatorGroup()
 
 DataValidator *DataValidatorGroup::add_new_validator()
 {
-	DataValidator *validator = new DataValidator(_first);
+	DataValidator *validator = nullptr;
+
+	switch(_type) {
+		case MAGNETOMETER:
+			validator = new MagValidator(_first);
+			break;
+		case STANDARD:
+		default:
+			validator = new DataValidator(_first);
+			break;
+	}
+
 	if (!validator) {
 		return nullptr;
 	}
@@ -267,12 +278,13 @@ DataValidatorGroup::print()
 		if (next->used()) {
 			uint32_t flags = next->state();
 
-			ECL_INFO("sensor #%u, prio: %d, state:%s%s%s%s%s%s", i, next->priority(),
+			ECL_INFO("sensor #%u, prio: %d, state:%s%s%s%s%s%s%s", i, next->priority(),
 			((flags & DataValidator::ERROR_FLAG_NO_DATA) ? " OFF" : ""),
 			((flags & DataValidator::ERROR_FLAG_STALE_DATA) ? " STALE" : ""),
 			((flags & DataValidator::ERROR_FLAG_TIMEOUT) ? " TOUT" : ""),
 			((flags & DataValidator::ERROR_FLAG_HIGH_ERRCOUNT) ? " ECNT" : ""),
 			((flags & DataValidator::ERROR_FLAG_HIGH_ERRDENSITY) ? " EDNST" : ""),
+			((flags & DataValidator::ERROR_FLAG_COMPLEX_ERROR) ? " CMPLX" : ""),
 			((flags == DataValidator::ERROR_FLAG_NO_ERROR) ? " OK" : ""));
 
 			next->print();
