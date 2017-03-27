@@ -168,9 +168,9 @@ void EstimatorInterface::setMagData(uint64_t time_usec, float (&data)[3])
 		memcpy(&mag_sample_new.mag._data[0], data, sizeof(mag_sample_new.mag._data));
 
 		// correct for EKF learned and stored bias offsets
-		mag_sample_new.mag(0) -= _params._mag_bias_x;
-		mag_sample_new.mag(1) -= _params._mag_bias_y;
-		mag_sample_new.mag(2) -= _params._mag_bias_z;
+		mag_sample_new.mag(0) -= _params.mag_bias_x;
+		mag_sample_new.mag(1) -= _params.mag_bias_y;
+		mag_sample_new.mag(2) -= _params.mag_bias_z;
 
 		_mag_buffer.push(mag_sample_new);
 	}

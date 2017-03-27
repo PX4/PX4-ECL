@@ -281,9 +281,9 @@ struct parameters {
 					// the EKF will report that it is dead-reckoning (usec)
 
 	// magnetometer XYZ axis leanred bias values to be subtracted from the sensor data (milli-Gauss)
-	float _mag_bias_x;
-	float _mag_bias_y;
-	float _mag_bias_z;
+	float mag_bias_x;
+	float mag_bias_y;
+	float mag_bias_z;
 
 	// Initialize parameter values.  Initialization must be accomplished in the constructor to allow C99 compiler compatibility.
 	parameters()
@@ -397,9 +397,9 @@ struct parameters {
 		no_aid_timeout_max = 1e6;
 
 		// magnetometer XYZ axis learned bias values to be subtracted from the sensor data (milli-Gauss)
-		_mag_bias_x = 0.0f;
-		_mag_bias_y = 0.0f;
-		_mag_bias_z = 0.0f;
+		mag_bias_x = 0.0f;
+		mag_bias_y = 0.0f;
+		mag_bias_z = 0.0f;
 
 	}
 };
