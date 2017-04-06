@@ -159,8 +159,20 @@ void Ekf::predictCovariance()
 	_ang_rate_mag_filt = fmax(_imu_sample_delayed.delta_ang.norm(), alpha * _ang_rate_mag_filt);
 	_accel_mag_filt = fmax(_imu_sample_delayed.delta_vel.norm(), alpha * _accel_mag_filt);
 	if (_ang_rate_mag_filt > dt * _params.acc_bias_learn_gyr_lim || _accel_mag_filt > dt * _params.acc_bias_learn_acc_lim) {
+		// store the bias state variances to be re-instated later
+		if (_accel_bias_inhibit) {
+			_prev_dvel_bias_var(0) = P[13][13];
+			_prev_dvel_bias_var(1) = P[14][14];
+			_prev_dvel_bias_var(2) = P[15][15];
+		}
 		_accel_bias_inhibit = true;
 	} else {
+		// re-instate the bias state variances
+		if (_accel_bias_inhibit) {
+			P[13][13] = _prev_dvel_bias_var(0);
+			P[14][14] = _prev_dvel_bias_var(1);
+			P[15][15] = _prev_dvel_bias_var(2);
+		}
 		_accel_bias_inhibit = false;
 	}
 
@@ -436,15 +448,9 @@ void Ekf::predictCovariance()
 		}
 
 	} else {
-		// Inhibit delta velocity bias learning. Zero the covariance terms but preserve the variances from the
-		// previous prediction step which prevents these states being updated by any of the measurement fusion
-		// processes, but  allows estimation to be resumed later.
+		// Inhibit delta velocity bias learning by zeroing the covariance terms
 		zeroRows(nextP,13,15);
 		zeroCols(nextP,13,15);
-		nextP[13][13] = P[13][13];
-		nextP[14][14] = P[14][14];
-		nextP[15][15] = P[15][15];
-
 	}
 
 	// Don't do covariance prediction on magnetic field states unless we are using 3-axis fusion
@@ -714,7 +720,7 @@ void Ekf::fixCovarianceErrors()
 	// by ensuring the corresponding covariance matrix values are kept at zero
 
 	// accelerometer bias states
-	if ((_params.fusion_mode & MASK_INHIBIT_ACC_BIAS)) {
+	if ((_params.fusion_mode & MASK_INHIBIT_ACC_BIAS) || _accel_bias_inhibit) {
 		zeroRows(P,13,15);
 		zeroCols(P,13,15);
 	} else {
