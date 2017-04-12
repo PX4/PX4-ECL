@@ -285,6 +285,11 @@ struct parameters {
 	unsigned no_aid_timeout_max;	// maximum lapsed time from last fusion of measurements that constrain drift before
 					// the EKF will report that it is dead-reckoning (usec)
 
+	// magnetometer XYZ axis leanred bias values to be subtracted from the sensor data (milli-Gauss)
+	float mag_bias_x;
+	float mag_bias_y;
+	float mag_bias_z;
+
 	// Initialize parameter values.  Initialization must be accomplished in the constructor to allow C99 compiler compatibility.
 	parameters()
 	{
@@ -395,6 +400,11 @@ struct parameters {
 		// dead reckoning timers
 		no_gps_timeout_max = 7e6;
 		no_aid_timeout_max = 1e6;
+
+		// magnetometer XYZ axis learned bias values to be subtracted from the sensor data (milli-Gauss)
+		mag_bias_x = 0.0f;
+		mag_bias_y = 0.0f;
+		mag_bias_z = 0.0f;
 
 	}
 };
