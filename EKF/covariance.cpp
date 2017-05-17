@@ -211,11 +211,10 @@ void Ekf::predictCovariance()
 		wind_vel_sig = 0.0f;
 	}
 
-	// Construct the process noise variance diagonal for those states with a stationary process model
-	// These are kinematic states and their error growth is controlled separately by the IMU noise variances
-	for (unsigned i = 0; i <= 9; i++) {
-		process_noise[i] = 0.0f;
-	}
+	// Construct the process noise variance diagonal for those states with a stationary process model.
+	// The covariance growth of the quaternion, velocity and position states is controlled separately
+	// by the IMU noise variance terms built into the auto generated covariance prediction code.
+
 	// delta angle bias states
 	process_noise[12] = process_noise[11] = process_noise[10] = sq(d_ang_bias_sig);
 	// delta_velocity bias states
@@ -399,8 +398,8 @@ void Ekf::predictCovariance()
 	nextP[11][12] = P[11][12];
 	nextP[12][12] = P[12][12];
 
-	// add process noise that is not from the IMU
-	for (unsigned i = 0; i <= 12; i++) {
+	// add gyro bias process noise variance
+	for (unsigned i = 10; i <= 12; i++) {
 		nextP[i][i] += process_noise[i];
 	}
 
@@ -408,55 +407,64 @@ void Ekf::predictCovariance()
 	if (!(_params.fusion_mode & MASK_INHIBIT_ACC_BIAS) && !_accel_bias_inhibit) {
 
 		// calculate variances and upper diagonal covariances for IMU delta velocity bias states
-		nextP[0][13] = P[0][13] + P[1][13]*SF[9] + P[2][13]*SF[11] + P[3][13]*SF[10] + P[10][13]*SF[14] + P[11][13]*SF[15] + P[12][13]*SPP[10];
-		nextP[1][13] = P[1][13] + P[0][13]*SF[8] + P[2][13]*SF[7] + P[3][13]*SF[11] - P[12][13]*SF[15] + P[11][13]*SPP[10] - (P[10][13]*q0)/2;
-		nextP[2][13] = P[2][13] + P[0][13]*SF[6] + P[1][13]*SF[10] + P[3][13]*SF[8] + P[12][13]*SF[14] - P[10][13]*SPP[10] - (P[11][13]*q0)/2;
-		nextP[3][13] = P[3][13] + P[0][13]*SF[7] + P[1][13]*SF[6] + P[2][13]*SF[9] + P[10][13]*SF[15] - P[11][13]*SF[14] - (P[12][13]*q0)/2;
-		nextP[4][13] = P[4][13] + P[0][13]*SF[5] + P[1][13]*SF[3] - P[3][13]*SF[4] + P[2][13]*SPP[0] + P[13][13]*SPP[3] + P[14][13]*SPP[6] - P[15][13]*SPP[9];
-		nextP[5][13] = P[5][13] + P[0][13]*SF[4] + P[2][13]*SF[3] + P[3][13]*SF[5] - P[1][13]*SPP[0] - P[13][13]*SPP[8] + P[14][13]*SPP[2] + P[15][13]*SPP[5];
-		nextP[6][13] = P[6][13] + P[1][13]*SF[4] - P[2][13]*SF[5] + P[3][13]*SF[3] + P[0][13]*SPP[0] + P[13][13]*SPP[4] - P[14][13]*SPP[7] - P[15][13]*SPP[1];
-		nextP[7][13] = P[7][13] + P[4][13]*dt;
-		nextP[8][13] = P[8][13] + P[5][13]*dt;
-		nextP[9][13] = P[9][13] + P[6][13]*dt;
-		nextP[10][13] = P[10][13];
-		nextP[11][13] = P[11][13];
-		nextP[12][13] = P[12][13];
-		nextP[13][13] = P[13][13];
-		nextP[0][14] = P[0][14] + P[1][14]*SF[9] + P[2][14]*SF[11] + P[3][14]*SF[10] + P[10][14]*SF[14] + P[11][14]*SF[15] + P[12][14]*SPP[10];
-		nextP[1][14] = P[1][14] + P[0][14]*SF[8] + P[2][14]*SF[7] + P[3][14]*SF[11] - P[12][14]*SF[15] + P[11][14]*SPP[10] - (P[10][14]*q0)/2;
-		nextP[2][14] = P[2][14] + P[0][14]*SF[6] + P[1][14]*SF[10] + P[3][14]*SF[8] + P[12][14]*SF[14] - P[10][14]*SPP[10] - (P[11][14]*q0)/2;
-		nextP[3][14] = P[3][14] + P[0][14]*SF[7] + P[1][14]*SF[6] + P[2][14]*SF[9] + P[10][14]*SF[15] - P[11][14]*SF[14] - (P[12][14]*q0)/2;
-		nextP[4][14] = P[4][14] + P[0][14]*SF[5] + P[1][14]*SF[3] - P[3][14]*SF[4] + P[2][14]*SPP[0] + P[13][14]*SPP[3] + P[14][14]*SPP[6] - P[15][14]*SPP[9];
-		nextP[5][14] = P[5][14] + P[0][14]*SF[4] + P[2][14]*SF[3] + P[3][14]*SF[5] - P[1][14]*SPP[0] - P[13][14]*SPP[8] + P[14][14]*SPP[2] + P[15][14]*SPP[5];
-		nextP[6][14] = P[6][14] + P[1][14]*SF[4] - P[2][14]*SF[5] + P[3][14]*SF[3] + P[0][14]*SPP[0] + P[13][14]*SPP[4] - P[14][14]*SPP[7] - P[15][14]*SPP[1];
-		nextP[7][14] = P[7][14] + P[4][14]*dt;
-		nextP[8][14] = P[8][14] + P[5][14]*dt;
-		nextP[9][14] = P[9][14] + P[6][14]*dt;
-		nextP[10][14] = P[10][14];
-		nextP[11][14] = P[11][14];
-		nextP[12][14] = P[12][14];
-		nextP[13][14] = P[13][14];
-		nextP[14][14] = P[14][14];
-		nextP[0][15] = P[0][15] + P[1][15]*SF[9] + P[2][15]*SF[11] + P[3][15]*SF[10] + P[10][15]*SF[14] + P[11][15]*SF[15] + P[12][15]*SPP[10];
-		nextP[1][15] = P[1][15] + P[0][15]*SF[8] + P[2][15]*SF[7] + P[3][15]*SF[11] - P[12][15]*SF[15] + P[11][15]*SPP[10] - (P[10][15]*q0)/2;
-		nextP[2][15] = P[2][15] + P[0][15]*SF[6] + P[1][15]*SF[10] + P[3][15]*SF[8] + P[12][15]*SF[14] - P[10][15]*SPP[10] - (P[11][15]*q0)/2;
-		nextP[3][15] = P[3][15] + P[0][15]*SF[7] + P[1][15]*SF[6] + P[2][15]*SF[9] + P[10][15]*SF[15] - P[11][15]*SF[14] - (P[12][15]*q0)/2;
-		nextP[4][15] = P[4][15] + P[0][15]*SF[5] + P[1][15]*SF[3] - P[3][15]*SF[4] + P[2][15]*SPP[0] + P[13][15]*SPP[3] + P[14][15]*SPP[6] - P[15][15]*SPP[9];
-		nextP[5][15] = P[5][15] + P[0][15]*SF[4] + P[2][15]*SF[3] + P[3][15]*SF[5] - P[1][15]*SPP[0] - P[13][15]*SPP[8] + P[14][15]*SPP[2] + P[15][15]*SPP[5];
-		nextP[6][15] = P[6][15] + P[1][15]*SF[4] - P[2][15]*SF[5] + P[3][15]*SF[3] + P[0][15]*SPP[0] + P[13][15]*SPP[4] - P[14][15]*SPP[7] - P[15][15]*SPP[1];
-		nextP[7][15] = P[7][15] + P[4][15]*dt;
-		nextP[8][15] = P[8][15] + P[5][15]*dt;
-		nextP[9][15] = P[9][15] + P[6][15]*dt;
-		nextP[10][15] = P[10][15];
-		nextP[11][15] = P[11][15];
-		nextP[12][15] = P[12][15];
-		nextP[13][15] = P[13][15];
-		nextP[14][15] = P[14][15];
-		nextP[15][15] = P[15][15];
+		if (_params.acc_bias_learn_mask & (1<<0)) {
+			nextP[0][13] = P[0][13] + P[1][13]*SF[9] + P[2][13]*SF[11] + P[3][13]*SF[10] + P[10][13]*SF[14] + P[11][13]*SF[15] + P[12][13]*SPP[10];
+			nextP[1][13] = P[1][13] + P[0][13]*SF[8] + P[2][13]*SF[7] + P[3][13]*SF[11] - P[12][13]*SF[15] + P[11][13]*SPP[10] - (P[10][13]*q0)/2;
+			nextP[2][13] = P[2][13] + P[0][13]*SF[6] + P[1][13]*SF[10] + P[3][13]*SF[8] + P[12][13]*SF[14] - P[10][13]*SPP[10] - (P[11][13]*q0)/2;
+			nextP[3][13] = P[3][13] + P[0][13]*SF[7] + P[1][13]*SF[6] + P[2][13]*SF[9] + P[10][13]*SF[15] - P[11][13]*SF[14] - (P[12][13]*q0)/2;
+			nextP[4][13] = P[4][13] + P[0][13]*SF[5] + P[1][13]*SF[3] - P[3][13]*SF[4] + P[2][13]*SPP[0] + P[13][13]*SPP[3] + P[14][13]*SPP[6] - P[15][13]*SPP[9];
+			nextP[5][13] = P[5][13] + P[0][13]*SF[4] + P[2][13]*SF[3] + P[3][13]*SF[5] - P[1][13]*SPP[0] - P[13][13]*SPP[8] + P[14][13]*SPP[2] + P[15][13]*SPP[5];
+			nextP[6][13] = P[6][13] + P[1][13]*SF[4] - P[2][13]*SF[5] + P[3][13]*SF[3] + P[0][13]*SPP[0] + P[13][13]*SPP[4] - P[14][13]*SPP[7] - P[15][13]*SPP[1];
+			nextP[7][13] = P[7][13] + P[4][13]*dt;
+			nextP[8][13] = P[8][13] + P[5][13]*dt;
+			nextP[9][13] = P[9][13] + P[6][13]*dt;
+			nextP[10][13] = P[10][13];
+			nextP[11][13] = P[11][13];
+			nextP[12][13] = P[12][13];
+			nextP[13][13] = P[13][13] + process_noise[13];
+		} else {
+			zeroRows(nextP,13,13);
+		}
 
-		// add process noise that is not from the IMU
-		for (unsigned i = 13; i <= 15; i++) {
-			nextP[i][i] += process_noise[i];
+		if (_params.acc_bias_learn_mask & (1<<1)) {
+			nextP[0][14] = P[0][14] + P[1][14]*SF[9] + P[2][14]*SF[11] + P[3][14]*SF[10] + P[10][14]*SF[14] + P[11][14]*SF[15] + P[12][14]*SPP[10];
+			nextP[1][14] = P[1][14] + P[0][14]*SF[8] + P[2][14]*SF[7] + P[3][14]*SF[11] - P[12][14]*SF[15] + P[11][14]*SPP[10] - (P[10][14]*q0)/2;
+			nextP[2][14] = P[2][14] + P[0][14]*SF[6] + P[1][14]*SF[10] + P[3][14]*SF[8] + P[12][14]*SF[14] - P[10][14]*SPP[10] - (P[11][14]*q0)/2;
+			nextP[3][14] = P[3][14] + P[0][14]*SF[7] + P[1][14]*SF[6] + P[2][14]*SF[9] + P[10][14]*SF[15] - P[11][14]*SF[14] - (P[12][14]*q0)/2;
+			nextP[4][14] = P[4][14] + P[0][14]*SF[5] + P[1][14]*SF[3] - P[3][14]*SF[4] + P[2][14]*SPP[0] + P[13][14]*SPP[3] + P[14][14]*SPP[6] - P[15][14]*SPP[9];
+			nextP[5][14] = P[5][14] + P[0][14]*SF[4] + P[2][14]*SF[3] + P[3][14]*SF[5] - P[1][14]*SPP[0] - P[13][14]*SPP[8] + P[14][14]*SPP[2] + P[15][14]*SPP[5];
+			nextP[6][14] = P[6][14] + P[1][14]*SF[4] - P[2][14]*SF[5] + P[3][14]*SF[3] + P[0][14]*SPP[0] + P[13][14]*SPP[4] - P[14][14]*SPP[7] - P[15][14]*SPP[1];
+			nextP[7][14] = P[7][14] + P[4][14]*dt;
+			nextP[8][14] = P[8][14] + P[5][14]*dt;
+			nextP[9][14] = P[9][14] + P[6][14]*dt;
+			nextP[10][14] = P[10][14];
+			nextP[11][14] = P[11][14];
+			nextP[12][14] = P[12][14];
+			nextP[13][14] = P[13][14];
+			nextP[14][14] = P[14][14] + process_noise[14];
+		} else {
+			zeroRows(nextP,14,14);
+		}
+
+		if (_params.acc_bias_learn_mask & (1<<2)) {
+			nextP[0][15] = P[0][15] + P[1][15]*SF[9] + P[2][15]*SF[11] + P[3][15]*SF[10] + P[10][15]*SF[14] + P[11][15]*SF[15] + P[12][15]*SPP[10];
+			nextP[1][15] = P[1][15] + P[0][15]*SF[8] + P[2][15]*SF[7] + P[3][15]*SF[11] - P[12][15]*SF[15] + P[11][15]*SPP[10] - (P[10][15]*q0)/2;
+			nextP[2][15] = P[2][15] + P[0][15]*SF[6] + P[1][15]*SF[10] + P[3][15]*SF[8] + P[12][15]*SF[14] - P[10][15]*SPP[10] - (P[11][15]*q0)/2;
+			nextP[3][15] = P[3][15] + P[0][15]*SF[7] + P[1][15]*SF[6] + P[2][15]*SF[9] + P[10][15]*SF[15] - P[11][15]*SF[14] - (P[12][15]*q0)/2;
+			nextP[4][15] = P[4][15] + P[0][15]*SF[5] + P[1][15]*SF[3] - P[3][15]*SF[4] + P[2][15]*SPP[0] + P[13][15]*SPP[3] + P[14][15]*SPP[6] - P[15][15]*SPP[9];
+			nextP[5][15] = P[5][15] + P[0][15]*SF[4] + P[2][15]*SF[3] + P[3][15]*SF[5] - P[1][15]*SPP[0] - P[13][15]*SPP[8] + P[14][15]*SPP[2] + P[15][15]*SPP[5];
+			nextP[6][15] = P[6][15] + P[1][15]*SF[4] - P[2][15]*SF[5] + P[3][15]*SF[3] + P[0][15]*SPP[0] + P[13][15]*SPP[4] - P[14][15]*SPP[7] - P[15][15]*SPP[1];
+			nextP[7][15] = P[7][15] + P[4][15]*dt;
+			nextP[8][15] = P[8][15] + P[5][15]*dt;
+			nextP[9][15] = P[9][15] + P[6][15]*dt;
+			nextP[10][15] = P[10][15];
+			nextP[11][15] = P[11][15];
+			nextP[12][15] = P[12][15];
+			nextP[13][15] = P[13][15];
+			nextP[14][15] = P[14][15];
+			nextP[15][15] = P[15][15] + process_noise[15];
+		} else {
+			zeroRows(nextP,15,15);
 		}
 
 	} else {
@@ -586,7 +594,7 @@ void Ekf::predictCovariance()
 		nextP[20][21] = P[20][21];
 		nextP[21][21] = P[21][21];
 
-		// add process noise that is not from the IMU
+		// add magnetic field state process noise variance
 		for (unsigned i = 16; i <= 21; i++) {
 			nextP[i][i] += process_noise[i];
 		}
@@ -645,7 +653,7 @@ void Ekf::predictCovariance()
 		nextP[22][23] = P[22][23];
 		nextP[23][23] = P[23][23];
 
-		// add process noise that is not from the IMU
+		// add wind state process noise variance
 		for (unsigned i = 22; i <= 23; i++) {
 			nextP[i][i] += process_noise[i];
 		}
