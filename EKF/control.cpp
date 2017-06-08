@@ -1230,6 +1230,14 @@ void Ekf::controlMagFusion()
 			_control_status.flags.mag_3D = false;
 		}
 
+		// If we are not fusing in observations to constrain yaw variance growth, and yaw variance has become large,
+		// then we must fuse in a measurement to prevent the covariance matrix from becoming badly conditioned.
+		if (_control_status.flags.yaw_align && !_control_status.flags.mag_hdg && !_control_status.flags.mag_3D ) {
+			if (calcYawVariance() > sq(_params.mag_heading_noise)) {
+				_control_status.flags.mag_hdg = true;
+			}
+		}
+
 		// if we are using 3-axis magnetometer fusion, but without external aiding, then the declination must be fused as an observation to prevent long term heading drift
 		// fusing declination when gps aiding is available is optional, but recommended to prevent problem if the vehicle is static for extended periods of time
 		// do not attempt to fuse declination if the earth field is too close to vertical
