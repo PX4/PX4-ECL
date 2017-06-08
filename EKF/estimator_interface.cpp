@@ -570,3 +570,22 @@ void EstimatorInterface::print_status() {
 	ECL_INFO("output vert buffer: %d (%d Bytes)", _output_vert_buffer.get_length(), _output_vert_buffer.get_total_size());
 	ECL_INFO("drag buffer: %d (%d Bytes)", _drag_buffer.get_length(), _drag_buffer.get_total_size());
 }
+
+// return Euler yaw angle  in radians at output time horizon using the best conditioned of a 321 or 312 sequence to avoid gimbal lock
+float EstimatorInterface::getOutputYawAngle(void)
+{
+	// determine if a 321 or 312 Euler sequence is best
+	float yaw_angle;
+	if (fabsf(_R_to_earth_now(2, 0)) < fabsf(_R_to_earth_now(2, 1))) {
+		// use a 321 sequence
+		yaw_angle = atan2f(_R_to_earth_now(1, 0), _R_to_earth_now(0, 0));
+
+	} else {
+		// Use a 312 sequence
+		// See http://www.atacolorado.com/eulersequences.doc
+		yaw_angle = atan2f(-_R_to_earth_now(0, 1), _R_to_earth_now(1, 1));
+
+	}
+
+	return yaw_angle;
+}

@@ -270,6 +270,9 @@ bool Ekf::initialiseFilter()
 		// calculate the averaged magnetometer reading
 		Vector3f mag_init = _mag_filt_state;
 
+		// set a yaw value we will use as a default if no other yaw estimate is available
+		_last_inflight_yaw = math::radians(_params.mag_yaw_ground);
+
 		// calculate the initial magnetic field and yaw alignment
 		_control_status.flags.yaw_align = resetMagHeading(mag_init);
 

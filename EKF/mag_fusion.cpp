@@ -468,17 +468,30 @@ void Ekf::fuseHeading()
 			euler321(2) = 0.0f;
 			Dcmf R_to_earth(euler321);
 
-			// rotate the magnetometer measurements into earth frame using a zero yaw angle
-			if (_control_status.flags.mag_3D) {
-				// don't apply bias corrections if we are learning them
-				mag_earth_pred = R_to_earth * _mag_sample_delayed.mag;
+			if ((_params.mag_earth_field_bad == 1) || (_params.mag_earth_field_bad == 2)) {
+				if (!_control_status.flags.in_air) {
+					// use the last known good yaw angle
+					measured_hdg = _last_inflight_yaw;
+
+				} else {
+					// use the current heading so that the innovation is zero
+					// this can be used if the yaw variance has become too large
+					measured_hdg = predicted_hdg;
+
+				}
 			} else {
-				mag_earth_pred = R_to_earth * (_mag_sample_delayed.mag - _state.mag_B);
+				// rotate the magnetometer measurements into earth frame using a zero yaw angle
+				if (_control_status.flags.mag_3D) {
+					// don't apply bias corrections if we are learning them
+					mag_earth_pred = R_to_earth * _mag_sample_delayed.mag;
+				} else {
+					mag_earth_pred = R_to_earth * (_mag_sample_delayed.mag - _state.mag_B);
+				}
+
+				// the angle of the projection onto the horizontal gives the yaw angle
+				measured_hdg = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + _mag_declination;
+
 			}
-
-			// the angle of the projection onto the horizontal gives the yaw angle
-			measured_hdg = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + _mag_declination;
-
 		} else if (_control_status.flags.ev_yaw) {
 			// calculate the yaw angle for a 321 sequence
 			// Expressions obtained from yaw_input_321.c produced by https://github.com/PX4/ecl/blob/master/matlab/scripts/Inertial%20Nav%20EKF/quat2yaw321.m
@@ -560,17 +573,32 @@ void Ekf::fuseHeading()
 			R_to_earth(2,1) = sr;
 			R_to_earth(2,2) = cp*cr;
 
-			// rotate the magnetometer measurements into earth frame using a zero yaw angle
-			if (_control_status.flags.mag_3D) {
-				// don't apply bias corrections if we are learning them
-				mag_earth_pred = R_to_earth * _mag_sample_delayed.mag;
+			if ((_params.mag_earth_field_bad == 1) || (_params.mag_earth_field_bad == 2)) {
+				if (!_control_status.flags.in_air) {
+					// use the last known good yaw angle
+					measured_hdg = _last_inflight_yaw;
+
+				} else {
+					// use the current heading so that the innovation is zero
+					// this can be used if the yaw variance has become too large
+					measured_hdg = predicted_hdg;
+
+				}
 			} else {
-				mag_earth_pred = R_to_earth * (_mag_sample_delayed.mag - _state.mag_B);
-			}
+				// rotate the magnetometer measurements into earth frame using a zero yaw angle
+				if (_control_status.flags.mag_3D) {
+					// don't apply bias corrections if we are learning them
+					mag_earth_pred = R_to_earth * _mag_sample_delayed.mag;
 
-			// the angle of the projection onto the horizontal gives the yaw angle
-			measured_hdg = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + _mag_declination;
+				} else {
+					mag_earth_pred = R_to_earth * (_mag_sample_delayed.mag - _state.mag_B);
 
+				}
+
+				// the angle of the projection onto the horizontal gives the yaw angle
+				measured_hdg = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + _mag_declination;
+
+			}			
 		} else if (_control_status.flags.ev_yaw) {
 			// calculate the yaw angle for a 312 sequence
 			// Values from yaw_input_312.c file produced by https://github.com/PX4/ecl/blob/master/matlab/scripts/Inertial%20Nav%20EKF/quat2yaw312.m
