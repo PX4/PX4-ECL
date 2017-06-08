@@ -1141,7 +1141,16 @@ void Ekf::controlMagFusion()
 			bool use_3D_fusion = _control_status.flags.tilt_align && // Use of 3D fusion requires valid tilt estimates
 					_control_status.flags.in_air && // don't use when on the ground becasue of magnetic anomalies
 					(_flt_mag_align_complete || height_achieved) && // once in-flight field alignment has been performed, ignore relative height
-					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000); // Using 3-axis fusion for a minimum period after to allow for false negatives
+					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000) && // Using 3-axis fusion for a minimum period after to allow for false negatives
+					!(_params.mag_field_vertical == 1); // don't use if explicitly prohibited by parameter setting
+
+			// Earth field is too close to vertical to be able to use the horizontal projection for yaw estimation
+			bool in_air_mag_hdg_prohibited = ((_params.mag_field_vertical == 1) || (_params.mag_field_vertical == 2));
+
+			// Do not use mag heading fusion in air if earth field is close to vertical because small mag and tilt errors
+			// can produce large yaw errors.  We can use it on ground by using an assumed heading measurement
+			bool use_hdg_fusion = !use_3D_fusion &&
+					!(_control_status.flags.in_air && in_air_mag_hdg_prohibited);
 
 			// perform switch-over
 			if (use_3D_fusion) {
@@ -1171,7 +1180,7 @@ void Ekf::controlMagFusion()
 				_control_status.flags.mag_3D = _flt_mag_align_complete;
 				_control_status.flags.mag_hdg = !_control_status.flags.mag_3D;
 
-			} else {
+			} else if (use_hdg_fusion) {
 				// save magnetic field state variances for next time
 				if (_control_status.flags.mag_3D) {
 					for (uint8_t index = 0; index <= 5; index ++) {
@@ -1180,6 +1189,12 @@ void Ekf::controlMagFusion()
 					_control_status.flags.mag_3D = false;
 				}
 				_control_status.flags.mag_hdg = true;
+
+			} else {
+				// we cannot fuse any data
+				_control_status.flags.mag_hdg = false;
+				_control_status.flags.mag_3D = false;
+
 			}
 
 			// perform switch-over from only updating the mag states to updating all states
@@ -1205,9 +1220,9 @@ void Ekf::controlMagFusion()
 				_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 			}
 
-			// always use 3-axis mag fusion
+			// always use 3-axis mag fusion if not explicitly prohibited by parameter setting
 			_control_status.flags.mag_hdg = false;
-			_control_status.flags.mag_3D = true;
+			_control_status.flags.mag_3D = !(_params.mag_field_vertical == 1);
 
 		} else {
 			// do no magnetometer fusion at all
@@ -1217,7 +1232,11 @@ void Ekf::controlMagFusion()
 
 		// if we are using 3-axis magnetometer fusion, but without external aiding, then the declination must be fused as an observation to prevent long term heading drift
 		// fusing declination when gps aiding is available is optional, but recommended to prevent problem if the vehicle is static for extended periods of time
-		if (_control_status.flags.mag_3D && (!_control_status.flags.gps || (_params.mag_declination_source & MASK_FUSE_DECL))) {
+		// do not attempt to fuse declination if the earth field is too close to vertical
+		if (_control_status.flags.mag_3D &&
+				(!_control_status.flags.gps || (_params.mag_declination_source & MASK_FUSE_DECL)) &&
+				!(_params.mag_field_vertical == 1) &&
+				!(_params.mag_field_vertical == 2)) {
 			_control_status.flags.mag_dec = true;
 
 		} else {
