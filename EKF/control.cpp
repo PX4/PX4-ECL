@@ -1093,13 +1093,70 @@ void Ekf::controlMagFusion()
 	// check for new magnetometer data that has fallen behind the fusion time horizon
 	if (_mag_data_ready) {
 
-		// Determine if we should use simple magnetic heading fusion which works better when there are large external disturbances
-		// or the more accurate 3-axis fusion
+		// Determine if we are using high inclination magnetic field option.
+		bool high_field_inclination = (_params.mag_field_vertical == 1) || (_params.mag_field_vertical == 2);
+
+		// select the magnetometer fusion method
 		if (_control_status.flags.mag_fault) {
 			// do no magnetometer fusion at all
 			_control_status.flags.mag_hdg = false;
 			_control_status.flags.mag_3D = false;
+		} else if (high_field_inclination) {
+
+			// Check if height has increased sufficiently to be away from ground magnetic anomalies
+			bool height_achieved = (_last_on_ground_posD - _state.pos(2)) > 1.5f;
+
+			// Use heading fusion when on ground with a user specified heading measurement
+			bool use_hdg_fusion = !_control_status.flags.in_air;
+
+			// decide whether 3-axis magnetomer fusion can be used
+			bool use_3D_fusion = !use_hdg_fusion &&
+					_control_status.flags.tilt_align && // Use of 3D fusion requires valid tilt estimates
+					(_flt_mag_align_complete || height_achieved) && // once in-flight field alignment has been performed, ignore relative height
+					!(_params.mag_field_vertical == 1); // don't use if explicitly prohibited by parameter setting
+
+			// perform switch-over
+			if (use_3D_fusion) {
+				if (!_control_status.flags.mag_3D) {
+					if (!_flt_mag_align_complete) {
+						// if transitioning into 3-axis fusion mode for the first time, we need to initialise the yaw angle and field states
+						_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+						_flt_mag_align_complete = true;
+					} else {
+						// reset the mag field covariances
+						zeroRows(P, 16, 21);
+						zeroCols(P, 16, 21);
+
+						// re-instate the last used variances
+						for (uint8_t index = 0; index <= 5; index ++) {
+							P[index+16][index+16] = _saved_mag_variance[index];
+						}
+					}
+					_control_status.flags.mag_3D = true;
+				}
+
+				_control_status.flags.mag_hdg = false;
+
+			} else if (use_hdg_fusion) {
+				// save magnetic field state variances for next time
+				if (_control_status.flags.mag_3D) {
+					for (uint8_t index = 0; index <= 5; index ++) {
+						_saved_mag_variance[index] = P[index+16][index+16];
+					}
+					_control_status.flags.mag_3D = false;
+				}
+				_control_status.flags.mag_hdg = true;
+
+			} else {
+				// we cannot fuse any data
+				_control_status.flags.mag_hdg = false;
+				_control_status.flags.mag_3D = false;
+
+			}
+
 		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_AUTO) {
+			// Determine if we should use simple magnetic heading fusion which works better when there are large external disturbances
+			// or the more accurate 3-axis fusion
 			// Check if height has increased sufficiently to be away from ground magnetic anomalies
 			bool height_achieved = (_last_on_ground_posD - _state.pos(2)) > 1.5f;
 
@@ -1141,16 +1198,7 @@ void Ekf::controlMagFusion()
 			bool use_3D_fusion = _control_status.flags.tilt_align && // Use of 3D fusion requires valid tilt estimates
 					_control_status.flags.in_air && // don't use when on the ground becasue of magnetic anomalies
 					(_flt_mag_align_complete || height_achieved) && // once in-flight field alignment has been performed, ignore relative height
-					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000) && // Using 3-axis fusion for a minimum period after to allow for false negatives
-					!(_params.mag_field_vertical == 1); // don't use if explicitly prohibited by parameter setting
-
-			// Earth field is too close to vertical to be able to use the horizontal projection for yaw estimation
-			bool in_air_mag_hdg_prohibited = ((_params.mag_field_vertical == 1) || (_params.mag_field_vertical == 2));
-
-			// Do not use mag heading fusion in air if earth field is close to vertical because small mag and tilt errors
-			// can produce large yaw errors.  We can use it on ground by using an assumed heading measurement
-			bool use_hdg_fusion = !use_3D_fusion &&
-					!(_control_status.flags.in_air && in_air_mag_hdg_prohibited);
+					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000); // Using 3-axis fusion for a minimum period after to allow for false negatives
 
 			// perform switch-over
 			if (use_3D_fusion) {
@@ -1161,6 +1209,7 @@ void Ekf::controlMagFusion()
 							_control_status.flags.yaw_align = realignYawGPS();
 							_flt_mag_align_complete = _control_status.flags.yaw_align;
 						} else {
+							// if transitioning into 3-axis fusion mode for the first time, we need to initialise the yaw angle and field states
 							_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 							_flt_mag_align_complete = _control_status.flags.yaw_align;
 						}
@@ -1172,28 +1221,27 @@ void Ekf::controlMagFusion()
 						// re-instate the last used variances
 						for (uint8_t index = 0; index <= 5; index ++) {
 							P[index+16][index+16] = _saved_mag_variance[index];
+
 						}
 					}
+					_control_status.flags.mag_3D = true;
+
 				}
 
 				// only use one type of mag fusion at the same time
 				_control_status.flags.mag_3D = _flt_mag_align_complete;
 				_control_status.flags.mag_hdg = !_control_status.flags.mag_3D;
 
-			} else if (use_hdg_fusion) {
+			} else {
 				// save magnetic field state variances for next time
 				if (_control_status.flags.mag_3D) {
 					for (uint8_t index = 0; index <= 5; index ++) {
 						_saved_mag_variance[index] = P[index+16][index+16];
 					}
 					_control_status.flags.mag_3D = false;
+
 				}
 				_control_status.flags.mag_hdg = true;
-
-			} else {
-				// we cannot fuse any data
-				_control_status.flags.mag_hdg = false;
-				_control_status.flags.mag_3D = false;
 
 			}
 
@@ -1210,7 +1258,7 @@ void Ekf::controlMagFusion()
 			}
 
 		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_HEADING) {
-			// always use heading fusion
+			// always use heading fusion in this mode
 			_control_status.flags.mag_hdg = true;
 			_control_status.flags.mag_3D = false;
 
@@ -1218,16 +1266,17 @@ void Ekf::controlMagFusion()
 			// if transitioning into 3-axis fusion mode, we need to initialise the yaw angle and field states
 			if (!_control_status.flags.mag_3D) {
 				_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+				_control_status.flags.mag_3D = true;
+
 			}
 
-			// always use 3-axis mag fusion if not explicitly prohibited by parameter setting
 			_control_status.flags.mag_hdg = false;
-			_control_status.flags.mag_3D = !(_params.mag_field_vertical == 1);
 
 		} else {
 			// do no magnetometer fusion at all
 			_control_status.flags.mag_hdg = false;
 			_control_status.flags.mag_3D = false;
+
 		}
 
 		// If we are not fusing in observations to constrain yaw variance growth, and yaw variance has become large,
