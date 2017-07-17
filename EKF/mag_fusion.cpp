@@ -424,7 +424,12 @@ void Ekf::fuseHeading()
 	Vector3f mag_earth_pred;
 	float measured_hdg;
 
-	// determine if a 321 or 312 Euler sequence is best
+	if (!_control_status.flags.mag_hdg && !_control_status.flags.ev_yaw) {
+		// there is no yaw observation
+		return;
+	}
+
+	// determine if a 321 or 312 Euler sequence is numerically better
 	if (fabsf(_R_to_earth(2, 0)) < fabsf(_R_to_earth(2, 1))) {
 		// calculate observation jacobian when we are observing the first rotation in a 321 sequence
 		float t9 = q0*q3;
@@ -464,20 +469,16 @@ void Ekf::fuseHeading()
 		euler321(2) = 0.0f;
 		Dcmf R_to_earth(euler321);
 
-		// calculate the observed yaw angle
-		if (_control_status.flags.mag_hdg) {
+		if (_control_status.flags.ev_yaw) {
+			const Quatf q = _ev_sample_delayed.quat;
+			float y = 2.0f*(q(0)*(3) + q(1)*q(2));
+			float x = 1.0f - 2.0f*(q(2)*q(2) + q(3)*q(3));
+			measured_hdg = atan2f(y, x);
+		} else {
 			// rotate the magnetometer measurements into earth frame using a zero yaw angle
 			mag_earth_pred = R_to_earth * _mag_sample_delayed.mag;
 			// the angle of the projection onto the horizontal gives the yaw angle
 			measured_hdg = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + _mag_declination;
-		} else if (_control_status.flags.ev_yaw) {
-			// convert the observed quaternion to a rotation matrix
-			Dcmf R_to_earth_ev(_ev_sample_delayed.quat);	// transformation matrix from body to world frame
-			// calculate the yaw angle for a 312 sequence
-			measured_hdg = atan2f(R_to_earth_ev(1, 0) , R_to_earth_ev(0, 0));
-		} else {
-			// there is no yaw observation
-			return;
 		}
 
 	} else {
@@ -542,20 +543,16 @@ void Ekf::fuseHeading()
 		R_to_earth(2, 0) = -s2 * c1;
 		R_to_earth(2, 1) = s1;
 
-		// calculate the observed yaw angle
-		if (_control_status.flags.mag_hdg) {
+		if (_control_status.flags.ev_yaw) {
+			const Quatf q = _ev_sample_delayed.quat;
+			float y = 2.0f*(q(0)*(3) + q(1)*q(2));
+			float x = 1.0f - 2.0f*(q(2)*q(2) + q(3)*q(3));
+			measured_hdg = atan2f(y, x);
+		} else {
 			// rotate the magnetometer measurements into earth frame using a zero yaw angle
 			mag_earth_pred = R_to_earth * _mag_sample_delayed.mag;
 			// the angle of the projection onto the horizontal gives the yaw angle
 			measured_hdg = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + _mag_declination;
-		} else if (_control_status.flags.ev_yaw) {
-			// convert the observed quaternion to a rotation matrix
-			Dcmf R_to_earth_ev(_ev_sample_delayed.quat);	// transformation matrix from body to world frame
-			// calculate the yaw angle for a 312 sequence
-			measured_hdg = atan2f(-R_to_earth_ev(0, 1) , R_to_earth_ev(1, 1));
-		} else {
-			// there is no yaw observation
-			return;
 		}
 	}
 
@@ -566,9 +563,6 @@ void Ekf::fuseHeading()
 	} else if (_control_status.flags.ev_yaw) {
 		// using error estimate from external vision data
 		R_YAW = sq(fmaxf(_ev_sample_delayed.angErr, 1.0e-2f));
-	} else {
-		// there is no yaw observation
-		return;
 	}
 
 	// Calculate innovation variance and Kalman gains, taking advantage of the fact that only the first 3 elements in H are non zero
