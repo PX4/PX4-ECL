@@ -623,14 +623,14 @@ void Ekf::fuseHeading()
 		}
 	}
 
-	// wrap the heading to the interval between +-pi
-	measured_hdg = wrap_pi(measured_hdg);
-
-	// calculate the innovation
-	_heading_innov = predicted_hdg - measured_hdg;
-
-	// wrap the innovation to the interval between +-pi
-	_heading_innov = wrap_pi(_heading_innov);
+	// calculate innovation in interval +-pi
+	_heading_innov = fmodf(predicted_hdg - measured_hdg, 2.0f*M_PI_F);
+	if (_heading_innov < -M_PI_F) {
+		_heading_innov += 2.0f*M_PI_F;
+	}
+	if (_heading_innov > +M_PI_F) {
+		_heading_innov -= 2.0f*M_PI_F;
+	}
 
 	// innovation test ratio
 	_yaw_test_ratio = sq(_heading_innov) / (sq(math::max(_params.heading_innov_gate, 1.0f)) * _heading_innov_var);
