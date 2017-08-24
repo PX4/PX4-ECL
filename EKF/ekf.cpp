@@ -241,7 +241,7 @@ bool Ekf::initialiseFilter()
 
 	// check to see if we have enough measurements and return false if not
 	bool hgt_count_fail = _hgt_counter <= 2 * _obs_buffer_length;
-	bool mag_count_fail = _mag_counter <= 2 * _obs_buffer_length;
+	bool mag_count_fail = (_params.mag_fusion_type != MAG_FUSE_TYPE_NONE) && (_mag_counter <= 2 * _obs_buffer_length); // 
 	bool ev_count_fail = ((_params.fusion_mode & MASK_USE_EVPOS) || (_params.fusion_mode & MASK_USE_EVYAW)) && (_ev_counter <= 2 * _obs_buffer_length);
 
 	if (hgt_count_fail || mag_count_fail || ev_count_fail) {
