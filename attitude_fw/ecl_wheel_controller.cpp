@@ -42,13 +42,13 @@
 
 #include <geo/geo.h>
 
-float ECL_WheelController::control_bodyrate(const struct ECL_ControlData &ctl_data)
+float ECL_WheelController::control_bodyrate(const ECL_ControlData &ctl_data)
 {
 	/* Do not calculate control signal with bad inputs */
 	if (!(ISFINITE(ctl_data.body_z_rate) &&
 	      ISFINITE(ctl_data.groundspeed) &&
 	      ISFINITE(ctl_data.groundspeed_scaler))) {
-		return math::constrain(_last_output, -1.0f, 1.0f);
+		return constrain(_last_output, -1.0f, 1.0f);
 	}
 
 	/* get the usual dt estimate */
@@ -67,11 +67,11 @@ float ECL_WheelController::control_bodyrate(const struct ECL_ControlData &ctl_da
 	float min_speed = 1.0f;
 
 	/* Calculate body angular rate error */
-	_rate_error = _rate_setpoint - ctl_data.body_z_rate; //body angular rate error
+	const float rate_error = _rate_setpoint - ctl_data.body_z_rate; //body angular rate error
 
 	if (!lock_integrator && _k_i > 0.0f && ctl_data.groundspeed > min_speed) {
 
-		float id = _rate_error * dt * ctl_data.groundspeed_scaler;
+		float id = rate_error * dt * ctl_data.groundspeed_scaler;
 
 		/*
 		 * anti-windup: do not allow integrator to increase if actuator is at limit
@@ -90,16 +90,16 @@ float ECL_WheelController::control_bodyrate(const struct ECL_ControlData &ctl_da
 
 	/* integrator limit */
 	//xxx: until start detection is available: integral part in control signal is limited here
-	float integrator_constrained = math::constrain(_integrator, -_integrator_max, _integrator_max);
+	float integrator_constrained = constrain(_integrator, -_integrator_max, _integrator_max);
 
 	/* Apply PI rate controller and store non-limited output */
 	_last_output = _rate_setpoint * _k_ff * ctl_data.groundspeed_scaler +
-		       ctl_data.groundspeed_scaler * ctl_data.groundspeed_scaler * (_rate_error * _k_p + integrator_constrained);
+		       ctl_data.groundspeed_scaler * ctl_data.groundspeed_scaler * (rate_error * _k_p + integrator_constrained);
 
-	return math::constrain(_last_output, -1.0f, 1.0f);
+	return constrain(_last_output, -1.0f, 1.0f);
 }
 
-float ECL_WheelController::control_attitude(const struct ECL_ControlData &ctl_data)
+float ECL_WheelController::control_attitude(const ECL_ControlData &ctl_data)
 {
 	/* Do not calculate control signal with bad inputs */
 	if (!(ISFINITE(ctl_data.yaw_setpoint) &&

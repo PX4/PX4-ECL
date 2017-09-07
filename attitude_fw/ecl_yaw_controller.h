@@ -56,9 +56,17 @@ public:
 	ECL_YawController() = default;
 	~ECL_YawController() = default;
 
-	float control_attitude(const struct ECL_ControlData &ctl_data) override;
-	float control_euler_rate(const struct ECL_ControlData &ctl_data) override;
-	float control_bodyrate(const struct ECL_ControlData &ctl_data) override;
+	float control_attitude(const ECL_ControlData &ctl_data) override;
+	float control_euler_rate(const ECL_ControlData &ctl_data) override;
+	float control_bodyrate(const ECL_ControlData &ctl_data) override;
+
+	void set_roll_ff(float roll_ff)
+	{
+		_roll_ff = roll_ff;
+	}
+
+protected:
+	float _roll_ff{0.0f};
 };
 
 #endif // ECL_YAW_CONTROLLER_H

@@ -40,7 +40,7 @@
 
 #include "ecl_pitch_controller.h"
 
-float ECL_PitchController::control_attitude(const struct ECL_ControlData &ctl_data)
+float ECL_PitchController::control_attitude(const ECL_ControlData &ctl_data)
 {
 	/* Do not calculate control signal with bad inputs */
 	if (!(ISFINITE(ctl_data.pitch_setpoint) &&
@@ -71,7 +71,7 @@ float ECL_PitchController::control_attitude(const struct ECL_ControlData &ctl_da
 	return _rate_setpoint;
 }
 
-float ECL_PitchController::control_bodyrate(const struct ECL_ControlData &ctl_data)
+float ECL_PitchController::control_bodyrate(const ECL_ControlData &ctl_data)
 {
 	/* Do not calculate control signal with bad inputs */
 	if (!(ISFINITE(ctl_data.roll) &&
@@ -83,7 +83,7 @@ float ECL_PitchController::control_bodyrate(const struct ECL_ControlData &ctl_da
 	      ISFINITE(ctl_data.airspeed_max) &&
 	      ISFINITE(ctl_data.scaler))) {
 
-		return math::constrain(_last_output, -1.0f, 1.0f);
+		return constrain(_last_output, -1.0f, 1.0f);
 	}
 
 	/* get the usual dt estimate */
@@ -98,11 +98,11 @@ float ECL_PitchController::control_bodyrate(const struct ECL_ControlData &ctl_da
 		lock_integrator = true;
 	}
 
-	_rate_error = _bodyrate_setpoint - ctl_data.body_y_rate;
+	const float rate_error = _bodyrate_setpoint - ctl_data.body_y_rate;
 
 	if (!lock_integrator && _k_i > 0.0f) {
 
-		float id = _rate_error * dt * ctl_data.scaler;
+		float id = rate_error * dt * ctl_data.scaler;
 
 		/*
 		 * anti-windup: do not allow integrator to increase if actuator is at limit
@@ -121,20 +121,20 @@ float ECL_PitchController::control_bodyrate(const struct ECL_ControlData &ctl_da
 
 	/* integrator limit */
 	//xxx: until start detection is available: integral part in control signal is limited here
-	float integrator_constrained = math::constrain(_integrator, -_integrator_max, _integrator_max);
+	float integrator_constrained = constrain(_integrator, -_integrator_max, _integrator_max);
 
 	/* Apply PI rate controller and store non-limited output */
 	_last_output = _bodyrate_setpoint * _k_ff * ctl_data.scaler +
-		       _rate_error * _k_p * ctl_data.scaler * ctl_data.scaler
+		       rate_error * _k_p * ctl_data.scaler * ctl_data.scaler
 		       + integrator_constrained;  //scaler is proportional to 1/airspeed
 
-	return math::constrain(_last_output, -1.0f, 1.0f);
+	return constrain(_last_output, -1.0f, 1.0f);
 }
 
-float ECL_PitchController::control_euler_rate(const struct ECL_ControlData &ctl_data)
+float ECL_PitchController::control_euler_rate(const ECL_ControlData &ctl_data)
 {
 	/* Transform setpoint to body angular rates (jacobian) */
-	_bodyrate_setpoint = cosf(ctl_data.roll) * _rate_setpoint +
+	_bodyrate_setpoint = cosf(ctl_data.roll) * ctl_data.pitch_rate_setpoint +
 			     cosf(ctl_data.pitch) * sinf(ctl_data.roll) * ctl_data.yaw_rate_setpoint;
 
 	return control_bodyrate(ctl_data);

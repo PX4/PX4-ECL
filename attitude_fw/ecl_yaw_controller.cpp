@@ -40,7 +40,7 @@
 
 #include "ecl_yaw_controller.h"
 
-float ECL_YawController::control_attitude(const struct ECL_ControlData &ctl_data)
+float ECL_YawController::control_attitude(const ECL_ControlData &ctl_data)
 {
 	/* Do not calculate control signal with bad inputs */
 	if (!(ISFINITE(ctl_data.roll) &&
@@ -56,7 +56,7 @@ float ECL_YawController::control_attitude(const struct ECL_ControlData &ctl_data
 	/* roll is used as feedforward term and inverted flight needs to be considered */
 	if (fabsf(ctl_data.roll) < math::radians(90.0f)) {
 		/* not inverted, but numerically still potentially close to infinity */
-		constrained_roll = math::constrain(ctl_data.roll, math::radians(-80.0f), math::radians(80.0f));
+		constrained_roll = constrain(ctl_data.roll, math::radians(-80.0f), math::radians(80.0f));
 
 	} else {
 		inverted = true;
@@ -65,15 +65,15 @@ float ECL_YawController::control_attitude(const struct ECL_ControlData &ctl_data
 		//note: the ranges are extended by 10 deg here to avoid numeric resolution effects
 		if (ctl_data.roll > 0.0f) {
 			/* right hemisphere */
-			constrained_roll = math::constrain(ctl_data.roll, math::radians(100.0f), math::radians(180.0f));
+			constrained_roll = constrain(ctl_data.roll, math::radians(100.0f), math::radians(180.0f));
 
 		} else {
 			/* left hemisphere */
-			constrained_roll = math::constrain(ctl_data.roll, math::radians(-180.0f), math::radians(-100.0f));
+			constrained_roll = constrain(ctl_data.roll, math::radians(-180.0f), math::radians(-100.0f));
 		}
 	}
 
-	constrained_roll = math::constrain(constrained_roll, -fabsf(ctl_data.roll_setpoint), fabsf(ctl_data.roll_setpoint));
+	constrained_roll = constrain(constrained_roll, -fabsf(ctl_data.roll_setpoint), fabsf(ctl_data.roll_setpoint));
 
 
 	if (!inverted) {
@@ -90,21 +90,21 @@ float ECL_YawController::control_attitude(const struct ECL_ControlData &ctl_data
 	}
 
 	if (!ISFINITE(_rate_setpoint)) {
-		warnx("yaw rate sepoint not finite");
+		ECL_WARN("yaw rate sepoint not finite");
 		_rate_setpoint = 0.0f;
 	}
 
 	return _rate_setpoint;
 }
 
-float ECL_YawController::control_bodyrate(const struct ECL_ControlData &ctl_data)
+float ECL_YawController::control_bodyrate(const ECL_ControlData &ctl_data)
 {
 	/* Do not calculate control signal with bad inputs */
 	if (!(ISFINITE(ctl_data.roll) && ISFINITE(ctl_data.pitch) && ISFINITE(ctl_data.body_y_rate) &&
 	      ISFINITE(ctl_data.body_z_rate) && ISFINITE(ctl_data.pitch_rate_setpoint) &&
 	      ISFINITE(ctl_data.airspeed_min) && ISFINITE(ctl_data.airspeed_max) &&
 	      ISFINITE(ctl_data.scaler))) {
-		return math::constrain(_last_output, -1.0f, 1.0f);
+		return constrain(_last_output, -1.0f, 1.0f);
 	}
 
 	/* get the usual dt estimate */
@@ -131,11 +131,11 @@ float ECL_YawController::control_bodyrate(const struct ECL_ControlData &ctl_data
 	}
 
 	/* Calculate body angular rate error */
-	_rate_error = _bodyrate_setpoint - ctl_data.body_z_rate; // body angular rate error
+	const float rate_error = _bodyrate_setpoint - ctl_data.body_z_rate; // body angular rate error
 
 	if (!lock_integrator && _k_i > 0.0f && airspeed > 0.5f * ctl_data.airspeed_min) {
 
-		float id = _rate_error * dt;
+		float id = rate_error * dt;
 
 		/*
 		 * anti-windup: do not allow integrator to increase if actuator is at limit
@@ -154,21 +154,22 @@ float ECL_YawController::control_bodyrate(const struct ECL_ControlData &ctl_data
 
 	/* integrator limit */
 	//xxx: until start detection is available: integral part in control signal is limited here
-	float integrator_constrained = math::constrain(_integrator, -_integrator_max, _integrator_max);
+	float integrator_constrained = constrain(_integrator, -_integrator_max, _integrator_max);
 
 	/* Apply PI rate controller and store non-limited output */
-	_last_output = (_bodyrate_setpoint * _k_ff + _rate_error * _k_p + integrator_constrained) * ctl_data.scaler *
-		       ctl_data.scaler;  //scaler is proportional to 1/airspeed
+	// TODO: add roll feedforward
+	_last_output = (_bodyrate_setpoint * _k_ff
+					+ rate_error * _k_p
+					+ integrator_constrained) * ctl_data.scaler * ctl_data.scaler;  //scaler is proportional to 1/airspeed
 
-	return math::constrain(_last_output, -1.0f, 1.0f);
+	return constrain(_last_output, -1.0f, 1.0f);
 }
 
-float ECL_YawController::control_euler_rate(const struct ECL_ControlData &ctl_data)
+float ECL_YawController::control_euler_rate(const ECL_ControlData &ctl_data)
 {
 	/* Transform setpoint to body angular rates (jacobian) */
 	_bodyrate_setpoint = -sinf(ctl_data.roll) * ctl_data.pitch_rate_setpoint +
-			     cosf(ctl_data.roll) * cosf(ctl_data.pitch) * _rate_setpoint;
+			     cosf(ctl_data.roll) * cosf(ctl_data.pitch) * ctl_data.yaw_rate_setpoint;
 
 	return control_bodyrate(ctl_data);
-
 }

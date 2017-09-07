@@ -73,15 +73,17 @@ struct ECL_ControlData {
 	bool lock_integrator;
 };
 
+using math::constrain;
+
 class __EXPORT ECL_Controller
 {
 public:
 	ECL_Controller() = default;
 	~ECL_Controller() = default;
 
-	virtual float control_attitude(const struct ECL_ControlData &ctl_data) = 0;
-	virtual float control_euler_rate(const struct ECL_ControlData &ctl_data) = 0;
-	virtual float control_bodyrate(const struct ECL_ControlData &ctl_data) = 0;
+	virtual float control_attitude(const ECL_ControlData &ctl_data) = 0;
+	virtual float control_euler_rate(const ECL_ControlData &ctl_data) = 0;
+	virtual float control_bodyrate(const ECL_ControlData &ctl_data) = 0;
 
 	/* Setters */
 	void set_time_constant(float time_constant);
@@ -90,11 +92,10 @@ public:
 	void set_k_ff(float k_ff);
 	void set_integrator_max(float max);
 	void set_max_rate(float max_rate);
+
 	void set_bodyrate_setpoint(float rate) { _bodyrate_setpoint = rate; }
 
 	/* Getters */
-	float get_rate_error();
-	float get_desired_rate();
 	float get_desired_bodyrate();
 
 	void reset_integrator();
@@ -114,7 +115,6 @@ protected:
 	float _bodyrate_setpoint{0.0f};
 
 	float _max_rate{0.0f};
-	float _rate_error{0.0f};
 	float _last_output{0.0f};
 
 	float constrain_airspeed(float airspeed, float minspeed, float maxspeed);
