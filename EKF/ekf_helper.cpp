@@ -506,6 +506,10 @@ bool Ekf::resetMagHeading(Vector3f &mag_init)
 			// calculate the yaw angle for a 312 sequence
 			euler321(2) = atan2f(R_to_earth_ev(1, 0), R_to_earth_ev(0, 0));
 
+		} else if ((_params.mag_field_vertical == 1) || (_params.mag_field_vertical == 2)) {
+			// use best estimate
+			euler321(2) = _last_inflight_yaw;
+
 		} else if (_params.mag_fusion_type <= MAG_FUSE_TYPE_3D) {
 			// rotate the magnetometer measurements into earth frame using a zero yaw angle
 			Vector3f mag_earth_pred = R_to_earth * _mag_sample_delayed.mag;
@@ -578,6 +582,10 @@ bool Ekf::resetMagHeading(Vector3f &mag_init)
 			Dcmf R_to_earth_ev(_ev_sample_delayed.quat);	// transformation matrix from body to world frame
 			// calculate the yaw angle for a 312 sequence
 			euler312(0) = atan2f(-R_to_earth_ev(0, 1), R_to_earth_ev(1, 1));
+
+		} else if ((_params.mag_field_vertical == 1) || (_params.mag_field_vertical == 2)) {
+			// use best estimate
+			euler312(0) = _last_inflight_yaw;
 
 		} else if (_params.mag_fusion_type <= MAG_FUSE_TYPE_3D) {
 			// rotate the magnetometer measurements into earth frame using a zero yaw angle
@@ -1208,6 +1216,38 @@ Vector3f Ekf::calcRotVecVariances()
 	}
 
 	return rot_var_vec;
+}
+
+// calculate the yaw variance from the quaternion covariances
+float Ekf::calcYawVariance()
+{
+	float yaw_variance;
+	float q0, q3;
+
+	if (_state.quat_nominal(0) >= 0.0f) {
+		q0 = _state.quat_nominal(0);
+		q3 = _state.quat_nominal(3);
+	} else {
+		q0 = -_state.quat_nominal(0);
+		q3 = -_state.quat_nominal(3);
+	}
+	float t2 = q0*q0;
+	float t3 = acosf(q0);
+	float t4 = -t2+1.0f;
+	float t5 = t2-1.0f;
+	if ((t4 > 1e-9f) && (t5 < -1e-9f)) {
+		float t6 = 1.0f/t5;
+		float t8 = powf(t4,-1.5f);
+		float t11 = 1.0f/sqrtf(t4);
+		float t15 = q3*t6*2.0f;
+		float t16 = q0*q3*t3*t8*2.0f;
+		float t17 = t15+t16;
+		yaw_variance = t17*(P[0][0]*t17+P[3][0]*t3*t11*2.0f)+t3*t11*(P[0][3]*t17+P[3][3]*t3*t11*2.0f)*2.0f;
+	} else {
+		yaw_variance = 4.0f * P[3][3];
+	}
+
+	return yaw_variance;
 }
 
 // initialise the quaternion covariances using rotation vector variances

@@ -561,6 +561,9 @@ private:
 	// rotate quaternion covariances into variances for an equivalent rotation vector
 	Vector3f calcRotVecVariances();
 
+	// calculate the yaw variance from the quaternion covariances
+	float calcYawVariance();
+
 	// initialise the quaternion covariances using rotation vector variances
 	void initialiseQuatCovariances(Vector3f &rot_vec_var);
 

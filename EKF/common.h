@@ -245,6 +245,10 @@ struct parameters {
 	int32_t mag_fusion_type{0};		///< integer used to specify the type of magnetometer fusion used
 	float mag_acc_gate{0.5f};		///< when in auto select mode, heading fusion will be used when manoeuvre accel is lower than this (m/sec**2)
 	float mag_yaw_rate_gate{0.25f};		///< yaw rate threshold used by mode select logic (rad/sec)
+	int32_t mag_field_vertical{0};		///< set to 1 or 2 when the earth field is too close to vertical to give reliable heading.
+						///< A value of 1 will assume yaw = mag_yaw_ground when on the ground and do no yaw or mag fusion in air.
+						///< A value of 2 will assume yaw = mag_yaw_ground when on the ground and do 3-axis mag fusion in the air.
+	float mag_yaw_ground{0.0f};		///< This yaw angle will be used for alignment and fusion when on the ground if mag_field_vertical = 1 or 2 (deg)
 
 	// airspeed fusion
 	float tas_innov_gate{5.0f};		///< True Airspeed innovation consistency gate size (STD)
