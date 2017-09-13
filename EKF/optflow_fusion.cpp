@@ -524,10 +524,6 @@ void Ekf::get_drag_innov_var(float drag_innov_var[2])
 // calculate optical flow gyro bias errors
 void Ekf::calcOptFlowBias()
 {
-	// accumulate the bias corrected delta angles from the navigation sensor and lapsed time
-	_imu_del_ang_of += _imu_sample_delayed.delta_ang;
-	_delta_time_of += _imu_sample_delayed.delta_ang_dt;
-
 	// reset the accumulators if the time interval is too large
 	if (_delta_time_of > 1.0f) {
 		_imu_del_ang_of.setZero();

@@ -280,6 +280,10 @@ void Ekf::controlExternalVisionFusion()
 
 void Ekf::controlOpticalFlowFusion()
 {
+	// accumulate the bias corrected delta angles from the navigation sensor and lapsed time for flow gyro correction
+	_imu_del_ang_of += _imu_sample_delayed.delta_ang;
+	_delta_time_of += _imu_sample_delayed.delta_ang_dt;
+
 	// Check for new optical flow data that has fallen behind the fusion time horizon
 	if (_flow_data_ready) {
 
