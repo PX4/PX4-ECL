@@ -998,6 +998,8 @@ void Ekf::controlAirDataFusion()
 
 	if (_control_status.flags.wind && airspeed_timed_out && sideslip_timed_out && !(_params.fusion_mode & MASK_USE_DRAG)) {
 		_control_status.flags.wind = false;
+		_state.wind_vel(0) = 0.0f;
+		_state.wind_vel(1) = 0.0f;
 
 	}
 
