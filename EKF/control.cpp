@@ -451,7 +451,7 @@ void Ekf::controlGpsFusion()
 
 			if (do_reset) {
 				// Reset states to the last GPS measurement
-				if (_control_status.flags.fixed_wing) {
+				if (_control_status.flags.fixed_wing && _control_status.flags.gps) {
 					// if flying a fixed wing aircraft, do a complete reset that includes yaw, velocity and position
 					realignYawGPS();
 					resetVelocity();
@@ -1156,7 +1156,7 @@ void Ekf::controlMagFusion()
 				if (!_control_status.flags.mag_3D) {
 					if (!_flt_mag_align_complete) {
 						// If we are flying a vehicle that flies forward, eg plane, then we can use the GPS course to check and correct the heading
-						if (_control_status.flags.fixed_wing && _control_status.flags.in_air) {
+						if (_control_status.flags.fixed_wing && _control_status.flags.in_air && _control_status.flags.gps) {
 							_control_status.flags.yaw_align = realignYawGPS();
 							_flt_mag_align_complete = _control_status.flags.yaw_align;
 						} else {
