@@ -346,126 +346,121 @@ bool Ekf::realignYawGPS()
 {
 	// Need at least 5 m/s of GPS horizontal speed and ratio of velocity error to velocity < 0.15  for a reliable alignment
 	float gpsSpeed = sqrtf(sq(_gps_sample_delayed.vel(0)) + sq(_gps_sample_delayed.vel(1)));
-	if ((gpsSpeed > 5.0f) && (_gps_sample_delayed.sacc < (0.15f * gpsSpeed))) {
-		// check for excessive GPS velocity innovations
-		bool badVelInnov = ((_vel_pos_test_ratio[0] > 1.0f) || (_vel_pos_test_ratio[1] > 1.0f)) && _control_status.flags.gps;
 
-		// calculate GPS course over ground angle
-		float gpsCOG = atan2f(_gps_sample_delayed.vel(1), _gps_sample_delayed.vel(0));
+	// check for excessive GPS velocity innovations
+	bool badVelInnov = ((_vel_pos_test_ratio[0] > 1.0f) || (_vel_pos_test_ratio[1] > 1.0f)) && _control_status.flags.gps;
 
-		// calculate course yaw angle
-		float ekfGOG = atan2f(_state.vel(1), _state.vel(0));
+	// calculate GPS course over ground angle
+	float gpsCOG = atan2f(_gps_sample_delayed.vel(1), _gps_sample_delayed.vel(0));
 
-		// Check the EKF and GPS course over ground for consistency
-		float courseYawError = gpsCOG - ekfGOG;
+	// calculate course yaw angle
+	float ekfGOG = atan2f(_state.vel(1), _state.vel(0));
 
-		// If the angles disagree and horizontal GPS velocity innovations are large or no previous yaw alignment, we declare the magnetic yaw as bad
-		bool badYawErr = fabsf(courseYawError) > 0.5f;
-		bool badMagYaw = (badYawErr && badVelInnov);
+	// Check the EKF and GPS course over ground for consistency
+	float courseYawError = gpsCOG - ekfGOG;
 
-		if (badMagYaw) {
-			_num_bad_flight_yaw_events ++;
+	// If the angles disagree and horizontal GPS velocity innovations are large or no previous yaw alignment, we declare the magnetic yaw as bad
+	bool badYawErr = fabsf(courseYawError) > 0.5f;
+	bool badMagYaw = (badYawErr && badVelInnov);
+
+	if (badMagYaw) {
+		_num_bad_flight_yaw_events ++;
+	}
+
+	// correct yaw angle using GPS ground course if compass yaw bad or yaw is previously not aligned
+	if ((gpsSpeed > 5.0f) && (_gps_sample_delayed.sacc < (0.15f * gpsSpeed)) && (badMagYaw || !_control_status.flags.yaw_align)) {
+
+		ECL_WARN("EKF bad yaw corrected using GPS course");
+
+		// declare the magnetomer as failed if a bad yaw has occurred more than once
+		if (_flt_mag_align_complete && (_num_bad_flight_yaw_events >= 2) && !_control_status.flags.mag_fault) {
+			ECL_WARN("EKF stopping magnetometer use");
+			_control_status.flags.mag_fault = true;
 		}
 
-		// correct yaw angle using GPS ground course if compass yaw bad or yaw is previously not aligned
-		if (badMagYaw || !_control_status.flags.yaw_align) {
-			ECL_WARN("EKF bad yaw corrected using GPS course");
+		// save a copy of the quaternion state for later use in calculating the amount of reset change
+		Quatf quat_before_reset = _state.quat_nominal;
 
-			// declare the magnetomer as failed if a bad yaw has occurred more than once
-			if (_flt_mag_align_complete && (_num_bad_flight_yaw_events >= 2) && !_control_status.flags.mag_fault) {
-				ECL_WARN("EKF stopping magnetometer use");
-				_control_status.flags.mag_fault = true;
-			}
+		// calculate the variance for the rotation estimate expressed as a rotation vector
+		// this will be used later to reset the quaternion state covariances
+		Vector3f angle_err_var_vec = calcRotVecVariances();
 
-			// save a copy of the quaternion state for later use in calculating the amount of reset change
-			Quatf quat_before_reset = _state.quat_nominal;
+		// update transformation matrix from body to world frame using the current state estimate
+		_R_to_earth = quat_to_invrotmat(_state.quat_nominal);
 
-			// calculate the variance for the rotation estimate expressed as a rotation vector
-			// this will be used later to reset the quaternion state covariances
-			Vector3f angle_err_var_vec = calcRotVecVariances();
+		// get quaternion from existing filter states and calculate roll, pitch and yaw angles
+		Eulerf euler321(_state.quat_nominal);
 
-			// update transformation matrix from body to world frame using the current state estimate
-			_R_to_earth = quat_to_invrotmat(_state.quat_nominal);
+		// apply yaw correction
+		if (!_flt_mag_align_complete) {
+			// This is our first flight aligment so we can assume that the recent change in velocity has occurred due to a
+			// forward direction takeoff or launch and therefore the inertial and GPS ground course discrepancy is due to yaw error
+			euler321(2) += courseYawError;
+			_flt_mag_align_complete = true;
 
-			// get quaternion from existing filter states and calculate roll, pitch and yaw angles
-			Eulerf euler321(_state.quat_nominal);
-
-			// apply yaw correction
-			if (!_flt_mag_align_complete) {
-				// This is our first flight aligment so we can assume that the recent change in velocity has occurred due to a
-				// forward direction takeoff or launch and therefore the inertial and GPS ground course discrepancy is due to yaw error
-				euler321(2) += courseYawError;
-				_flt_mag_align_complete = true;
-
-			} else if (_control_status.flags.wind) {
-				// we have previously aligned yaw in-flight and have wind estimates so set the yaw such that the vehicle nose is
-				// aligned with the wind relative GPS velocity vector
-				euler321(2) = atan2f((_gps_sample_delayed.vel(1) - _state.wind_vel(1)) , (_gps_sample_delayed.vel(0) - _state.wind_vel(0)));
-
-			} else {
-				// we don't have wind estimates, so align yaw to the GPS velocity vector
-				euler321(2) = atan2f(_gps_sample_delayed.vel(1) , _gps_sample_delayed.vel(0));
-
-			}
-
-			// calculate new filter quaternion states using corected yaw angle
-			_state.quat_nominal = Quatf(euler321);
-
-			// update transformation matrix from body to world frame using the current state estimate
-			_R_to_earth = quat_to_invrotmat(_state.quat_nominal);
-
-			// Use the last magnetometer measurements to reset the field states
-			_state.mag_B.zero();
-			_state.mag_I = _R_to_earth * _mag_sample_delayed.mag;
-
-			// use the combined EKF and GPS speed variance to calculate a rough estimate of the yaw error after alignment
-			float SpdErrorVariance = sq(_gps_sample_delayed.sacc) + P[4][4] + P[5][5];
-			float sineYawError = math::constrain(sqrtf(SpdErrorVariance) / gpsSpeed, 0.0f, 1.0f);
-			angle_err_var_vec(2) = sq(asinf(sineYawError));
-
-			// reset the quaternion covariances using the rotation vector variances
-			initialiseQuatCovariances(angle_err_var_vec);
-
-			// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
-			zeroRows(P, 16, 21);
-			zeroCols(P, 16, 21);
-
-			for (uint8_t index = 16; index <= 21; index ++) {
-				P[index][index] = sq(_params.mag_noise);
-			}
-
-			// calculate the amount that the quaternion has changed by
-			_state_reset_status.quat_change = quat_before_reset.inversed() * _state.quat_nominal;
-
-			// add the reset amount to the output observer buffered data
-			outputSample output_states;
-			unsigned output_length = _output_buffer.get_length();
-			for (unsigned i = 0; i < output_length; i++) {
-				output_states = _output_buffer.get_from_index(i);
-				output_states.quat_nominal = _state_reset_status.quat_change * output_states.quat_nominal;
-				_output_buffer.push_to_index(i, output_states);
-			}
-
-			// apply the change in attitude quaternion to our newest quaternion estimate
-			// which was already taken out from the output buffer
-			_output_new.quat_nominal = _state_reset_status.quat_change * _output_new.quat_nominal;
-
-			// capture the reset event
-			_state_reset_status.quat_counter++;
-
-			// the alignment using GPS has been successful
-			_control_status.flags.yaw_align = true;
-			return true;
+		} else if (_control_status.flags.wind) {
+			// we have previously aligned yaw in-flight and have wind estimates so set the yaw such that the vehicle nose is
+			// aligned with the wind relative GPS velocity vector
+			euler321(2) = atan2f((_gps_sample_delayed.vel(1) - _state.wind_vel(1)) , (_gps_sample_delayed.vel(0) - _state.wind_vel(0)));
 
 		} else {
-			// attempt a normal alignment using the magnetometer
-			return resetMagHeading(_mag_sample_delayed.mag);
+			// we don't have wind estimates, so align yaw to the GPS velocity vector
+			euler321(2) = atan2f(_gps_sample_delayed.vel(1) , _gps_sample_delayed.vel(0));
 
 		}
 
+		// calculate new filter quaternion states using corected yaw angle
+		_state.quat_nominal = Quatf(euler321);
+
+		// update transformation matrix from body to world frame using the current state estimate
+		_R_to_earth = quat_to_invrotmat(_state.quat_nominal);
+
+		// Use the last magnetometer measurements to reset the field states
+		_state.mag_B.zero();
+		_state.mag_I = _R_to_earth * _mag_sample_delayed.mag;
+
+		// use the combined EKF and GPS speed variance to calculate a rough estimate of the yaw error after alignment
+		float SpdErrorVariance = sq(_gps_sample_delayed.sacc) + P[4][4] + P[5][5];
+		float sineYawError = math::constrain(sqrtf(SpdErrorVariance) / gpsSpeed, 0.0f, 1.0f);
+		angle_err_var_vec(2) = sq(asinf(sineYawError));
+
+		// reset the quaternion covariances using the rotation vector variances
+		initialiseQuatCovariances(angle_err_var_vec);
+
+		// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
+		zeroRows(P, 16, 21);
+		zeroCols(P, 16, 21);
+
+		for (uint8_t index = 16; index <= 21; index ++) {
+			P[index][index] = sq(_params.mag_noise);
+		}
+
+		// calculate the amount that the quaternion has changed by
+		_state_reset_status.quat_change = quat_before_reset.inversed() * _state.quat_nominal;
+
+		// add the reset amount to the output observer buffered data
+		outputSample output_states;
+		unsigned output_length = _output_buffer.get_length();
+		for (unsigned i = 0; i < output_length; i++) {
+			output_states = _output_buffer.get_from_index(i);
+			output_states.quat_nominal = _state_reset_status.quat_change * output_states.quat_nominal;
+			_output_buffer.push_to_index(i, output_states);
+		}
+
+		// apply the change in attitude quaternion to our newest quaternion estimate
+		// which was already taken out from the output buffer
+		_output_new.quat_nominal = _state_reset_status.quat_change * _output_new.quat_nominal;
+
+		// capture the reset event
+		_state_reset_status.quat_counter++;
+
+		// the alignment using GPS has been successful
+		_control_status.flags.yaw_align = true;
+		return true;
+
 	} else {
-		// we were unable to verify the alignment
-		return false;
+		// attempt a normal alignment using the magnetometer
+		return resetMagHeading(_mag_sample_delayed.mag);
 
 	}
 }
