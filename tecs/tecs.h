@@ -248,8 +248,6 @@ private:
 	float _pitch_setpoint_unc{0.0f};				///< pitch demand before limiting (rad)
 	float _STE_rate_max{0.0f};					///< specific total energy rate upper limit achieved when throttle is at _throttle_setpoint_max (m**2/sec**3)
 	float _STE_rate_min{0.0f};					///< specific total energy rate lower limit acheived when throttle is at _throttle_setpoint_min (m**2/sec**3)
-	float _throttle_setpoint_max{0.0f};				///< normalised throttle upper limit
-	float _throttle_setpoint_min{0.0f};				///< normalised throttle lower limit
 
 	// specific energy quantities
 	float _SPE_setpoint{0.0f};					///< specific potential energy demand (m**2/sec**2)
@@ -275,7 +273,6 @@ private:
 	bool _underspeed_detected{false};				///< true when an underspeed condition has been detected
 	bool _detect_underspeed_enabled{true};				///< true when underspeed detection is enabled
 	bool _uncommanded_descent_recovery{false};			///< true when a continuous descent caused by an unachievable airspeed demand has been detected
-	bool _climbout_mode_active{false};				///< true when in climbout mode
 	bool _airspeed_enabled{false};					///< true when airspeed use has been enabled
 	bool _states_initalized{false};					///< true when TECS states have been iniitalized
 	bool _in_air{false};						///< true when the vehicle is flying
@@ -298,7 +295,7 @@ private:
 	/**
 	 * Detect if the system is not capable of maintaining airspeed
 	 */
-	void _detect_underspeed();
+	void _detect_underspeed(float throttle_max);
 
 	/**
 	 * Update specific energy
@@ -308,23 +305,24 @@ private:
 	/**
 	 * Update throttle setpoint
 	 */
-	void _update_throttle_setpoint(float throttle_cruise, const matrix::Dcmf &rotMat);
+	void _update_throttle_setpoint(float throttle_cruise, float throttle_min, float throttle_max,
+				       const matrix::Dcmf &rotMat, bool climbout);
 
 	/**
 	 * Detect an uncommanded descent
 	 */
-	void _detect_uncommanded_descent();
+	void _detect_uncommanded_descent(float throttle_max);
 
 	/**
 	 * Update the pitch setpoint
 	 */
-	void _update_pitch_setpoint(float pitch_setpoint_min, float pitch_setpoint_max);
+	void _update_pitch_setpoint(float pitch_setpoint_min, float pitch_setpoint_max, bool climbout);
 
 	/**
 	 * Initialize the controller
 	 */
 	void _initialize_states(float pitch, float throttle_cruise, float baro_altitude, float EAS2TAS,
-				float pitch_setpoint_min, float pitch_setpoint_max);
+				float pitch_setpoint_min, float pitch_setpoint_max, bool climbout);
 
 	/**
 	 * Calculate specific total energy rate limits
