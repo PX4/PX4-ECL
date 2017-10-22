@@ -149,10 +149,6 @@ void TECS::_update_speed_states(float indicated_airspeed, float EAS2TAS)
 	const uint64_t now = ecl_absolute_time();
 	const float dt = constrain((now - _speed_update_timestamp) * 1.0e-6f, DT_MIN, DT_MAX);
 
-	// Convert equivalent airspeed quantities to true airspeed
-	_TAS_max   = _indicated_airspeed_max * EAS2TAS;
-	_TAS_min   = _indicated_airspeed_min * EAS2TAS;
-
 	// If airspeed measurements are not being used, fix the airspeed estimate to halfway between
 	// min and max limits
 	if (!ISFINITE(indicated_airspeed) || !airspeed_sensor_enabled()) {
@@ -189,15 +185,17 @@ void TECS::_update_speed_states(float indicated_airspeed, float EAS2TAS)
 	_speed_update_timestamp = now;
 }
 
-void TECS::_update_speed_setpoint(const float airspeed_setpoint)
+void TECS::_update_speed_setpoint(const float airspeed_setpoint, const float EAS2TAS)
 {
 	// Set the airspeed demand to the minimum value if an underspeed or
 	// or a uncontrolled descent condition exists to maximise climb rate
-	if ((_uncommanded_descent_recovery) || (_underspeed_detected)) {
-		_TAS_setpoint_adj = _TAS_min;
+
+	if (_uncommanded_descent_recovery || _underspeed_detected) {
+		_TAS_setpoint_adj = _indicated_airspeed_min * EAS2TAS;
 
 	} else {
-		_TAS_setpoint_adj = constrain(airspeed_setpoint, _TAS_min, _TAS_max);
+		const float IAS_setpoint_adj = constrain(airspeed_setpoint, _indicated_airspeed_min, _indicated_airspeed_max);
+		_TAS_setpoint_adj = IAS_setpoint_adj * EAS2TAS;
 	}
 
 	// Apply limits on the demanded rate of change of speed based based on physical performance limits
@@ -248,14 +246,14 @@ void TECS::_update_height_setpoint(float desired, float state)
 	_hgt_rate_setpoint = constrain(hgt_rate_setpoint_unc, -_max_sink_rate, _max_climb_rate);
 }
 
-void TECS::_detect_underspeed(const float throttle_max)
+void TECS::_detect_underspeed(const float EAS2TAS, const float throttle_max)
 {
 	if (!_detect_underspeed_enabled) {
 		_underspeed_detected = false;
 		return;
 	}
 
-	if (((_tas_state < _TAS_min * 0.9f) && (_last_throttle_setpoint >= throttle_max * 0.95f))
+	if (((_tas_state < (_indicated_airspeed_min * EAS2TAS * 0.9f)) && (_last_throttle_setpoint >= throttle_max * 0.95f))
 	    || ((_vert_pos_state < _hgt_setpoint_adj) && _underspeed_detected)) {
 
 		_underspeed_detected = true;
@@ -311,9 +309,9 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const float th
 
 		// Calculate a predicted throttle from the demanded rate of change of energy, using the cruise throttle
 		// as the starting point. Assume:
-		// Specific total energy rate = _STE_rate_max is achieved when throttle is set to _throttle_setpoint_max
+		// Specific total energy rate = _STE_rate_max is achieved when throttle is set to throttle_max
 		// Specific total energy rate = 0 at cruise throttle
-		// Specific total energy rate = _STE_rate_min is achieved when throttle is set to _throttle_setpoint_min
+		// Specific total energy rate = _STE_rate_min is achieved when throttle is set to throttle_min
 		float throttle_predicted = 0.0f;
 
 		if (STE_rate_setpoint >= 0) {
@@ -530,7 +528,7 @@ void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_alt
 	_states_initalized = true;
 }
 
-void TECS::update_pitch_throttle(const math::Matrix<3, 3> &rotMat, float pitch, float baro_altitude, float hgt_setpoint,
+void TECS::update_pitch_throttle(const matrix::Dcmf &rotMat, float pitch, float baro_altitude, float hgt_setpoint,
 				 float EAS_setpoint, float indicated_airspeed, float eas_to_tas, bool climb_out, float pitch_min_climbout,
 				 float throttle_min, float throttle_max, float throttle_cruise, float pitch_limit_min, float pitch_limit_max)
 {
@@ -558,13 +556,13 @@ void TECS::update_pitch_throttle(const math::Matrix<3, 3> &rotMat, float pitch, 
 	_update_speed_states(indicated_airspeed, eas_to_tas);
 
 	// Detect an underspeed condition
-	_detect_underspeed(throttle_max);
+	_detect_underspeed(eas_to_tas, throttle_max);
 
 	// Detect an uncommanded descent caused by an unachievable airspeed demand
 	_detect_uncommanded_descent(throttle_max);
 
 	// Calculate the demanded true airspeed
-	_update_speed_setpoint(EAS_setpoint * eas_to_tas);
+	_update_speed_setpoint(EAS_setpoint, eas_to_tas);
 
 	// Calculate the demanded height
 	_update_height_setpoint(hgt_setpoint, baro_altitude);

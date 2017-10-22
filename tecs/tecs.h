@@ -232,8 +232,6 @@ private:
 
 	// speed demand calculations
 	float _EAS{0.0f};						///< equivalent airspeed (m/sec)
-	float _TAS_max{30.0f};						///< true airpeed demand upper limit (m/sec)
-	float _TAS_min{3.0f};						///< true airpeed demand lower limit (m/sec)
 	float _TAS_setpoint_adj{0.0f};					///< true airspeed demand tracked by the TECS algorithm (m/sec)
 	float _TAS_rate_setpoint{0.0f};					///< true airspeed rate demand tracked by the TECS algorithm (m/sec**2)
 
@@ -285,7 +283,7 @@ private:
 	/**
 	 * Update the desired airspeed
 	 */
-	void _update_speed_setpoint(float airspeed_setpoint);
+	void _update_speed_setpoint(float airspeed_setpoint, float EAS2TAS);
 
 	/**
 	 * Update the desired height
@@ -295,7 +293,7 @@ private:
 	/**
 	 * Detect if the system is not capable of maintaining airspeed
 	 */
-	void _detect_underspeed(float throttle_max);
+	void _detect_underspeed(float EAS2TAS, float throttle_max);
 
 	/**
 	 * Update specific energy
