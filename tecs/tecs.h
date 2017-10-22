@@ -39,6 +39,7 @@
 
 #pragma once
 
+#include <geo/geo.h>
 #include <mathlib/mathlib.h>
 #include <matrix/math.hpp>
 
@@ -82,12 +83,11 @@ public:
 	 */
 	void update_pitch_throttle(const matrix::Dcmf &rotMat, float pitch, float baro_altitude, float hgt_setpoint,
 				   float EAS_setpoint, float indicated_airspeed, float eas_to_tas, bool climb_out_setpoint, float pitch_min_climbout,
-				   float throttle_min, float throttle_setpoint_max, float throttle_cruise,
+				   float throttle_min, float throttle_max, float throttle_cruise,
 				   float pitch_limit_min, float pitch_limit_max);
 
-	float get_throttle_setpoint(void) { return _throttle_setpoint; }
-	float get_pitch_setpoint() { return _pitch_setpoint; }
-	float get_speed_weight() { return _pitch_speed_weight; }
+	float get_throttle_setpoint(void) { return _last_throttle_setpoint; }
+	float get_pitch_setpoint() { return _last_pitch_setpoint; }
 
 	void reset_state() { _states_initalized = false; }
 
@@ -104,9 +104,22 @@ public:
 	void set_time_const(float time_const) { _pitch_time_constant = time_const; }
 	void set_integrator_gain(float gain) { _integrator_gain = gain; }
 
-	void set_min_sink_rate(float rate) { _min_sink_rate = rate; }
+	void set_min_sink_rate(float rate)
+	{
+		_min_sink_rate = rate;
+
+		// Calculate the specific total energy lower rate limits from the min throttle sink rate
+		_STE_rate_min = - _min_sink_rate * CONSTANTS_ONE_G;
+	}
+
+	void set_max_climb_rate(float climb_rate)
+	{
+		_max_climb_rate = climb_rate;
+		// Calculate the specific total energy upper rate limits from the max throttle climb rate
+		_STE_rate_max = climb_rate * CONSTANTS_ONE_G;
+	}
+
 	void set_max_sink_rate(float sink_rate) { _max_sink_rate = sink_rate; }
-	void set_max_climb_rate(float climb_rate) { _max_climb_rate = climb_rate; }
 
 	void set_height_comp_filter_omega(float omega) { _hgt_estimate_freq = omega; }
 	void set_heightrate_ff(float heightrate_ff) { _height_setpoint_gain_ff = heightrate_ff; }
@@ -203,10 +216,6 @@ private:
 	float _indicated_airspeed_max{30.0f};				///< equivalent airspeed demand upper limit (m/sec)
 	float _throttle_slewrate{0.0f};					///< throttle demand slew rate limit (1/sec)
 
-	// controller outputs
-	float _throttle_setpoint{0.0f};					///< normalized throttle demand (0..1)
-	float _pitch_setpoint{0.0f};					///< pitch angle demand (radians)
-
 	// complimentary filter states
 	float _vert_accel_state{0.0f};					///< complimentary filter state - height second derivative (m/sec**2)
 	float _vert_vel_state{0.0f};					///< complimentary filter state - height rate (m/sec)
@@ -225,14 +234,10 @@ private:
 	float _EAS{0.0f};						///< equivalent airspeed (m/sec)
 	float _TAS_max{30.0f};						///< true airpeed demand upper limit (m/sec)
 	float _TAS_min{3.0f};						///< true airpeed demand lower limit (m/sec)
-	float _TAS_setpoint{0.0f};					///< current airpeed demand (m/sec)
-	float _TAS_setpoint_last{0.0f};					///< previous true airpeed demand (m/sec)
-	float _EAS_setpoint{0.0f};					///< Equivalent airspeed demand (m/sec)
 	float _TAS_setpoint_adj{0.0f};					///< true airspeed demand tracked by the TECS algorithm (m/sec)
 	float _TAS_rate_setpoint{0.0f};					///< true airspeed rate demand tracked by the TECS algorithm (m/sec**2)
 
 	// height demand calculations
-	float _hgt_setpoint{0.0f};					///< demanded height tracked by the TECS algorithm (m)
 	float _hgt_setpoint_in_prev{0.0f};				///< previous value of _hgt_setpoint after noise filtering (m)
 	float _hgt_setpoint_prev{0.0f};					///< previous value of _hgt_setpoint after noise filtering and rate limiting (m)
 	float _hgt_setpoint_adj{0.0f};					///< demanded height used by the control loops after all filtering has been applied (m)
@@ -245,8 +250,6 @@ private:
 	float _STE_rate_min{0.0f};					///< specific total energy rate lower limit acheived when throttle is at _throttle_setpoint_min (m**2/sec**3)
 	float _throttle_setpoint_max{0.0f};				///< normalised throttle upper limit
 	float _throttle_setpoint_min{0.0f};				///< normalised throttle lower limit
-	float _pitch_setpoint_max{0.5f};				///< pitch demand upper limit (rad)
-	float _pitch_setpoint_min{-0.5f};				///< pitch demand lower limit (rad)
 
 	// specific energy quantities
 	float _SPE_setpoint{0.0f};					///< specific potential energy demand (m**2/sec**2)
@@ -280,12 +283,12 @@ private:
 	/**
 	 * Update the airspeed internal state using a second order complementary filter
 	 */
-	void _update_speed_states(float airspeed_setpoint, float indicated_airspeed, float eas_to_tas);
+	void _update_speed_states(float indicated_airspeed, float EAS2TAS);
 
 	/**
 	 * Update the desired airspeed
 	 */
-	void _update_speed_setpoint();
+	void _update_speed_setpoint(float airspeed_setpoint);
 
 	/**
 	 * Update the desired height
@@ -315,13 +318,13 @@ private:
 	/**
 	 * Update the pitch setpoint
 	 */
-	void _update_pitch_setpoint();
+	void _update_pitch_setpoint(float pitch_setpoint_min, float pitch_setpoint_max);
 
 	/**
 	 * Initialize the controller
 	 */
-	void _initialize_states(float pitch, float throttle_cruise, float baro_altitude, float pitch_min_climbout,
-				float eas_to_tas);
+	void _initialize_states(float pitch, float throttle_cruise, float baro_altitude, float EAS2TAS,
+				float pitch_setpoint_min, float pitch_setpoint_max);
 
 	/**
 	 * Calculate specific total energy rate limits
