@@ -1078,6 +1078,7 @@ void Ekf::controlMagFusion()
 	if (!_control_status.flags.in_air) {
 		_last_on_ground_posD = _state.pos(2);
 		_flt_mag_align_complete = false;
+		_time_last_flt_align = 0;
 		_num_bad_flight_yaw_events = 0;
 	}
 
@@ -1129,10 +1130,12 @@ void Ekf::controlMagFusion()
 			}
 
 			// decide whether 3-axis magnetomer fusion can be used
+			bool recent_flt_align = (_imu_sample_delayed.time_us - _time_last_flt_align) < 30 * 1000 * 1000;
 			bool use_3D_fusion = _control_status.flags.tilt_align && // Use of 3D fusion requires valid tilt estimates
 					_control_status.flags.in_air && // don't use when on the ground becasue of magnetic anomalies
 					(_flt_mag_align_complete || height_achieved) && // once in-flight field alignment has been performed, ignore relative height
-					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000); // Using 3-axis fusion for a minimum period after to allow for false negatives
+					(((_imu_sample_delayed.time_us - _time_last_movement) < 5 * 1000 * 1000) || // Use 3-axis fusion for a minimum period after to allow for false negatives
+					 recent_flt_align); // Force use of 3-axis fusion for part of flight to allow bias estimates to correct before using heading fusion
 
 			// perform switch-over
 			if (use_3D_fusion) {
@@ -1145,6 +1148,9 @@ void Ekf::controlMagFusion()
 						} else {
 							_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 							_flt_mag_align_complete = _control_status.flags.yaw_align;
+						}
+						if (_flt_mag_align_complete) {
+							_time_last_flt_align = _imu_sample_delayed.time_us;
 						}
 					} else {
 						// reset the mag field covariances

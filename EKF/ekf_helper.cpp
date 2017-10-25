@@ -396,6 +396,7 @@ bool Ekf::realignYawGPS()
 				// forward direction takeoff or launch and therefore the inertial and GPS ground course discrepancy is due to yaw error
 				euler321(2) += courseYawError;
 				_flt_mag_align_complete = true;
+				_time_last_flt_align = _imu_sample_delayed.time_us;
 
 			} else if (_control_status.flags.wind) {
 				// we have previously aligned yaw in-flight and have wind estimates so set the yaw such that the vehicle nose is
