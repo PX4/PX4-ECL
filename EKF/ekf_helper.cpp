@@ -920,7 +920,7 @@ void Ekf::get_ekf_gpos_accuracy(float *ekf_eph, float *ekf_epv, bool *dead_recko
 	// If we are dead-reckoning, use the innovations as a conservative alternate measure of the horizontal position error
 	// The reason is that complete rejection of measurements is often casued by heading misalignment or inertial sensing errors
 	// and using state variances for accuracy reporting is overly optimistic in these situations
-	if (_is_dead_reckoning && (_control_status.flags.gps || _control_status.flags.ev_pos)) {
+	if ((_is_dead_reckoning || _bad_velpos_yaw) && (_control_status.flags.gps || _control_status.flags.ev_pos)) {
 		hpos_err = math::max(hpos_err, sqrtf(_vel_pos_innov[3] * _vel_pos_innov[3] + _vel_pos_innov[4] * _vel_pos_innov[4]));
 
 	}
@@ -954,7 +954,7 @@ void Ekf::get_ekf_lpos_accuracy(float *ekf_eph, float *ekf_epv, bool *dead_recko
 	// If we are dead-reckoning, use the innovations as a conservative alternate measure of the horizontal position error
 	// The reason is that complete rejection of measurements is often casued by heading misalignment or inertial sensing errors
 	// and using state variances for accuracy reporting is overly optimistic in these situations
-	if (_is_dead_reckoning && (_control_status.flags.gps || _control_status.flags.ev_pos)) {
+	if ((_is_dead_reckoning || _bad_velpos_yaw)  && (_control_status.flags.gps || _control_status.flags.ev_pos)) {
 		hpos_err = math::max(hpos_err, sqrtf(_vel_pos_innov[3] * _vel_pos_innov[3] + _vel_pos_innov[4] * _vel_pos_innov[4]));
 
 	}
@@ -989,7 +989,7 @@ void Ekf::get_ekf_vel_accuracy(float *ekf_evh, float *ekf_evv, bool *dead_reckon
 	// and using state variances for accuracy reporting is overly optimistic in these situations
 	float vel_err_conservative = 0.0f;
 
-	if (_is_dead_reckoning) {
+	if ((_is_dead_reckoning || _bad_velpos_yaw)) {
 		if (_control_status.flags.opt_flow) {
 			float gndclearance = math::max(_params.rng_gnd_clearance, 0.1f);
 			vel_err_conservative = math::max((_terrain_vpos - _state.pos(2)),

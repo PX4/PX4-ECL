@@ -421,6 +421,7 @@ protected:
 	innovation_fault_status_u _innov_check_fail_status{};
 
 	bool _is_dead_reckoning{false};	// true if we are no longer fusing measurements that constrain horizontal velocity drift
+	bool _bad_velpos_yaw{false};	// true if the yaw and velocity or position innovations are failing checks
 
 	// IMU vibration monitoring
 	Vector3f _delta_ang_prev;	// delta angle from the previous IMU measurement

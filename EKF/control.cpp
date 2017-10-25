@@ -136,6 +136,11 @@ void Ekf::controlFusionModes()
 			&& (_time_last_imu - _time_last_vel_fuse > _params.no_aid_timeout_max)
 			&& (_time_last_imu - _time_last_of_fuse > _params.no_aid_timeout_max);
 
+	// a combination of bad magnetometer and velocity or position innvovations usually indicates a bad yaw that the vehicle cannot recover from
+	// unless it is fixed wing type
+	_bad_velpos_yaw = (_fault_status.flags.bad_mag_hdg || _fault_status.flags.bad_mag_x  || _fault_status.flags.bad_mag_y || _fault_status.flags.bad_mag_z)
+			&& (_fault_status.flags.bad_vel_N || _fault_status.flags.bad_vel_E);
+
 }
 
 void Ekf::controlExternalVisionFusion()
