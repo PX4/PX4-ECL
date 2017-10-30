@@ -55,6 +55,7 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_subdirectory(libgeo)
+add_subdirectory(tests)
 
 
 set(CONFIGURED_ONCE TRUE CACHE INTERNAL
