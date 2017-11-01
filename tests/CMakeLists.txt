@@ -1,4 +1,4 @@
-# We need thread support
+# We need thread support.
 find_package(Threads REQUIRED)
 
 # Enable ExternalProject CMake module for GoogleTest
@@ -37,5 +37,6 @@ set_target_properties(libgmock PROPERTIES
 # I couldn't make it work with INTERFACE_INCLUDE_DIRECTORIES
 include_directories("${source_dir}/googletest/include"
                     "${source_dir}/googlemock/include")
-                    
+
+# Add subdirectories                   
 add_subdirectory(testgeo)

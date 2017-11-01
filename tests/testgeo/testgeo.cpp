@@ -1,4 +1,5 @@
 #include "testgeo.h"
+#include "geo.h"
 
 GeoTest::GeoTest(){};
 
