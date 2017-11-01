@@ -305,6 +305,6 @@ float _wrap_pi(float bearing);
 float _wrap_2pi(float bearing);
 float get_mag_declination(float lat, float lon);
 #else
-#include <lib/geo/geo.h>
+//#include <lib/geo/geo.h>
 #endif //POSIX_SHARED
 #endif //GEO_H
