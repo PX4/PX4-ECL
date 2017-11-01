@@ -31,32 +31,32 @@
 #
 ############################################################################
 
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+# All cmake commands in this file require at least version 2.8.6
+cmake_minimum_required(VERSION 3.0.2MA FATAL_ERROR)
 
-project("ECL")
+# The name of the entire project: ECL = Estimation and Control Library.
+# CXX is the supported language for this project.
+project("ECL" CXX)
 
+# Enable testing for this directory and below using ctest.
 enable_testing()
 
-
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR
-    "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set(warnings "-Wall -Wextra -Werror")
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    set(warnings "/W4 /WX /EHsc")
-endif()
+# Initialize built-in CMake variable that differs from default.
+# We need to do that only once, the first time cmake is run.
 if (NOT CONFIGURED_ONCE)
-    set(CMAKE_CXX_FLAGS "${warnings}"
-        CACHE STRING "Flags used by the compiler during all build types." FORCE)
-    set(CMAKE_C_FLAGS   "${warnings}"
-        CACHE STRING "Flags used by the compiler during all build types." FORCE)
+
+	# compiler flag 
+	 set(CMAKE_CXX_FLAGS
+	 	"-Wall -Wextra -Werror"
+	    CACHE STRING "Flags used by the compiler during all build types." FORCE)
 endif()
 
-
+# Add include directory to the build.
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 add_subdirectory(libgeo)
 add_subdirectory(tests)
 
-
+# The first time cmake is run we create a new variable that indicates 
+# that there has already been a cmake configuration. 
 set(CONFIGURED_ONCE TRUE CACHE INTERNAL
     "A flag showing that CMake has configured at least once.")
