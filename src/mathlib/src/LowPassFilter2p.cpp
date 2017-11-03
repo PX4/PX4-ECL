@@ -37,7 +37,8 @@
 
 #include "LowPassFilter2p.hpp"
 #include <math.h>
-#include "constants.h"
+
+static const float PI = 3.14159265f;
 
 namespace math
 {
@@ -52,13 +53,13 @@ void LowPassFilter2p::set_cutoff_frequency(float sample_freq, float cutoff_freq)
 	}
 
 	float fr = sample_freq / _cutoff_freq;
-	float ohm = tanf(PI_F / fr);
-	float c = 1.0f + 2.0f * cosf(PI_F / 4.0f) * ohm + ohm * ohm;
+	float ohm = tanf(PI / fr);
+	float c = 1.0f + 2.0f * cosf(PI / 4.0f) * ohm + ohm * ohm;
 	_b0 = ohm * ohm / c;
 	_b1 = 2.0f * _b0;
 	_b2 = _b0;
 	_a1 = 2.0f * (ohm * ohm - 1.0f) / c;
-	_a2 = (1.0f - 2.0f * cosf(PI_F / 4.0f) * ohm + ohm * ohm) / c;
+	_a2 = (1.0f - 2.0f * cosf(PI / 4.0f) * ohm + ohm * ohm) / c;
 }
 
 float LowPassFilter2p::apply(float sample)

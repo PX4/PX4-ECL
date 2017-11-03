@@ -3,7 +3,7 @@ project("Math-Lib" VERSION 0.1 LANGUAGES CXX)
 
 # create library target
 add_library(mathlib
-	src/Limits.cpp src/LowPassFilter2p.cpp)
+	src/LowPassFilter2p.cpp)
 add_library(ecl::mathlib ALIAS mathlib)
 	
 # Define headers for this library. PUBLIC headers are used for

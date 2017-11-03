@@ -40,16 +40,6 @@
 #pragma once
 
 
-//this should be defined in stdint.h, but seems to be missing in the ARM toolchain (5.2.0)
-#ifndef UINT64_C
-# if __WORDSIZE == 64
-#  define UINT64_C(c)	c ## UL
-# else
-#  define UINT64_C(c)	c ## ULL
-# endif
-#endif
-
-
 namespace math
 {
 
@@ -71,12 +61,147 @@ inline constexpr const _Tp &constrain(const _Tp &val, const _Tp &min_val, const 
 	return (val < min_val) ? min_val : ((val > max_val) ? max_val : val);
 }
 
-float radians(float degrees);
+template<typename _Tp>
+inline constexpr const _Tp &radians(const _Tp &degrees)
+{
+	return (degrees / ((_Tp)180) * (_Tp)3.14159265358979323);
+}
 
-double radians(double degrees);
+template<typename _Tp>
+inline constexpr const _Tp &degrees(const _Tp &radians)
+{
+	return (radians / ((_Tp)3.14159265358979323) * (_Tp)180);
+}
 
-float degrees(float radians);
+template<typename _Tp>
+_Tp wrap_pi(_Tp radians)
+{
+	/* value is inf or NaN */
+	if (!isfinite(radians)) {
+		return radians;
+	}
 
-double degrees(double radians);
+	/* define pi */
+	_Tp Pi = (_Tp)3.14159265358979323;
+
+	int c = 0;
+
+	while (radians >= Pi) {
+
+		radians -= (_Tp)2 * Pi;
+
+		if (c++ > 3) {
+			return NAN;
+		}
+	}
+
+	c = 0;
+
+	while (radians < Pi) {
+		radians += (_Tp)2 * Pi;
+
+		if (c++ > 3) {
+			return NAN;
+		}
+	}
+
+	return radians;
+}
+
+template<typename _Tp>
+_Tp wrap_2pi(_Tp radians)
+{
+	/* value is inf or NaN */
+	if (!isfinite(radians)) {
+		return radians;
+	}
+
+	/* define pi */
+	_Tp Pi = (_Tp)3.14159265358979323;
+
+	int c = 0;
+
+	while (radians >= (_Tp)2 * Pi) {
+		radians -= (_Tp)2 * Pi;
+
+		if (c++ > 3) {
+			return NAN;
+		}
+	}
+
+	c = 0;
+
+	while (radians < (_Tp)0) {
+		radians += (_Tp)2 * Pi;
+
+		if (c++ > 3) {
+			return NAN;
+		}
+	}
+
+	return radians;
+}
+
+template<typename _Tp>
+_Tp wrap_180(_Tp degrees)
+{
+	/* value is inf or NaN */
+	if (!isfinite(degrees)) {
+		return degrees;
+	}
+
+	int c = 0;
+
+	while (degrees >= (_Tp)180) {
+		degrees -= (_Tp)360;
+
+		if (c++ > 3) {
+			return NAN;
+		}
+	}
+
+	c = 0;
+
+	while (degrees < (_Tp)-180) {
+		degrees += (_Tp)360;
+
+		if (c++ > 3) {
+			return NAN;
+		}
+	}
+
+	return degrees;
+}
+
+template<typename _Tp>
+_Tp wrap_360(_Tp degrees)
+{
+	/* value is inf or NaN */
+	if (!isfinite(degrees)) {
+		return degrees;
+	}
+
+	int c = 0;
+
+	while (degrees >= (_Tp)360) {
+		degrees -= (_Tp)360;
+
+		if (c++ > 3) {
+			return NAN;
+		}
+	}
+
+	c = 0;
+
+	while (degrees < (_Tp)0) {
+		degrees += (_Tp)360;
+
+		if (c++ > 3) {
+			return NAN;
+		}
+	}
+
+	return degrees;
+}
 
 }
