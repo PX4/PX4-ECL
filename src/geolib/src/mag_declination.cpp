@@ -48,11 +48,11 @@
 #include <stdint.h>
 
 /** set this always to the sampling in degrees for the table below */
-#define SAMPLING_RES		10.0f
-#define SAMPLING_MIN_LAT	-60.0f
-#define SAMPLING_MAX_LAT	60.0f
-#define SAMPLING_MIN_LON	-180.0f
-#define SAMPLING_MAX_LON	180.0f
+static const float SAMPLING_RES		= 10.0f  ;
+static const float SAMPLING_MIN_LAT	= -60.0f ;
+static const float SAMPLING_MAX_LAT	= 60.0f  ;
+static const float SAMPLING_MIN_LON	= -180.0f;
+static const float SAMPLING_MAX_LON	= 180.0f ;
 
 #define constrain(val, min, max) (val < min) ? min : ((val > max) ? max : val)
 

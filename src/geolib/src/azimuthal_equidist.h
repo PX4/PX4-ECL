@@ -48,21 +48,6 @@
 #include "mag_declination.h"
 #include <stdint.h>
 
-
-#define CONSTANTS_ONE_G					9.80665f		/* m/s^2		*/
-#define CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C		1.225f			/* kg/m^3		*/
-#define CONSTANTS_AIR_GAS_CONST				287.1f 			/* J/(kg * K)		*/
-#define CONSTANTS_ABSOLUTE_NULL_CELSIUS			-273.15f		/* °C			*/
-#define CONSTANTS_RADIUS_OF_EARTH			6371000			/* meters (m)		*/
-#define CONSTANTS_DEG_TO_RAD 				0.017453292519943295
-#define CONSTANTS_RAD_TO_DEG 				57.295779513082323
-#define CONSTANTS_PI_F			3.14159265f
-#define CONSTANTS_PI_2_F		1.57079632f
-#define CONSTANTS_TWOPI_F		6.28318531f
-#define CONSTANTS_PI 3.14
-#define ERROR -1
-#define OK 0
-
 // XXX remove
 struct crosstrack_error_s {
 	bool past_end;		// Flag indicating we are past the end of the line/arc segment
@@ -311,9 +296,3 @@ bool map_projection_global_initialized(void);
  float mavlink_wpm_distance_to_point_local(float x_now, float y_now, float z_now,
 		float x_next, float y_next, float z_next,
 		float *dist_xy, float *dist_z);
-
- float _wrap_180(float bearing);
- float _wrap_360(float bearing);
- float _wrap_pi(float bearing);
- float _wrap_2pi(float bearing);
-

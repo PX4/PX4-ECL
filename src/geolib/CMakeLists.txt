@@ -5,6 +5,12 @@ project("Geo-Lib" VERSION 0.1 LANGUAGES CXX)
 add_library(geolib
 	src/azimuthal_equidist.cpp src/mag_declination.cpp)
 add_library(ecl::geolib ALIAS geolib)
+
+# Specify libraries to be used for geolib.
+target_link_libraries(geolib
+    ecl::mathlib
+)
+
 	
 # Define headers for this library. PUBLIC headers are used for
 # compiling the library, and will be added to consumers' build
