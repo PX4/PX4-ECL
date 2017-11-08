@@ -42,6 +42,11 @@ project("ECL" VERSION 0.1 LANGUAGES CXX)
 # locations on all platforms.
 include(GNUInstallDirs)
 
+# Check if matrix submodule is available
+if(NOT EXISTS ${CMAKE_SOURCE_DIR}/matrixlib/.git)
+	message(SEND_ERROR "The git submodules are not available. Please run git submodule update --init --recursive")
+endif()
+
 # Initialize built-in CMake variable that differs from default.
 # We need to do that only once, the first time cmake is run.
 # if (NOT CONFIGURED_ONCE)
@@ -59,7 +64,10 @@ enable_testing()
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(mathlib)
 add_subdirectory(geolib)
-add_subdirectory(tests)
+#add_subdirectory(attitude_fwlib)
+add_subdirectory(matrixlib)
+add_subdirectory(tecslib)
+#add_subdirectory(tests)
 
 # The first time cmake is run we create a new variable that indicates 
 # that there has already been a cmake configuration. 
