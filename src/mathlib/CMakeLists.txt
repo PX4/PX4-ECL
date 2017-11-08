@@ -1,29 +1,29 @@
 # mathlib library
-project("Math-Lib" VERSION 0.1 LANGUAGES CXX)
+project("Math" VERSION 0.1 LANGUAGES CXX)
 
 # create library target
-add_library(mathlib
-	src/LowPassFilter2p.cpp)
-add_library(ecl::mathlib ALIAS mathlib)
+add_library(math
+	src/LowPassFilter2p.cpp src/Limits.hpp)
+add_library(ecl::mathlib ALIAS math)
 	
 # Define headers for this library. PUBLIC headers are used for
 # compiling the library, and will be added to consumers' build
 # paths.
-target_include_directories(mathlib PUBLIC
+target_include_directories(math PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
     
 # If we have compiler requirements for this library, list them
 # here
-target_compile_features(mathlib
+target_compile_features(math
     PUBLIC 
     	cxx_auto_type
     PRIVATE 
     	cxx_variadic_templates)
     
 # 'make install' to the correct locations (provided by GNUInstallDirs).
-install(TARGETS mathlib EXPORT  
+install(TARGETS math EXPORT  
     ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})  # This is for Windows
