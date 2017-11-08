@@ -36,6 +36,8 @@
 /// Author: Leonard Hall <LeonardTHall@gmail.com>
 
 #include "LowPassFilter2p.hpp"
+#include "Limits.hpp"
+
 #include <math.h>
 
 static const float PI = 3.14159265f;
@@ -72,7 +74,7 @@ float LowPassFilter2p::apply(float sample)
 	// do the filtering
 	float delay_element_0 = sample - _delay_element_1 * _a1 - _delay_element_2 * _a2;
 
-	if (!isfinite(delay_element_0)) {
+	if (!is_finite(delay_element_0)) {
 		// don't allow bad values to propagate via the filter
 		delay_element_0 = sample;
 	}

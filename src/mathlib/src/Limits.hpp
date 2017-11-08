@@ -39,9 +39,23 @@
 
 #pragma once
 
+#include <stdio.h>
+#include <cmath>
 
 namespace math
 {
+
+template<typename _Tp>
+bool is_finite(_Tp x) {
+#if defined (__PX4_NUTTX)
+    return PX4_ISFINITE(x);
+#elif defined (__PX4_QURT)
+    return __builtin_isfinite(x);
+#else
+    return std::isfinite(x);
+#endif
+}
+
 
 template<typename _Tp>
 inline constexpr const _Tp &min(const _Tp &a, const _Tp &b)
@@ -77,7 +91,7 @@ template<typename _Tp>
 _Tp wrap_pi(_Tp radians)
 {
 	/* value is inf or NaN */
-	if (!isfinite(radians)) {
+	if (!is_finite(radians)) {
 		return radians;
 	}
 
@@ -112,7 +126,7 @@ template<typename _Tp>
 _Tp wrap_2pi(_Tp radians)
 {
 	/* value is inf or NaN */
-	if (!isfinite(radians)) {
+	if (!is_finite(radians)) {
 		return radians;
 	}
 
@@ -146,7 +160,7 @@ template<typename _Tp>
 _Tp wrap_180(_Tp degrees)
 {
 	/* value is inf or NaN */
-	if (!isfinite(degrees)) {
+	if (!is_finite(degrees)) {
 		return degrees;
 	}
 
@@ -177,7 +191,7 @@ template<typename _Tp>
 _Tp wrap_360(_Tp degrees)
 {
 	/* value is inf or NaN */
-	if (!isfinite(degrees)) {
+	if (!is_finite(degrees)) {
 		return degrees;
 	}
 
