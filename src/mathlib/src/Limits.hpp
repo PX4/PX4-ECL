@@ -58,31 +58,31 @@ bool is_finite(_Tp x) {
 
 
 template<typename _Tp>
-inline constexpr const _Tp &min(const _Tp &a, const _Tp &b)
+inline _Tp min(const _Tp a, const _Tp b)
 {
 	return (a < b) ? a : b;
 }
 
 template<typename _Tp>
-inline constexpr const _Tp &max(const _Tp &a, const _Tp &b)
+inline _Tp max(const _Tp a, const _Tp b)
 {
 	return (a > b) ? a : b;
 }
 
 template<typename _Tp>
-inline constexpr const _Tp &constrain(const _Tp &val, const _Tp &min_val, const _Tp &max_val)
+inline _Tp constrain(const _Tp val, const _Tp min_val, const _Tp max_val)
 {
 	return (val < min_val) ? min_val : ((val > max_val) ? max_val : val);
 }
 
 template<typename _Tp>
-inline constexpr const _Tp &radians(const _Tp &degrees)
+inline _Tp radians(const _Tp degrees)
 {
 	return (degrees / ((_Tp)180) * (_Tp)3.14159265358979323);
 }
 
 template<typename _Tp>
-inline constexpr const _Tp &degrees(const _Tp &radians)
+inline _Tp degrees(const _Tp radians)
 {
 	return (radians / ((_Tp)3.14159265358979323) * (_Tp)180);
 }

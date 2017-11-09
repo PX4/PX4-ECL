@@ -67,6 +67,7 @@ add_subdirectory(geolib)
 #add_subdirectory(attitude_fwlib)
 add_subdirectory(matrixlib)
 add_subdirectory(tecslib)
+add_subdirectory(ekflib)
 #add_subdirectory(tests)
 
 # The first time cmake is run we create a new variable that indicates 
