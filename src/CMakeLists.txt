@@ -68,7 +68,8 @@ add_subdirectory(geolib)
 add_subdirectory(matrixlib)
 add_subdirectory(tecslib)
 add_subdirectory(ekflib)
-#add_subdirectory(tests)
+add_subdirectory(L1lib)
+add_subdirectory(tests)
 
 # The first time cmake is run we create a new variable that indicates 
 # that there has already been a cmake configuration. 
