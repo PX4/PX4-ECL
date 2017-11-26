@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2013 Estimation and Control Library (ECL). All rights reserved.
+ *   Copyright (c) 2013-2018 Estimation and Control Library (ECL). All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,16 +51,15 @@
 
 #include "ecl_controller.h"
 
-class ECL_RollController :
-	public ECL_Controller
+class ECL_RollController : public ECL_Controller
 {
 public:
-	ECL_RollController();
+	ECL_RollController() = default;
 	~ECL_RollController() = default;
 
-	float control_attitude(const struct ECL_ControlData &ctl_data);
-	float control_euler_rate(const struct ECL_ControlData &ctl_data);
-	float control_bodyrate(const struct ECL_ControlData &ctl_data);
+	float control_attitude(const ECL_ControlData &ctl_data) override;
+	float control_euler_rate(const ECL_ControlData &ctl_data) override;
+	float control_bodyrate(const ECL_ControlData &ctl_data) override;
 };
 
 #endif // ECL_ROLL_CONTROLLER_H
