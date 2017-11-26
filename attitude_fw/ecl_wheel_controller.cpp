@@ -35,36 +35,26 @@
  * @file ecl_wheel_controller.cpp
  * Implementation of a simple PID wheel controller for heading tracking.
  *
- * Authors and acknowledgements in header.
+ * Authors and acknowledgments in header.
  */
 
 #include "ecl_wheel_controller.h"
-#include <stdint.h>
-#include <float.h>
+
 #include <geo/geo.h>
-#include <ecl/ecl.h>
-#include <mathlib/mathlib.h>
-#include <systemlib/err.h>
-#include <ecl/ecl.h>
 
-ECL_WheelController::ECL_WheelController() :
-	ECL_Controller("wheel")
-{
-}
-
-float ECL_WheelController::control_bodyrate(const struct ECL_ControlData &ctl_data)
+float ECL_WheelController::control_bodyrate(const ECL_ControlData &ctl_data)
 {
 	/* Do not calculate control signal with bad inputs */
-	if (!(PX4_ISFINITE(ctl_data.body_z_rate) &&
-	      PX4_ISFINITE(ctl_data.groundspeed) &&
-	      PX4_ISFINITE(ctl_data.groundspeed_scaler))) {
-		return math::constrain(_last_output, -1.0f, 1.0f);
+	if (!(ISFINITE(ctl_data.body_z_rate) &&
+	      ISFINITE(ctl_data.groundspeed) &&
+	      ISFINITE(ctl_data.groundspeed_scaler))) {
+		return constrain(_last_output, -1.0f, 1.0f);
 	}
 
 	/* get the usual dt estimate */
 	uint64_t dt_micros = ecl_elapsed_time(&_last_run);
 	_last_run = ecl_absolute_time();
-	float dt = (float)dt_micros * 1e-6f;
+	float dt = dt_micros * 1e-6f;
 
 	/* lock integral for long intervals */
 	bool lock_integrator = ctl_data.lock_integrator;
@@ -77,11 +67,11 @@ float ECL_WheelController::control_bodyrate(const struct ECL_ControlData &ctl_da
 	float min_speed = 1.0f;
 
 	/* Calculate body angular rate error */
-	_rate_error = _rate_setpoint - ctl_data.body_z_rate; //body angular rate error
+	const float rate_error = _rate_setpoint - ctl_data.body_z_rate; //body angular rate error
 
 	if (!lock_integrator && _k_i > 0.0f && ctl_data.groundspeed > min_speed) {
 
-		float id = _rate_error * dt * ctl_data.groundspeed_scaler;
+		float id = rate_error * dt * ctl_data.groundspeed_scaler;
 
 		/*
 		 * anti-windup: do not allow integrator to increase if actuator is at limit
@@ -100,21 +90,20 @@ float ECL_WheelController::control_bodyrate(const struct ECL_ControlData &ctl_da
 
 	/* integrator limit */
 	//xxx: until start detection is available: integral part in control signal is limited here
-	float integrator_constrained = math::constrain(_integrator, -_integrator_max, _integrator_max);
+	float integrator_constrained = constrain(_integrator, -_integrator_max, _integrator_max);
 
 	/* Apply PI rate controller and store non-limited output */
 	_last_output = _rate_setpoint * _k_ff * ctl_data.groundspeed_scaler +
-		       ctl_data.groundspeed_scaler * ctl_data.groundspeed_scaler * (_rate_error * _k_p + integrator_constrained);
+		       ctl_data.groundspeed_scaler * ctl_data.groundspeed_scaler * (rate_error * _k_p + integrator_constrained);
 
-	return math::constrain(_last_output, -1.0f, 1.0f);
+	return constrain(_last_output, -1.0f, 1.0f);
 }
 
-
-float ECL_WheelController::control_attitude(const struct ECL_ControlData &ctl_data)
+float ECL_WheelController::control_attitude(const ECL_ControlData &ctl_data)
 {
 	/* Do not calculate control signal with bad inputs */
-	if (!(PX4_ISFINITE(ctl_data.yaw_setpoint) &&
-	      PX4_ISFINITE(ctl_data.yaw))) {
+	if (!(ISFINITE(ctl_data.yaw_setpoint) &&
+	      ISFINITE(ctl_data.yaw))) {
 		return _rate_setpoint;
 	}
 
@@ -125,14 +114,13 @@ float ECL_WheelController::control_attitude(const struct ECL_ControlData &ctl_da
 	_rate_setpoint =  yaw_error / _tc;
 
 	/* limit the rate */
-	if (_max_rate > 0.01f) {
+	if (_max_rate >= 0.0f) {
 		if (_rate_setpoint > 0.0f) {
 			_rate_setpoint = (_rate_setpoint > _max_rate) ? _max_rate : _rate_setpoint;
 
 		} else {
 			_rate_setpoint = (_rate_setpoint < -_max_rate) ? -_max_rate : _rate_setpoint;
 		}
-
 	}
 
 	return _rate_setpoint;

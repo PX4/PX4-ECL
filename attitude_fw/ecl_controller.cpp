@@ -48,25 +48,6 @@
 
 #include "ecl_controller.h"
 
-#include <stdio.h>
-#include <mathlib/mathlib.h>
-
-ECL_Controller::ECL_Controller(const char *name) :
-	_last_run(0),
-	_tc(0.1f),
-	_k_p(0.0f),
-	_k_i(0.0f),
-	_k_ff(0.0f),
-	_integrator_max(0.0f),
-	_max_rate(0.0f),
-	_last_output(0.0f),
-	_integrator(0.0f),
-	_rate_error(0.0f),
-	_rate_setpoint(0.0f),
-	_bodyrate_setpoint(0.0f)
-{
-}
-
 void ECL_Controller::reset_integrator()
 {
 	_integrator = 0.0f;
@@ -104,16 +85,6 @@ void ECL_Controller::set_max_rate(float max_rate)
 	_max_rate = max_rate;
 }
 
-float ECL_Controller::get_rate_error()
-{
-	return _rate_error;
-}
-
-float ECL_Controller::get_desired_rate()
-{
-	return _rate_setpoint;
-}
-
 float ECL_Controller::get_desired_bodyrate()
 {
 	return _bodyrate_setpoint;
@@ -128,7 +99,7 @@ float ECL_Controller::constrain_airspeed(float airspeed, float minspeed, float m
 {
 	float airspeed_result = airspeed;
 
-	if (!PX4_ISFINITE(airspeed)) {
+	if (!ISFINITE(airspeed)) {
 		/* airspeed is NaN, +- INF or not available, pick center of band */
 		airspeed_result = 0.5f * (minspeed + maxspeed);
 
