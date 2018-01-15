@@ -229,7 +229,7 @@ void Ekf::controlExternalVisionFusion()
 
 		// determine if we should start using the height observations
 		if (_params.vdist_sensor_type == VDIST_SENSOR_EV) {
-			// don't start using EV data unless daa is arriving frequently
+			// don't start using EV data unless data is arriving frequently
 			if (!_control_status.flags.ev_hgt && (_time_last_imu - _time_last_ext_vision < 2 * EV_MAX_INTERVAL)) {
 				setControlEVHeight();
 				resetHeight();
