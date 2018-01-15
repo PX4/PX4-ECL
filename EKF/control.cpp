@@ -933,6 +933,21 @@ void Ekf::controlHeightFusion()
 		}
 	}
 
+	// Determine if we rely on EV height but switched to baro
+	if (_params.vdist_sensor_type == VDIST_SENSOR_EV) {
+		if (_control_status.flags.baro_hgt && _baro_data_ready && !_baro_hgt_faulty) {
+			// switch to baro if there was a reset to baro
+			_fuse_height = true;
+			_in_range_aid_mode = false;
+
+			// we have just switched to using baro height, we don't need to set a height sensor offset
+			// since we track a separate _baro_hgt_offset
+			if (_control_status_prev.flags.baro_hgt != _control_status.flags.baro_hgt) {
+				_hgt_sensor_offset = 0.0f;
+			}
+		}
+	}
+
 	// calculate a filtered offset between the baro origin and local NED origin if we are not using the baro as a height reference
 	if (!_control_status.flags.baro_hgt && _baro_data_ready) {
 		float local_time_step = 1e-6f * _delta_time_baro_us;
