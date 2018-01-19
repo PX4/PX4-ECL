@@ -1288,8 +1288,11 @@ void Ekf::controlMagFusion()
 					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000) && // Using 3-axis fusion for a minimum period after to allow for false negatives
 					!(_params.mag_earth_field_bad == 1); // don't use if explicitly prohibited by parameter
 
+			// Quaternion variance has grown too high and needs to be constrained to prevent instability of the covariance matrix
+			bool high_quat_var = (P[0][0] + P[1][1] + P[2][2] + P[3][3]) > _params.quat_var_limit;
+
 			// Earth field quality insufficient to use the horizontal projection for yaw estimation
-			bool in_air_mag_hdg_prohibited = ((_params.mag_earth_field_bad == 1) || (_params.mag_earth_field_bad == 2));
+			bool in_air_mag_hdg_prohibited = ((_params.mag_earth_field_bad == 1) || (_params.mag_earth_field_bad == 2)) && !high_quat_var;
 
 			// Do not use mag heading fusion in air if earth field is close to vertical because small mag and tilt errors
 			// can produce large yaw errors.  We can use it on ground by using an assumed heading measurement
