@@ -1219,7 +1219,7 @@ void Ekf::controlMagFusion()
 					_control_status.flags.in_air && // don't use when on the ground becasue of magnetic anomalies
 					(_flt_mag_align_complete || height_achieved) && // once in-flight field alignment has been performed, ignore relative height
 					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000) && // Using 3-axis fusion for a minimum period after to allow for false negatives
-					!(_params.mag_earth_field_bad == 1); // don't use if explicitly prohibited by parameter
+					!(_params.mag_earth_field_bad == 2); // don't use if explicitly prohibited by parameter
 
 			// Quaternion variance has grown too high and needs to be constrained to prevent instability of the covariance matrix
 			bool high_quat_var = (P[0][0] + P[1][1] + P[2][2] + P[3][3]) > _params.quat_var_limit;
