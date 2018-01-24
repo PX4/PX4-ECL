@@ -58,8 +58,9 @@ DataValidatorGroup::DataValidatorGroup(unsigned siblings) :
 		next = new DataValidator();
 		if(i == 0) {
 			_first = next;
-		} else {
-			prev->setSibling(next);
+		}
+		else {
+			prev->sibling(next);
 		}
 		prev = next;
 	}
@@ -86,7 +87,7 @@ DataValidator *DataValidatorGroup::add_new_validator()
 	if (!validator) {
 		return nullptr;
 	}
-	_last->setSibling(validator);
+	_last->sibling(validator);
 	_last = validator;
 	_last->set_timeout(_timeout_interval_us);
 	return _last;
