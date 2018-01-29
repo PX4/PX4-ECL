@@ -76,7 +76,7 @@ public:
 	 * Set the sibling to the next node in the group
 	 *
 	 */
-	void			setSibling(DataValidator* sibling) { _sibling = sibling; }
+	void			setSibling(DataValidator* new_sibling) { _sibling = new_sibling; }
 
 	/**
 	 * Get the confidence of this validator
