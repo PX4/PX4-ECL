@@ -252,7 +252,7 @@ void Ekf::controlExternalVisionFusion()
 			_ev_sample_delayed.posNED(1) -= pos_offset_earth(1);
 			_ev_sample_delayed.posNED(2) -= pos_offset_earth(2);
 
-			// Use an incremental position fusion method for EV data if using GPS or if the observations are not in NED
+			// Check if we need to apply an offset before fusing EV data
 			if (_control_status.flags.gps || (_params.fusion_mode & MASK_ROTATE_EV)) {
 				_fuse_hpos_as_odom = true;
 			} else {
@@ -264,26 +264,29 @@ void Ekf::controlExternalVisionFusion()
 					// no previous observation available to calculate position change
 					_fuse_pos = false;
 					_hpos_prev_available = true;
+					// rotate measurement into body frame if required
+					// init offset between the two frames
+					if (_params.fusion_mode & MASK_ROTATE_EV) {
+						_pos_ev_offset = _state.pos - _ev_rot_mat * _ev_sample_delayed.posNED;
+					} else {
+						_pos_ev_offset = _state.pos - _ev_sample_delayed.posNED;
+					}
 
 				} else {
-					// calculate the change in position since the last measurement
-					Vector3f ev_delta_pos = _ev_sample_delayed.posNED - _pos_meas_prev;
+					Vector3f ev_pos = _ev_sample_delayed.posNED;
 
 					// rotate measurement into body frame if required
 					if (_params.fusion_mode & MASK_ROTATE_EV) {
-						ev_delta_pos = _ev_rot_mat * ev_delta_pos;
+						ev_pos = _ev_rot_mat * ev_pos;
 					}
 
-					// use the change in position since the last measurement
-					_vel_pos_innov[3] = _state.pos(0) - _hpos_pred_prev(0) - ev_delta_pos(0);
-					_vel_pos_innov[4] = _state.pos(1) - _hpos_pred_prev(1) - ev_delta_pos(1);
+					// correct for the coordinate offset
+					ev_pos += _pos_ev_offset;
+
+					_vel_pos_innov[3] = _state.pos(0) - ev_pos(0);
+					_vel_pos_innov[4] = _state.pos(1) - ev_pos(1);
 
 				}
-
-				// record observation and estimate for use next time
-				_pos_meas_prev = _ev_sample_delayed.posNED;
-				_hpos_pred_prev(0) = _state.pos(0);
-				_hpos_pred_prev(1) = _state.pos(1);
 
 			} else {
 				// use the absolute position
