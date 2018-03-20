@@ -1339,6 +1339,9 @@ void Ekf::controlVelPosFusion()
 {
 	// if we aren't doing any aiding, fake GPS measurements at the last known position to constrain drift
 	// Coincide fake measurements with baro data for efficiency with a minimum fusion rate of 5Hz
+	if (!(_params.fusion_mode & MASK_USE_GPS)) {
+		_control_status.flags.gps = false;
+	}
 	if (!_control_status.flags.gps &&
 			!_control_status.flags.opt_flow &&
 			!_control_status.flags.ev_pos &&
