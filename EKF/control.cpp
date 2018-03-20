@@ -1350,9 +1350,8 @@ void Ekf::controlVelPosFusion()
 	{
 		// Reset position and velocity states if we re-commence this aiding method
 		if ((_time_last_imu - _time_last_fake_gps) > (uint64_t)4e5) {
-			_last_known_posNE(0) = _state.pos(0);
-			_last_known_posNE(1) = _state.pos(1);
-			_state.vel.setZero();
+			resetPosition();
+			resetVelocity();
 			_fuse_hpos_as_odom = false;
 			if (_time_last_fake_gps != 0) {
 				ECL_WARN("EKF stopping navigation");
