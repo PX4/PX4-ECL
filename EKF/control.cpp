@@ -1360,6 +1360,8 @@ void Ekf::controlVelPosFusion()
 		}
 
 		_fuse_pos = true;
+		_fuse_hor_vel = false;
+		_fuse_vert_vel = false;
 		_time_last_fake_gps = _time_last_imu;
 
 		if (_control_status.flags.in_air && _control_status.flags.tilt_align) {
@@ -1367,6 +1369,9 @@ void Ekf::controlVelPosFusion()
 		} else {
 			_posObsNoiseNE = 0.5f;
 		}
+		_vel_pos_innov[0] = 0.0f;
+		_vel_pos_innov[1] = 0.0f;
+		_vel_pos_innov[2] = 0.0f;
 		_vel_pos_innov[3] = _state.pos(0) - _last_known_posNE(0);
 		_vel_pos_innov[4] = _state.pos(1) - _last_known_posNE(1);
 
