@@ -66,7 +66,7 @@ public:
 
 	bool is_estimate_valid() { return _initialised; }
 
-	bool check_if_meas_is_rejected(uint64_t time_now, float innov, float innov_var, uint64_t &time_meas_rejected,
+	bool check_if_meas_is_rejected(uint64_t time_now, float innov, float innov_var, uint8_t gate_size, uint64_t &time_meas_rejected,
 				       bool &reinit_filter);
 
 	float get_tas_scale() { return _state(tas); }
@@ -84,6 +84,8 @@ public:
 	void set_tas_scale_p_noise(float tas_scale_sigma) { _tas_scale_p_var = tas_scale_sigma * tas_scale_sigma; }
 	void set_tas_noise(float tas_sigma) { _tas_var = tas_sigma * tas_sigma; }
 	void set_beta_noise(float beta_var) { _beta_var = beta_var * beta_var; }
+	void set_tas_gate(uint8_t gate_size) {_tas_gate = gate_size; }
+	void set_beta_gate(uint8_t gate_size) {_beta_gate = gate_size; }
 
 private:
 	enum {
@@ -107,6 +109,8 @@ private:
 	float _tas_scale_p_var{0.0001f};	///< true airspeed scale process noise variance
 	float _tas_var{1.4f};		///< true airspeed measurement noise variance
 	float _beta_var{0.5f};	///< sideslip measurement noise variance
+	uint8_t _tas_gate{3};	///< airspeed fusion gate size
+	uint8_t _beta_gate{1};	///< sideslip fusion gate size
 
 	uint64_t _time_last_airspeed_fuse = 0;	///< timestamp of last airspeed fusion
 	uint64_t _time_last_beta_fuse = 0;		///< timestamp of last sideslip fusion

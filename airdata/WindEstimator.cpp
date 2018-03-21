@@ -184,7 +184,7 @@ WindEstimator::fuse_airspeed(uint64_t time_now, const float true_airspeed, const
 	bool reinit_filter = false;
 	bool meas_is_rejected = false;
 
-	meas_is_rejected = check_if_meas_is_rejected(time_now, _tas_innov, _tas_innov_var, _time_rejected_tas, reinit_filter);
+	meas_is_rejected = check_if_meas_is_rejected(time_now, _tas_innov, _tas_innov_var, _tas_gate, _time_rejected_tas, reinit_filter);
 
 	reinit_filter |= _tas_innov_var < 0.0f;
 
@@ -277,7 +277,7 @@ WindEstimator::fuse_beta(uint64_t time_now, const matrix::Vector3f &velI, const 
 	bool reinit_filter = false;
 	bool meas_is_rejected = false;
 
-	meas_is_rejected = check_if_meas_is_rejected(time_now, _beta_innov, _beta_innov_var, _time_rejected_beta,
+	meas_is_rejected = check_if_meas_is_rejected(time_now, _beta_innov, _beta_innov_var, _beta_gate, _time_rejected_beta,
 			   reinit_filter);
 
 	reinit_filter |= _beta_innov_var < 0.0f;
@@ -340,10 +340,10 @@ WindEstimator::run_sanity_checks()
 }
 
 bool
-WindEstimator::check_if_meas_is_rejected(uint64_t time_now, float innov, float innov_var, uint64_t &time_meas_rejected,
+WindEstimator::check_if_meas_is_rejected(uint64_t time_now, float innov, float innov_var, uint8_t gate_size, uint64_t &time_meas_rejected,
 		bool &reinit_filter)
 {
-	if (innov * innov > innov_var) {
+	if (innov * innov > gate_size * gate_size * innov_var) {
 		time_meas_rejected = time_meas_rejected == 0 ? time_now : time_meas_rejected;
 
 	} else {
