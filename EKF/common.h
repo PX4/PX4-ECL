@@ -266,7 +266,7 @@ struct parameters {
 	// synthetic sideslip fusion
 	float beta_innov_gate{5.0f};		///< synthetic sideslip innovation consistency gate size in standard deviation (STD)
 	float beta_noise{0.3f};			///< synthetic sideslip noise (rad)
-	float beta_avg_ft_us{1000000.0f};	///< The average time between synthetic sideslip measurements (uSec)
+	float beta_avg_ft_us{150000.0f};	///< The average time between synthetic sideslip measurements (uSec)
 
 	// range finder fusion
 	float range_noise{0.1f};		///< observation noise for range finder measurements (m)
@@ -433,6 +433,7 @@ union filter_control_status_u {
 		uint32_t mag_fault   : 1; ///< 18 - true when the magnetomer has been declared faulty and is no longer being used
 		uint32_t fuse_aspd   : 1; ///< 19 - true when airspeed measurements are being fused
 		uint32_t gnd_effect  : 1; ///< 20 - true when protection from ground effect induced static pressure rise is active
+		uint32_t rng_stuck   : 1; ///< 21 - true when rng data wasn't ready for more than 10s and new rng values haven't changed enough
 	} flags;
 	uint32_t value;
 };
