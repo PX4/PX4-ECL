@@ -84,6 +84,7 @@ void Ekf::fuseOptFlow()
 
 	// rotate into body frame
 	Vector3f vel_body = earth_to_body * vel_rel_earth;
+	vel_body *= 1.0f;
 
 	// calculate range from focal point to centre of image
 	float range = heightAboveGndEst / earth_to_body(2, 2); // absolute distance to the frame region in view
@@ -92,11 +93,11 @@ void Ekf::fuseOptFlow()
 	// correct for gyro bias errors in the data used to do the motion compensation
 	// Note the sign convention used: A positive LOS rate is a RH rotaton of the scene about that axis.
 	Vector2f opt_flow_rate;
-	opt_flow_rate(0) = _flow_sample_delayed.flowRadXYcomp(0) / _flow_sample_delayed.dt + _flow_gyro_bias(0);
-	opt_flow_rate(1) = _flow_sample_delayed.flowRadXYcomp(1) / _flow_sample_delayed.dt + _flow_gyro_bias(1);
+	opt_flow_rate(0) = -_flow_sample_delayed.flowRadXYcomp(0) / _flow_sample_delayed.dt;// + _flow_gyro_bias(0);
+	opt_flow_rate(1) = -_flow_sample_delayed.flowRadXYcomp(1) / _flow_sample_delayed.dt;// + _flow_gyro_bias(1);
 
-	if (opt_flow_rate.norm() < _params.flow_rate_max) {
-		_flow_innov[0] =  vel_body(1) / range - opt_flow_rate(0); // flow around the X axis
+	if (true) {
+		_flow_innov[0] = vel_body(1) / range - opt_flow_rate(0); // flow around the X axis
 		_flow_innov[1] = -vel_body(0) / range - opt_flow_rate(1); // flow around the Y axis
 
 	} else {
