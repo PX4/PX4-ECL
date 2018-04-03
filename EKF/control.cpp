@@ -345,63 +345,14 @@ void Ekf::controlOpticalFlowFusion()
 
 				// if we are not using GPS then the velocity and position states and covariances need to be set
 				if (!_control_status.flags.gps) {
-					// constrain height above ground to be above minimum possible
-					float heightAboveGndEst = fmaxf((_terrain_vpos - _state.pos(2)), _params.rng_gnd_clearance);
-
-					// calculate absolute distance from focal point to centre of frame assuming a flat earth
-					float range = heightAboveGndEst / _R_rng_to_earth_2_2;
-
-					if ((range - _params.rng_gnd_clearance) > 0.3f && _flow_sample_delayed.dt > 0.05f) {
-						// we should have reliable OF measurements so
-						// calculate X and Y body relative velocities from OF measurements
-						Vector3f vel_optflow_body;
-						vel_optflow_body(0) = - range * _flow_sample_delayed.flowRadXYcomp(1) / _flow_sample_delayed.dt;
-						vel_optflow_body(1) =   range * _flow_sample_delayed.flowRadXYcomp(0) / _flow_sample_delayed.dt;
-						vel_optflow_body(2) = 0.0f;
-
-						// rotate from body to earth frame
-						Vector3f vel_optflow_earth;
-						vel_optflow_earth = _R_to_earth * vel_optflow_body;
-
-						// take x and Y components
-						_state.vel(0) = vel_optflow_earth(0);
-						_state.vel(1) = vel_optflow_earth(1);
-
-					} else {
-						_state.vel(0) = 0.0f;
-						_state.vel(1) = 0.0f;
-					}
-
-					// reset the velocity covariance terms
-					zeroRows(P,4,5);
-					zeroCols(P,4,5);
-
-					// reset the horizontal velocity variance using the optical flow noise variance
-					P[5][5] = P[4][4] = sq(range) * calcOptFlowMeasVar();
-
-					if (!_control_status.flags.in_air) {
-						// we are likely starting OF for the first time so reset the horizontal position and vertical velocity states
-						_state.pos(0) = 0.0f;
-						_state.pos(1) = 0.0f;
-
-					} else {
-						// set to the last known position
-						_state.pos(0) = _last_known_posNE(0);
-						_state.pos(1) = _last_known_posNE(1);
-
-					}
-
-					// reset the corresponding covariances
-					// we are by definition at the origin at commencement so variances are also zeroed
-					zeroRows(P,7,8);
-					zeroCols(P,7,8);
+					resetVelocity();
+					resetPosition();
 
 					// align the output observer to the EKF states
 					alignOutputFilter();
 
 				}
 			}
-
 		} else if (!(_params.fusion_mode & MASK_USE_OF)) {
 			_control_status.flags.opt_flow = false;
 
