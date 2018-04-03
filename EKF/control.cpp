@@ -407,6 +407,22 @@ void Ekf::controlOpticalFlowFusion()
 
 		}
 
+		// handle the case when we now have optical flow, but have not been using it for an extended period
+		if (_control_status.flags.opt_flow) {
+
+			bool do_reset = (_time_last_imu - _time_last_of_fuse > _params.no_aid_timeout_max);
+
+			if (do_reset) {
+				resetVelocity();
+				resetPosition();
+				_velpos_reset_request = false;
+				ECL_WARN("EKF Optical Flow fusion timeout - reset to Optical Flow");
+				// Reset the timeout counters
+				_time_last_pos_fuse = _time_last_imu;
+				_time_last_vel_fuse = _time_last_imu;
+			}
+		}
+
 		// Accumulate autopilot gyro data across the same time interval as the flow sensor
 		_imu_del_ang_of += _imu_sample_delayed.delta_ang - _state.gyro_bias;
 		_delta_time_of += _imu_sample_delayed.delta_ang_dt;
