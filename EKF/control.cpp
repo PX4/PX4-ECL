@@ -330,23 +330,69 @@ void Ekf::controlExternalVisionFusion()
 
 void Ekf::controlOpticalFlowFusion()
 {
-	// Check for new optical flow data that has fallen behind the fusion time horizon
+	// Detect if the vehicle is on the ground and is being excessively tilted, shaken or rotated.
+	if (!_control_status.flags.in_air) {
+		bool motion_is_excessive = ((_accel_mag_filt > 10.8f)
+					    || (_accel_mag_filt < 8.8f)
+					    || (_ang_rate_mag_filt > 0.5f)
+					    || (_R_to_earth(2,2) < 0.866f));
+		if (motion_is_excessive) {
+			_time_bad_motion_us = _imu_sample_delayed.time_us;
+		} else {
+			_time_good_motion_us = _imu_sample_delayed.time_us;
+		}
+	} else {
+		_time_bad_motion_us = 0;
+		_time_good_motion_us = _imu_sample_delayed.time_us;
+	}
+
+	// Inhibit flow use if on ground and motion is excessive
+	// Apply a time based hysteresis to prevent rapid mode switching
+	if (!_inhibit_gndobs_use) {
+		if ((_imu_sample_delayed.time_us - _time_good_motion_us) > (uint64_t)1E5) {
+			_inhibit_gndobs_use = true;
+		}
+	} else {
+		if ((_imu_sample_delayed.time_us - _time_bad_motion_us) > (uint64_t)5E6) {
+			_inhibit_gndobs_use = false;
+		}
+	}
+
+	// Handle cases where we are using optical flow but are no longer able to because data is old
+	// or its use has been inhibited.
+	if (_control_status.flags.opt_flow) {
+	       if (_inhibit_gndobs_use) {
+		       ECL_INFO("EKF Optical Flow Use Inhibited");
+		       _control_status.flags.opt_flow = false;
+		       _time_last_of_fuse = 0;
+
+	       } else if (_time_last_imu - _flow_sample_delayed.time_us > (uint64_t)_params.no_gps_timeout_max) {
+		       ECL_INFO("EKF Optical Flow Data Stopped");
+		       _control_status.flags.opt_flow = false;
+
+	       }
+	}
+
 	if (_flow_data_ready) {
+		// New optical flow data has fallen behind the fusion time horizon and is ready to be fused
+
+		// Accumulate autopilot gyro data across the same time interval as the flow sensor
+		_imu_del_ang_of += _imu_sample_delayed.delta_ang - _state.gyro_bias;
+		_delta_time_of += _imu_sample_delayed.delta_ang_dt;
 
 		// optical flow fusion mode selection logic
 		if ((_params.fusion_mode & MASK_USE_OF) // optical flow has been selected by the user
 				&& !_control_status.flags.opt_flow // we are not yet using flow data
 				&& _control_status.flags.tilt_align // we know our tilt attitude
-				&& (_time_last_imu - _time_last_hagl_fuse) < (uint64_t)5e5) // we have a valid distance to ground estimate
+				&& get_terrain_valid()) // we have a valid distance to ground estimate
 		{
-
 			// If the heading is not aligned, reset the yaw and magnetic field states
 			if (!_control_status.flags.yaw_align) {
 				_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 			}
 
-			// If the heading is valid, start using optical flow aiding
-			if (_control_status.flags.yaw_align) {
+			// If the heading is valid and use is no tinhibited , start using optical flow aiding
+			if (_control_status.flags.yaw_align && !_inhibit_gndobs_use) {
 				// set the flag and reset the fusion timeout
 				_control_status.flags.opt_flow = true;
 				_time_last_of_fuse = _time_last_imu;
@@ -378,10 +424,6 @@ void Ekf::controlOpticalFlowFusion()
 			}
 		}
 
-		// Accumulate autopilot gyro data across the same time interval as the flow sensor
-		_imu_del_ang_of += _imu_sample_delayed.delta_ang - _state.gyro_bias;
-		_delta_time_of += _imu_sample_delayed.delta_ang_dt;
-
 		// fuse the data if the terrain/distance to bottom is valid
 		if (_control_status.flags.opt_flow && get_terrain_valid()) {
 			// Update optical flow bias estimates
@@ -393,10 +435,6 @@ void Ekf::controlOpticalFlowFusion()
 			_last_known_posNE(1) = _state.pos(1);
 
 		}
-	} else if (_control_status.flags.opt_flow && (_time_last_imu - _time_last_optflow > (uint64_t)_params.no_gps_timeout_max)) {
-		ECL_INFO("EKF Optical Flow Data Stopped");
-		_control_status.flags.opt_flow = false;
-
 	}
 
 }

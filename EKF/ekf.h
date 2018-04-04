@@ -298,7 +298,6 @@ private:
 	uint64_t _time_last_beta_fuse{0};	///< time the last fusion of synthetic sideslip measurements were performed (uSec)
 	uint64_t _time_last_rng_ready{0};	///< time the last range finder measurement was ready (uSec)
 	Vector2f _last_known_posNE;		///< last known local NE position vector (m)
-	float _last_disarmed_posD{0.0f};	///< vertical position recorded at arming (m)
 	float _imu_collection_time_adj{0.0f};	///< the amount of time the IMU collection needs to be advanced to meet the target set by FILTER_UPDATE_PERIOD_MS (sec)
 
 	uint64_t _time_acc_bias_check{0};	///< last time the  accel bias check passed (uSec)
@@ -346,6 +345,9 @@ private:
 	Vector3f _flow_gyro_bias;	///< bias errors in optical flow sensor rate gyro outputs (rad/sec)
 	Vector3f _imu_del_ang_of;	///< bias corrected delta angle measurements accumulated across the same time frame as the optical flow rates (rad)
 	float _delta_time_of{0.0f};	///< time in sec that _imu_del_ang_of was accumulated over (sec)
+	uint64_t _time_bad_motion_us{0};	///< last system time that on-ground motion exceeded limits (uSec)
+	uint64_t _time_good_motion_us{0};	///< last system time that on-ground motion was within limits (uSec)
+	bool _inhibit_gndobs_use{false};	///< true when use of ground observations (optical flow and range finder) is being temporarily inhibited due to excessive on-ground motion
 
 	float _mag_declination{0.0f};	///< magnetic declination used by reset and fusion functions (rad)
 
