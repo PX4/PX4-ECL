@@ -353,7 +353,7 @@ void Ekf::controlOpticalFlowFusion()
 				ECL_INFO("EKF Starting Optical Flow Use");
 
 				// if we are not using GPS then the velocity and position states and covariances need to be set
-				if (!_control_status.flags.gps) {
+				if (!_control_status.flags.gps || !_control_status.flags.ev_pos) {
 					resetVelocity();
 					resetPosition();
 
