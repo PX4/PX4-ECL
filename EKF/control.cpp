@@ -289,6 +289,15 @@ void Ekf::controlExternalVisionFusion()
 				// use the absolute position
 				_vel_pos_innov[3] = _state.pos(0) - _ev_sample_delayed.posNED(0);
 				_vel_pos_innov[4] = _state.pos(1) - _ev_sample_delayed.posNED(1);
+
+				// check if we have been deadreckoning too long
+				if (_time_last_imu - _time_last_pos_fuse > _params.no_gps_timeout_max) {
+					// don't reset velocity if we have another source of aiding constraining it
+					if (_time_last_imu - _time_last_of_fuse > (uint64_t)1E6) {
+						resetVelocity();
+					}
+					resetPosition();
+				}
 			}
 
 			// observation 1-STD error
@@ -311,7 +320,7 @@ void Ekf::controlExternalVisionFusion()
 			fuseHeading();
 
 		}
-	} else if (_control_status.flags.ev_pos && (_time_last_imu - _time_last_ext_vision > (uint64_t)5e6)) {
+	} else if (_control_status.flags.ev_pos && (_time_last_imu - _time_last_ext_vision > (uint64_t)_params.no_gps_timeout_max)) {
 		// Turn off EV fusion mode if no data has been received
 		_control_status.flags.ev_pos = false;
 		ECL_INFO("EKF External Vision Data Stopped");
