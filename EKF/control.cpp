@@ -358,6 +358,17 @@ void Ekf::controlOpticalFlowFusion()
 
 		}
 
+		// handle the case when we have optical flow, are reliant on it, but have not been using it for an extended period
+		if (_control_status.flags.opt_flow
+						&& !_control_status.flags.gps
+						&& !_control_status.flags.ev_pos) {
+			bool do_reset = _time_last_imu - _time_last_of_fuse > _params.no_gps_timeout_max;
+			if (do_reset) {
+				resetVelocity();
+				resetPosition();
+			}
+		}
+
 		// Accumulate autopilot gyro data across the same time interval as the flow sensor
 		_imu_del_ang_of += _imu_sample_delayed.delta_ang - _state.gyro_bias;
 		_delta_time_of += _imu_sample_delayed.delta_ang_dt;
@@ -373,7 +384,7 @@ void Ekf::controlOpticalFlowFusion()
 			_last_known_posNE(1) = _state.pos(1);
 
 		}
-	} else if (_control_status.flags.opt_flow && (_time_last_imu - _time_last_optflow > (uint64_t)5e6)) {
+	} else if (_control_status.flags.opt_flow && (_time_last_imu - _time_last_optflow > (uint64_t)_params.no_gps_timeout_max)) {
 		ECL_INFO("EKF Optical Flow Data Stopped");
 		_control_status.flags.opt_flow = false;
 
