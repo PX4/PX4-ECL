@@ -179,6 +179,9 @@ public:
 	// return true if the terrain estimate is valid
 	bool get_terrain_valid();
 
+	// update terrain validity status
+	void update_terrain_valid();
+
 	// get the estimated terrain vertical position relative to the NED origin
 	void get_terrain_vert_pos(float *ret);
 
@@ -412,6 +415,7 @@ private:
 	float _R_rng_to_earth_2_2{0.0f};	///< 2,2 element of the rotation matrix from sensor frame to earth frame
 	bool _range_data_continuous{false};	///< true when we are receiving range finder data faster than a 2Hz average
 	float _dt_last_range_update_filt_us{0.0f};	///< filtered value of the delta time elapsed since the last range measurement came into the filter (uSec)
+	bool _hagl_valid{false};		///< true when the height above ground estimate is valid
 
 	// height sensor fault status
 	bool _baro_hgt_faulty{false};		///< true if valid baro data is unavailable for use
