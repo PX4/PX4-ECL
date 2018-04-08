@@ -157,7 +157,7 @@ bool Ekf::resetPosition()
 
 	} else if (_control_status.flags.opt_flow) {
 		if (!_control_status.flags.in_air) {
-			// we are likely starting OF for the first time so reset the horizontal position and vertical velocity states
+			// we are likely starting OF for the first time so reset the horizontal position
 			_state.pos(0) = 0.0f;
 			_state.pos(1) = 0.0f;
 
