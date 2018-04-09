@@ -170,13 +170,7 @@ void Ekf::fuseHagl()
 // return true if the terrain height estimate is valid
 bool Ekf::get_terrain_valid()
 {
-	if (_terrain_initialised && _range_data_continuous && !_control_status.flags.rng_stuck &&
-		  ((_time_last_imu - _time_last_hagl_fuse) < (uint64_t)5e6)) {
-		return true;
-
-	} else {
-		return false;
-	}
+		return _hagl_valid;
 }
 
 // determine terrain validity
