@@ -58,3 +58,6 @@ px4_add_library(ecl
 	validation/data_validator.cpp
 	validation/data_validator_group.cpp
 	)
+target_compile_options(ecl PRIVATE
+	-Wdouble-promotion
+	)

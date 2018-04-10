@@ -108,6 +108,7 @@ void EstimatorInterface::setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, u
 			// Do not retry if allocation has failed previously
 			if (_drag_buffer.get_length() < _obs_buffer_length) {
 				_drag_buffer_fail = !_drag_buffer.allocate(_obs_buffer_length);
+
 				if (_drag_buffer_fail) {
 					ECL_ERR("EKF drag buffer allocation failed");
 					return;
@@ -163,6 +164,7 @@ void EstimatorInterface::setMagData(uint64_t time_usec, float (&data)[3])
 	// Do not retry if allocation has failed previously
 	if (_mag_buffer.get_length() < _obs_buffer_length) {
 		_mag_buffer_fail = !_mag_buffer.allocate(_obs_buffer_length);
+
 		if (_mag_buffer_fail) {
 			ECL_ERR("EKF mag buffer allocation failed");
 			return;
@@ -173,7 +175,7 @@ void EstimatorInterface::setMagData(uint64_t time_usec, float (&data)[3])
 	if (time_usec - _time_last_mag > _min_obs_interval_us) {
 
 		magSample mag_sample_new;
-		mag_sample_new.time_us = time_usec - _params.mag_delay_ms * 1000;
+		mag_sample_new.time_us = time_usec - static_cast<uint64_t>(_params.mag_delay_ms * 1000.0f);
 
 		mag_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
 		_time_last_mag = time_usec;
@@ -194,6 +196,7 @@ void EstimatorInterface::setGpsData(uint64_t time_usec, struct gps_message *gps)
 	// Do not retry if allocation has failed previously
 	if (_gps_buffer.get_length() < _obs_buffer_length) {
 		_gps_buffer_fail = !_gps_buffer.allocate(_obs_buffer_length);
+
 		if (_gps_buffer_fail) {
 			ECL_ERR("EKF GPS buffer allocation failed");
 			return;
@@ -205,7 +208,7 @@ void EstimatorInterface::setGpsData(uint64_t time_usec, struct gps_message *gps)
 
 	if (((time_usec - _time_last_gps) > _min_obs_interval_us) && need_gps && gps->fix_type > 2) {
 		gpsSample gps_sample_new;
-		gps_sample_new.time_us = gps->time_usec - _params.gps_delay_ms * 1000;
+		gps_sample_new.time_us = gps->time_usec - static_cast<uint64_t>(_params.gps_delay_ms * 1000.0f);
 
 		gps_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
 		_time_last_gps = time_usec;
@@ -247,6 +250,7 @@ void EstimatorInterface::setBaroData(uint64_t time_usec, float data)
 	// Do not retry if allocation has failed previously
 	if (_baro_buffer.get_length() < _obs_buffer_length) {
 		_baro_buffer_fail = !_baro_buffer.allocate(_obs_buffer_length);
+
 		if (_baro_buffer_fail) {
 			ECL_ERR("EKF baro buffer allocation failed");
 			return;
@@ -258,7 +262,7 @@ void EstimatorInterface::setBaroData(uint64_t time_usec, float data)
 
 		baroSample baro_sample_new;
 		baro_sample_new.hgt = data;
-		baro_sample_new.time_us = time_usec - _params.baro_delay_ms * 1000;
+		baro_sample_new.time_us = time_usec - static_cast<uint64_t>(_params.baro_delay_ms * 1000.0f);
 
 		baro_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
 		_time_last_baro = time_usec;
@@ -279,6 +283,7 @@ void EstimatorInterface::setAirspeedData(uint64_t time_usec, float true_airspeed
 	// Do not retry if allocation has failed previously
 	if (_airspeed_buffer.get_length() < _obs_buffer_length) {
 		_airspeed_buffer_fail = !_airspeed_buffer.allocate(_obs_buffer_length);
+
 		if (_airspeed_buffer_fail) {
 			ECL_ERR("EKF airspeed buffer allocation failed");
 			return;
@@ -290,7 +295,7 @@ void EstimatorInterface::setAirspeedData(uint64_t time_usec, float true_airspeed
 		airspeedSample airspeed_sample_new;
 		airspeed_sample_new.true_airspeed = true_airspeed;
 		airspeed_sample_new.eas2tas = eas2tas;
-		airspeed_sample_new.time_us = time_usec - _params.airspeed_delay_ms * 1000;
+		airspeed_sample_new.time_us = time_usec - static_cast<uint64_t>(_params.airspeed_delay_ms * 1000.0f);
 		airspeed_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2; //typo PeRRiod
 		_time_last_airspeed = time_usec;
 
@@ -308,6 +313,7 @@ void EstimatorInterface::setRangeData(uint64_t time_usec, float data)
 	// Do not retry if allocation has failed previously
 	if (_range_buffer.get_length() < _obs_buffer_length) {
 		_range_buffer_fail = !_range_buffer.allocate(_obs_buffer_length);
+
 		if (_range_buffer_fail) {
 			ECL_ERR("EKF range finder buffer allocation failed");
 			return;
@@ -318,7 +324,7 @@ void EstimatorInterface::setRangeData(uint64_t time_usec, float data)
 	if (time_usec - _time_last_range > _min_obs_interval_us) {
 		rangeSample range_sample_new;
 		range_sample_new.rng = data;
-		range_sample_new.time_us = time_usec - _params.range_delay_ms * 1000;
+		range_sample_new.time_us = time_usec - static_cast<uint64_t>(_params.range_delay_ms * 1000.0f);
 		_time_last_range = time_usec;
 
 		_range_buffer.push(range_sample_new);
@@ -336,6 +342,7 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 	// Do not retry if allocation has failed previously
 	if (_flow_buffer.get_length() < _obs_buffer_length) {
 		_flow_buffer_fail = !_flow_buffer.allocate(_obs_buffer_length);
+
 		if (_flow_buffer_fail) {
 			ECL_ERR("EKF optical flow buffer allocation failed");
 			return;
@@ -349,6 +356,7 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 		float delta_time = 1e-6f * (float)flow->dt;
 		float delta_time_min = 5e-7f * (float)_min_obs_interval_us;
 		bool delta_time_good = delta_time >= delta_time_min;
+
 		if (!delta_time_good) {
 			// protect against overflow casued by division with very small delta_time
 			delta_time = delta_time_min;
@@ -372,7 +380,7 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 		if ((delta_time_good && flow_quality_good && flow_magnitude_good) || !_control_status.flags.in_air) {
 			flowSample optflow_sample_new;
 			// calculate the system time-stamp for the mid point of the integration period
-			optflow_sample_new.time_us = time_usec - _params.flow_delay_ms * 1000 - flow->dt / 2;
+			optflow_sample_new.time_us = time_usec - static_cast<uint64_t>(_params.flow_delay_ms * 1000.0f) - flow->dt / 2;
 
 			// copy the quality metric returned by the PX4Flow sensor
 			optflow_sample_new.quality = flow->quality;
@@ -415,6 +423,7 @@ void EstimatorInterface::setExtVisionData(uint64_t time_usec, ext_vision_message
 	// Do not retry if allocation has failed previously
 	if (_ext_vision_buffer.get_length() < _obs_buffer_length) {
 		_ev_buffer_fail = !_ext_vision_buffer.allocate(_obs_buffer_length);
+
 		if (_ev_buffer_fail) {
 			ECL_ERR("EKF external vision buffer allocation failed");
 			return;
@@ -425,7 +434,7 @@ void EstimatorInterface::setExtVisionData(uint64_t time_usec, ext_vision_message
 	if (time_usec - _time_last_ext_vision > _min_obs_interval_us) {
 		extVisionSample ev_sample_new;
 		// calculate the system time-stamp for the mid point of the integration period
-		ev_sample_new.time_us = time_usec - _params.ev_delay_ms * 1000;
+		ev_sample_new.time_us = time_usec - static_cast<uint64_t>(_params.ev_delay_ms * 1000.0f);
 
 		// copy required data
 		ev_sample_new.angErr = evdata->angErr;
@@ -451,6 +460,7 @@ void EstimatorInterface::setAuxVelData(uint64_t time_usec, float (&data)[2], flo
 	// Do not retry if allocation has failed previously
 	if (_auxvel_buffer.get_length() < _obs_buffer_length) {
 		_auxvel_buffer_fail = !_auxvel_buffer.allocate(_obs_buffer_length);
+
 		if (_auxvel_buffer_fail) {
 			ECL_ERR("EKF aux vel buffer allocation failed");
 			return;
@@ -461,7 +471,7 @@ void EstimatorInterface::setAuxVelData(uint64_t time_usec, float (&data)[2], flo
 	if (time_usec - _time_last_auxvel > _min_obs_interval_us) {
 
 		auxVelSample auxvel_sample_new;
-		auxvel_sample_new.time_us = time_usec - _params.auxvel_delay_ms * 1000;
+		auxvel_sample_new.time_us = time_usec - static_cast<uint64_t>(_params.auxvel_delay_ms * 1000.0f);
 
 		auxvel_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
 		_time_last_auxvel = time_usec;
@@ -476,14 +486,14 @@ void EstimatorInterface::setAuxVelData(uint64_t time_usec, float (&data)[2], flo
 bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 {
 	// find the maximum time delay the buffers are required to handle
-	uint16_t max_time_delay_ms = math::max(_params.mag_delay_ms,
+	uint16_t max_time_delay_ms = static_cast<uint16_t>(math::max(_params.mag_delay_ms,
 					 math::max(_params.range_delay_ms,
 					     math::max(_params.gps_delay_ms,
 						 math::max(_params.flow_delay_ms,
 						     math::max(_params.ev_delay_ms,
 							 math::max(_params.auxvel_delay_ms,
 							     math::max(_params.min_delay_ms,
-								 math::max(_params.airspeed_delay_ms, _params.baro_delay_ms))))))));
+								 math::max(_params.airspeed_delay_ms, _params.baro_delay_ms)))))))));
 
 	// calculate the IMU buffer length required to accomodate the maximum delay with some allowance for jitter
 	_imu_buffer_length = (max_time_delay_ms / FILTER_UPDATE_PERIOD_MS) + 1;
@@ -553,7 +563,8 @@ bool EstimatorInterface::local_position_is_valid()
 	return !inertial_dead_reckoning();
 }
 
-void EstimatorInterface::print_status() {
+void EstimatorInterface::print_status()
+{
 	ECL_INFO("local position valid: %s", local_position_is_valid() ? "yes" : "no");
 	ECL_INFO("global position valid: %s", global_position_is_valid() ? "yes" : "no");
 
