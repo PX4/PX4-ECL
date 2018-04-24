@@ -1229,9 +1229,19 @@ void Ekf::controlMagFusion()
 			bool use_3D_fusion = _control_status.flags.tilt_align && // Use of 3D fusion requires valid tilt estimates
 					_control_status.flags.in_air && // don't use when on the ground becasue of magnetic anomalies
 					(_flt_mag_align_complete || height_achieved) && // once in-flight field alignment has been performed, ignore relative height
-					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000); // Using 3-axis fusion for a minimum period after to allow for false negatives
+					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000) && // Using 3-axis fusion for a minimum period after to allow for false negatives
+					!(_params.mag_earth_field_bad == 2); // don't use if explicitly prohibited by parameter
 
-			// perform switch-over
+			// Quaternion variance has grown too high and needs to be constrained to prevent instability of the covariance matrix
+			bool high_quat_var = (P[0][0] + P[1][1] + P[2][2] + P[3][3]) > _params.quat_var_limit;
+
+			// Earth field quality insufficient to use the horizontal projection for yaw estimation
+			bool in_air_mag_hdg_prohibited = ((_params.mag_earth_field_bad == 1) || (_params.mag_earth_field_bad == 2)) && !high_quat_var;
+
+			// Do not use mag heading fusion in air if earth field is close to vertical because small mag and tilt errors
+			// can produce large yaw errors.  We can use it on ground by using an assumed heading measurement
+			bool use_hdg_fusion = !use_3D_fusion && !(_control_status.flags.in_air && in_air_mag_hdg_prohibited);
+
 			if (use_3D_fusion) {
 				if (!_control_status.flags.mag_3D) {
 					if (!_flt_mag_align_complete) {
@@ -1269,9 +1279,9 @@ void Ekf::controlMagFusion()
 					for (uint8_t index = 0; index <= 5; index ++) {
 						_saved_mag_variance[index] = P[index+16][index+16];
 					}
-					_control_status.flags.mag_3D = false;
 				}
-				_control_status.flags.mag_hdg = true;
+				_control_status.flags.mag_3D = false;
+				_control_status.flags.mag_hdg = use_hdg_fusion;
 			}
 
 			/*
