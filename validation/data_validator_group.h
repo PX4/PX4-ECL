@@ -50,7 +50,13 @@ public:
 	 * @param siblings initial number of DataValidator's. Must be > 0.
 	 */
 	DataValidatorGroup(unsigned siblings);
-	virtual ~DataValidatorGroup();
+	~DataValidatorGroup();
+
+	// no copy, assignment, move, move assignment
+	DataValidatorGroup(const DataValidatorGroup &) = delete;
+	DataValidatorGroup &operator=(const DataValidatorGroup &) = delete;
+	DataValidatorGroup(DataValidatorGroup &&) = delete;
+	DataValidatorGroup &operator=(DataValidatorGroup &&) = delete;
 
 	/**
 	 * Create a new Validator (with index equal to the number of currently existing validators)
@@ -75,6 +81,13 @@ public:
 	 * @return		pointer to the array of best values
 	 */
 	float			*get_best(uint64_t timestamp, int *index);
+
+	/**
+	 * Get the best data validator of the group
+	 *
+	 * @return		pointer to the last best DataValidator
+	 */
+	DataValidator		*get_last_best() { return _best; }
 
 	/**
 	 * Get the RMS / vibration factor
@@ -132,17 +145,23 @@ public:
 	void			set_equal_value_threshold(uint32_t threshold);
 
 
-private:
-	DataValidator *_first;		/**< first node in the group */
-	DataValidator *_last;		/**< last node in the group */
-	uint32_t _timeout_interval_us; /**< currently set timeout */
-	int _curr_best;		/**< currently best index */
-	int _prev_best;		/**< the previous best index */
-	uint64_t _first_failover_time;	/**< timestamp where the first failover occured or zero if none occured */
-	unsigned _toggle_count;		/**< number of back and forth switches between two sensors */
-	static constexpr float MIN_REGULAR_CONFIDENCE = 0.9f;
+	float			calc_inconsistency();
 
-	/* we don't want this class to be copied */
-	DataValidatorGroup(const DataValidatorGroup &);
-	DataValidatorGroup operator=(const DataValidatorGroup &);
+
+private:
+	DataValidator *_first{nullptr};		/**< first node in the group */
+	DataValidator *_last{nullptr};		/**< last node in the group */
+
+	uint32_t _timeout_interval_us{1000000}; /**< currently set timeout */
+
+	int _curr_best{-1};			/**< currently best index */
+	int _prev_best{-1};			/**< the previous best index */
+
+	DataValidator *_best{nullptr};
+
+	uint64_t _first_failover_time{0};	/**< timestamp where the first failover occured or zero if none occured */
+
+	unsigned _toggle_count{0};		/**< number of back and forth switches between two sensors */
+
+	static constexpr float MIN_REGULAR_CONFIDENCE = 0.9f;
 };

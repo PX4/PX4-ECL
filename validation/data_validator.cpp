@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2015 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2015-2018 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,27 +41,6 @@
 
 #include "data_validator.h"
 #include <ecl.h>
-
-DataValidator::DataValidator() :
-	_error_mask(ERROR_FLAG_NO_ERROR),
-	_timeout_interval(20000),
-	_time_last(0),
-	_event_count(0),
-	_error_count(0),
-	_error_density(0),
-	_priority(0),
-	_mean{0.0f},
-	_lp{0.0f},
-	_M2{0.0f},
-	_rms{0.0f},
-	_value{0.0f},
-	_vibe{0.0f},
-	_value_equal_count(0),
-	_value_equal_count_threshold(VALUE_EQUAL_COUNT_DEFAULT),
-	_sibling(nullptr)
-{
-
-}
 
 void
 DataValidator::put(uint64_t timestamp, float val, uint64_t error_count_in, int priority_in)
@@ -124,8 +103,8 @@ DataValidator::confidence(uint64_t timestamp)
 {
 	float ret = 1.0f;
 
-	/* check if we have any data */
 	if (_time_last == 0) {
+		/* check if we have any data */
 		_error_mask |= ERROR_FLAG_NO_DATA;
 		ret = 0.0f;
 

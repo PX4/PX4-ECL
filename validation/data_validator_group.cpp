@@ -43,13 +43,7 @@
 #include <ecl.h>
 #include <cfloat>
 
-DataValidatorGroup::DataValidatorGroup(unsigned siblings) :
-	_first(nullptr),
-	_last(nullptr),
-	_curr_best(-1),
-	_prev_best(-1),
-	_first_failover_time(0),
-	_toggle_count(0)
+DataValidatorGroup::DataValidatorGroup(unsigned siblings)
 {
 	DataValidator *next = nullptr;
 	DataValidator *prev = nullptr;
@@ -218,6 +212,7 @@ DataValidatorGroup::get_best(uint64_t timestamp, int *index)
 
 		/* for all cases we want to keep a record of the best index */
 		_curr_best = max_index;
+		_best = best;
 	}
 
 	*index = max_index;
@@ -345,4 +340,40 @@ DataValidatorGroup::failover_state()
 	}
 
 	return DataValidator::ERROR_FLAG_NO_ERROR;
+}
+
+float
+DataValidatorGroup::calc_inconsistency()
+{
+	if (_best == nullptr) {
+		return 0.0f;
+	}
+
+	float inconsistency = 0.0f;
+
+	const matrix::Vector3f best_data{_best->value()};
+
+	DataValidator *next = _first;
+
+	while (next != nullptr) {
+
+		// check that the sensor we are checking against is not the same as the primary
+		// only use if healthy
+		if ((next != _best) && (next->priority() > 0) && (next->state() == DataValidator::ERROR_FLAG_NO_ERROR)) {
+
+			next->get_diff() = 0.95f * next->get_diff() + 0.05f * (best_data - matrix::Vector3f{next->value()});
+
+			// sum of differences squared for a single sensor comparison against the primary
+			const float diff_sum_sq = next->get_diff().length();
+
+			// capture the largest sum value
+			if (diff_sum_sq > inconsistency) {
+				inconsistency = diff_sum_sq;
+			}
+		}
+
+		next = next->sibling();
+	}
+
+	return inconsistency;
 }

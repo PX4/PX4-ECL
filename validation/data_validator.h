@@ -41,16 +41,21 @@
 
 #pragma once
 
-#include <cmath>
-#include <stdint.h>
+#include <matrix/math.hpp>
 
 class DataValidator
 {
 public:
 	static const unsigned dimensions = 3;
 
-	DataValidator();
-	virtual ~DataValidator() = default;
+	DataValidator() = default;
+	~DataValidator() = default;
+
+	// no copy, assignment, move, move assignment
+	DataValidator(const DataValidator &) = delete;
+	DataValidator &operator=(const DataValidator &) = delete;
+	DataValidator(DataValidator &&) = delete;
+	DataValidator &operator=(DataValidator &&) = delete;
 
 	/**
 	 * Put an item into the validator.
@@ -89,7 +94,7 @@ public:
 	 * Get the error count of this validator
 	 * @return		the error count
 	 */
-	uint64_t		error_count() { return _error_count; }
+	const uint64_t		&error_count() { return _error_count; }
 
 	/**
 	 * Get the values of this validator
@@ -113,7 +118,7 @@ public:
 	 * Get the error state of this validator
 	 * @return		the bitmask with the error status
 	 */
-	uint32_t		state() { return _error_mask; }
+	const uint32_t		&state() { return _error_mask; }
 
 	/**
 	 * Reset the error state of this validator
@@ -157,7 +162,14 @@ public:
 	 *
 	 * @return The timeout interval in microseconds
 	 */
-	uint32_t			get_timeout() const { return _timeout_interval; }
+	uint32_t		get_timeout() const { return _timeout_interval; }
+
+	/**
+	 * Get reference to the current differencce from primary
+	 *
+	 * @return The diff vector
+	 */
+	matrix::Vector3f	&get_diff() { return _diff; }
 
 	/**
 	 * Data validator error states
@@ -170,30 +182,33 @@ public:
 	static constexpr uint32_t ERROR_FLAG_HIGH_ERRDENSITY 	= (0x00000001U << 4);
 
 private:
-	uint32_t _error_mask;			/**< sensor error state */
-	uint32_t _timeout_interval;		/**< interval in which the datastream times out in us */
-	uint64_t _time_last;			/**< last timestamp */
-	uint64_t _event_count;			/**< total data counter */
-	uint64_t _error_count;			/**< error count */
-	int _error_density;			/**< ratio between successful reads and errors */
-	int _priority;				/**< sensor nominal priority */
-	float _mean[dimensions];		/**< mean of value */
-	float _lp[dimensions];			/**< low pass value */
-	float _M2[dimensions];			/**< RMS component value */
-	float _rms[dimensions];			/**< root mean square error */
-	float _value[dimensions];		/**< last value */
-	float _vibe[dimensions];		/**< vibration level, in sensor unit */
+	uint32_t _error_mask{ERROR_FLAG_NO_ERROR};	/**< sensor error state */
 
-	unsigned _value_equal_count;		/**< equal values in a row */
-	unsigned _value_equal_count_threshold;	/**< when to consider an equal count as a problem */
+	uint32_t _timeout_interval{20000};		/**< interval in which the datastream times out in us */
 
-	DataValidator *_sibling;		/**< sibling in the group */
+	uint64_t _time_last{0};				/**< last timestamp */
+
+	uint64_t _event_count{0};			/**< total data counter */
+	uint64_t _error_count{0};			/**< error count */
+
+	int _error_density{0};				/**< ratio between successful reads and errors */
+	int _priority{0};				/**< sensor nominal priority */
+
+	float _mean[dimensions] {};			/**< mean of value */
+	float _lp[dimensions] {};			/**< low pass value */
+	float _M2[dimensions] {};			/**< RMS component value */
+	float _rms[dimensions] {};			/**< root mean square error */
+	float _value[dimensions] {};			/**< last value */
+	float _vibe[dimensions] {};			/**< vibration level, in sensor unit */
+
+	unsigned _value_equal_count{0};			/**< equal values in a row */
+	unsigned _value_equal_count_threshold{VALUE_EQUAL_COUNT_DEFAULT}; /**< when to consider an equal count as a problem */
+
+	matrix::Vector3f	_diff {};		/**< diff used for inconsistency comparison with the primary */
+
+	DataValidator *_sibling{nullptr};		/**< sibling in the group */
 
 	static const constexpr unsigned NORETURN_ERRCOUNT = 10000;	/**< if the error count reaches this value, return sensor as invalid */
 	static const constexpr float ERROR_DENSITY_WINDOW = 100.0f; 	/**< window in measurement counts for errors */
 	static const constexpr unsigned VALUE_EQUAL_COUNT_DEFAULT = 100;	/**< if the sensor value is the same (accumulated also between axes) this many times, flag it */
-
-	/* we don't want this class to be copied */
-	DataValidator(const DataValidator &) = delete;
-	DataValidator operator=(const DataValidator &) = delete;
 };
