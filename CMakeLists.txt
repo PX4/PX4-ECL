@@ -80,26 +80,6 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
 	include_directories(${CMAKE_BINARY_DIR}/matrix-prefix/src/matrix)
 
 	add_subdirectory(mathlib)
-
-	include(CTest)
-	enable_testing()
-	
-	if(BUILD_TESTING)
-
-		add_custom_target(check
-			COMMAND env CTEST_OUTPUT_ON_FAILURE=1 ${CMAKE_CTEST_COMMAND}
-			DEPENDS ecl_EKF
-			USES_TERMINAL
-		)
-
-		option(EKF_PYTHON_TESTS "Build the EKF python tests" OFF)
-
-		if (EKF_PYTHON_TESTS)
-			# swig requires -fPIC
-			set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-		endif()
-	endif()
-
 endif()
 
 add_subdirectory(airdata)

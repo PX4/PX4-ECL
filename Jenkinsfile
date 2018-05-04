@@ -1,10 +1,10 @@
 pipeline {
   agent none
   stages {
-    stage('Build') {
+    stage('build') {
       parallel {
 
-        stage('Linux GCC') {
+        stage('build') {
           environment {
             CCACHE_BASEDIR = "${env.WORKSPACE}"
           }
@@ -24,7 +24,7 @@ pipeline {
           }
         }
 
-        stage('Linux Clang') {
+        stage('build clang') {
           environment {
             CCACHE_BASEDIR = "${env.WORKSPACE}"
             CC = 'clang'
@@ -46,6 +46,24 @@ pipeline {
           }
         }
 
+        stage('pytest') {
+          agent {
+            docker {
+              image 'px4io/px4-dev-ecl:2018-04-22'
+              args '-v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
+            }
+          }
+          steps {
+            sh 'export'
+            sh 'ccache -z'
+            sh 'make distclean'
+            sh 'make'
+            sh 'ccache -s'
+            //sh 'RUN_PYTEST=1 ./build.sh'
+            sh 'make distclean'
+          }
+        }
+        
         stage('OSX') {
           agent {
             node {
@@ -63,51 +81,10 @@ pipeline {
             sh 'ccache -s'
             sh 'make distclean'
           }
-        }
+        }    
 
-      } // parallel
-    } // stage Build
-
-    stage('Test') {
-      parallel {
-
-        stage('EKF pytest') {
-          agent {
-            docker {
-              image 'px4io/px4-dev-ecl:2018-04-22'
-              args '-v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
-            }
-          }
-          steps {
-            sh 'export'
-            sh 'ccache -z'
-            sh 'make distclean'
-            sh 'make test_EKF'
-            sh 'ccache -s'
-            sh 'make distclean'
-          }
-        }
-
-        stage('test') {
-          agent {
-            docker {
-              image 'px4io/px4-dev-ecl:2018-04-22'
-              args '-v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
-            }
-          }
-          steps {
-            sh 'export'
-            sh 'ccache -z'
-            sh 'make distclean'
-            sh 'make test'
-            sh 'ccache -s'
-            sh 'make distclean'
-          }
-        }
-
-      } // parallel
+      }
     }
-
   }
 
   environment {
