@@ -48,7 +48,8 @@
 
 #pragma once
 
-#include <ecl.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 struct ECL_ControlData {
 	float roll;
@@ -72,7 +73,7 @@ struct ECL_ControlData {
 	bool lock_integrator;
 };
 
-class ECL_Controller
+class __EXPORT ECL_Controller
 {
 public:
 	ECL_Controller(const char *name);

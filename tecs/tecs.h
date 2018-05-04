@@ -42,7 +42,7 @@
 #include <mathlib/mathlib.h>
 #include <matrix/math.hpp>
 
-class TECS
+class __EXPORT TECS
 {
 public:
 	TECS() = default;
@@ -266,7 +266,9 @@ private:
 
 	// time steps (non-fixed)
 	float _dt{DT_DEFAULT};						///< Time since last update of main TECS loop (sec)
+	static constexpr float DT_MIN = 0.001f;				///< minimum allowed value of _dt (sec)
 	static constexpr float DT_DEFAULT = 0.02f;			///< default value for _dt (sec)
+	static constexpr float DT_MAX = 1.0f;				///< max value of _dt allowed before a filter state reset is performed (sec)
 
 	// controller mode logic
 	bool _underspeed_detected{false};				///< true when an underspeed condition has been detected

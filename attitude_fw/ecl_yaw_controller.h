@@ -48,9 +48,12 @@
 #ifndef ECL_YAW_CONTROLLER_H
 #define ECL_YAW_CONTROLLER_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "ecl_controller.h"
 
-class ECL_YawController :
+class __EXPORT ECL_YawController :
 	public ECL_Controller
 {
 public:

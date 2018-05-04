@@ -38,7 +38,6 @@
 
 #pragma once
 
-#include <ecl.h>
 #include <mathlib/mathlib.h>
 #include <matrix/math.hpp>
 
@@ -68,8 +67,8 @@ public:
 
 	bool is_estimate_valid() { return _initialised; }
 
-	bool check_if_meas_is_rejected(uint64_t time_now, float innov, float innov_var, uint8_t gate_size,
-				       uint64_t &time_meas_rejected, bool &reinit_filter);
+	bool check_if_meas_is_rejected(uint64_t time_now, float innov, float innov_var, uint8_t gate_size, uint64_t &time_meas_rejected,
+				       bool &reinit_filter);
 
 	float get_tas_scale() { return _state(tas); }
 	float get_tas_innov() { return _tas_innov; }

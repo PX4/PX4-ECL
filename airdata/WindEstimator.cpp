@@ -38,6 +38,7 @@
 
 #include "WindEstimator.hpp"
 
+
 bool
 WindEstimator::initialise(const matrix::Vector3f &velI, const matrix::Vector2f &velIvar, const float tas_meas)
 {
@@ -320,7 +321,7 @@ WindEstimator::run_sanity_checks()
 		}
 	}
 
-	if (!ISFINITE(_state(w_n)) || !ISFINITE(_state(w_e)) || !ISFINITE(_state(tas))) {
+	if (!PX4_ISFINITE(_state(w_n)) || !PX4_ISFINITE(_state(w_e)) || !PX4_ISFINITE(_state(tas))) {
 		_initialised = false;
 		return;
 	}
@@ -339,8 +340,8 @@ WindEstimator::run_sanity_checks()
 }
 
 bool
-WindEstimator::check_if_meas_is_rejected(uint64_t time_now, float innov, float innov_var, uint8_t gate_size,
-		uint64_t &time_meas_rejected, bool &reinit_filter)
+WindEstimator::check_if_meas_is_rejected(uint64_t time_now, float innov, float innov_var, uint8_t gate_size, uint64_t &time_meas_rejected,
+		bool &reinit_filter)
 {
 	if (innov * innov > gate_size * gate_size * innov_var) {
 		time_meas_rejected = time_meas_rejected == 0 ? time_now : time_meas_rejected;
