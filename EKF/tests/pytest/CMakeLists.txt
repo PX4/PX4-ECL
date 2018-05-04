@@ -36,23 +36,20 @@ if(EKF_PYTHON_TESTS)
 	# pip3 install -r requirements.txt 
 
 	add_custom_target(ecl_EKF_pytest
-		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_BINARY_DIR}/EKF/swig/python ${CMAKE_CURRENT_SOURCE_DIR}/ekf_test.py --verbose --plots
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_BINARY_DIR}/EKF/swig/python ${CMAKE_CURRENT_SOURCE_DIR}/ekf_test.py --verbose
 		DEPENDS ecl_EKF _ecl_EKF
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		USES_TERMINAL
 	)
 
 	add_custom_target(ecl_EKF_pytest-quick
-		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_BINARY_DIR}/EKF/swig/python ${CMAKE_CURRENT_SOURCE_DIR}/ekf_test.py --quick --verbose --plots
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_BINARY_DIR}/EKF/swig/python ${CMAKE_CURRENT_SOURCE_DIR}/ekf_test.py --quick --verbose
 		DEPENDS ecl_EKF _ecl_EKF
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}		
 		USES_TERMINAL
 	)
 
 	add_custom_target(ecl_EKF_pytest-benchmark
 		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_BINARY_DIR}/EKF/swig/python ${CMAKE_CURRENT_SOURCE_DIR}/ekf_test.py --benchmark
 		DEPENDS ecl_EKF _ecl_EKF
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}		
 		USES_TERMINAL
 	)
 
@@ -60,7 +57,6 @@ if(EKF_PYTHON_TESTS)
 	add_custom_target(ecl_EKF_pytest-plots
 		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_BINARY_DIR}/EKF/swig/python ${CMAKE_CURRENT_SOURCE_DIR}/ekf_test.py --plots
 		DEPENDS ecl_EKF _ecl_EKF
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}		
 		USES_TERMINAL
 	)
 
