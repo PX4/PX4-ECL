@@ -41,6 +41,8 @@
 
 #pragma once
 
+__BEGIN_DECLS
+
 // Return magnetic declination in degrees
 float get_mag_declination(float lat, float lon);
 
@@ -49,3 +51,5 @@ float get_mag_inclination(float lat, float lon);
 
 // return magnetic field strength in mTesla
 float get_mag_strength(float lat, float lon);
+
+__END_DECLS
