@@ -44,8 +44,7 @@
 #include <cmath>
 #include <stdint.h>
 
-class DataValidator
-{
+class DataValidator {
 public:
 	static const unsigned dimensions = 3;
 
@@ -71,13 +70,13 @@ public:
 	 *
 	 * @return		the next sibling
 	 */
-	DataValidator		*sibling() { return _sibling; }
+	DataValidator*		sibling() { return _sibling; }
 
 	/**
 	 * Set the sibling to the next node in the group
 	 *
 	 */
-	void			setSibling(DataValidator *new_sibling) { _sibling = new_sibling; }
+	void			setSibling(DataValidator* new_sibling) { _sibling = new_sibling; }
 
 	/**
 	 * Get the confidence of this validator
@@ -95,7 +94,7 @@ public:
 	 * Get the values of this validator
 	 * @return		the stored value
 	 */
-	float			*value() { return _value; }
+	float*			value() { return _value; }
 
 	/**
 	 * Get the used status of this validator
@@ -124,13 +123,13 @@ public:
 	 * Get the RMS values of this validator
 	 * @return		the stored RMS
 	 */
-	float			*rms() { return _rms; }
+	float*			rms() { return _rms; }
 
 	/**
 	 * Get the vibration offset
 	 * @return		the stored vibration offset
 	 */
-	float			*vibration_offset() { return _vibe; }
+	float*			vibration_offset() { return _vibe; }
 
 	/**
 	 * Print the validator value
@@ -191,6 +190,6 @@ private:
 	static const constexpr unsigned VALUE_EQUAL_COUNT_DEFAULT = 100;	/**< if the sensor value is the same (accumulated also between axes) this many times, flag it */
 
 	/* we don't want this class to be copied */
-	DataValidator(const DataValidator &) = delete;
-	DataValidator operator=(const DataValidator &) = delete;
+	DataValidator(const DataValidator&) = delete;
+	DataValidator operator=(const DataValidator&) = delete;
 };
