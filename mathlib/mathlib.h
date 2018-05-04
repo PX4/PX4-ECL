@@ -40,9 +40,9 @@
  */
 #ifndef MATHLIB_H
 #define MATHLIB_H
-
-#ifdef ECL_STANDALONE
-
+#ifdef POSIX_SHARED
+// #include <Eigen/Dense>
+// #include <algorithm>
 #ifndef M_PI_F
 #define M_PI_F 3.14159265358979323846f
 #endif
@@ -67,8 +67,6 @@ float degrees(float radians);
 
 }
 #else
-
 #include <mathlib/mathlib.h>
-
-#endif //ECL_STANDALONE
+#endif //POSIX_SHARED
 #endif //MATHLIB_H

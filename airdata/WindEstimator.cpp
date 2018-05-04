@@ -38,6 +38,7 @@
 
 #include "WindEstimator.hpp"
 
+
 bool
 WindEstimator::initialise(const matrix::Vector3f &velI, const matrix::Vector2f &velIvar, const float tas_meas)
 {
@@ -320,7 +321,7 @@ WindEstimator::run_sanity_checks()
 		}
 	}
 
-	if (!ISFINITE(_state(w_n)) || !ISFINITE(_state(w_e)) || !ISFINITE(_state(tas))) {
+	if (!PX4_ISFINITE(_state(w_n)) || !PX4_ISFINITE(_state(w_e)) || !PX4_ISFINITE(_state(tas))) {
 		_initialised = false;
 		return;
 	}

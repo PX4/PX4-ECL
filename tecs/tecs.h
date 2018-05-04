@@ -42,7 +42,7 @@
 #include <mathlib/mathlib.h>
 #include <matrix/math.hpp>
 
-class TECS
+class __EXPORT TECS
 {
 public:
 	TECS() = default;

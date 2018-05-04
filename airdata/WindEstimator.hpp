@@ -38,7 +38,6 @@
 
 #pragma once
 
-#include <ecl.h>
 #include <mathlib/mathlib.h>
 #include <matrix/math.hpp>
 

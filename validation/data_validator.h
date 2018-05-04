@@ -44,7 +44,7 @@
 #include <cmath>
 #include <stdint.h>
 
-class DataValidator {
+class __EXPORT DataValidator {
 public:
 	static const unsigned dimensions = 3;
 
