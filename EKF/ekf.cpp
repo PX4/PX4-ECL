@@ -194,9 +194,7 @@ bool Ekf::initialiseFilter()
 	if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
 		if ((_hgt_counter == 0) && (_baro_sample_delayed.time_us != 0)) {
 			// initialise the counter and height fusion method when we start getting data from the buffer
-			_control_status.flags.baro_hgt = true;
-			_control_status.flags.gps_hgt = false;
-			_control_status.flags.rng_hgt = false;
+			setControlBaroHeight();
 			_hgt_counter = 1;
 
 		} else if ((_hgt_counter != 0) && (_baro_sample_delayed.time_us != 0)) {
