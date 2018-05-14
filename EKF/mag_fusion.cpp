@@ -630,11 +630,11 @@ void Ekf::fuseHeading()
 		return;
 	}
 
-	// Calculate the Kalman gains and only modify vehicle attitude to prevent linerisation
-	// errors corrupting other states when there are large metnic field variations.
+	// calculate the Kalman gains
+	// only calculate gains for states we are using
 	float Kfusion[_k_num_states] = {};
 
-	for (uint8_t row = 0; row <= 3; row++) {
+	for (uint8_t row = 0; row <= 15; row++) {
 		Kfusion[row] = 0.0f;
 
 		for (uint8_t col = 0; col <= 3; col++) {
@@ -642,6 +642,18 @@ void Ekf::fuseHeading()
 		}
 
 		Kfusion[row] *= heading_innov_var_inv;
+	}
+
+	if (_control_status.flags.wind) {
+		for (uint8_t row = 22; row <= 23; row++) {
+			Kfusion[row] = 0.0f;
+
+			for (uint8_t col = 0; col <= 3; col++) {
+				Kfusion[row] += P[row][col] * H_YAW[col];
+			}
+
+			Kfusion[row] *= heading_innov_var_inv;
+		}
 	}
 
 	// wrap the heading to the interval between +-pi
