@@ -403,14 +403,15 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 				optflow_sample_new.gyroXYZ = - flow->gyrodata;
 			}
 
+			Vector3f matching_gyro_sample;
+			imuSample matching_imu_sample;
+
 			if (flow_quality_good) {
 
 				if( no_gyro ) {
 
-					imuSample matching_imu_sample;
-
 					_imu_buffer.read_first_older_than(optflow_sample_new.time_us, &matching_imu_sample);
-					Vector3f matching_gyro_sample = matching_imu_sample.delta_ang / matching_imu_sample.delta_ang_dt;
+					matching_gyro_sample = matching_imu_sample.delta_ang / matching_imu_sample.delta_ang_dt;
 					optflow_sample_new.gyroXYZ = matching_gyro_sample;
 					optflow_sample_new.flowRadXY = flow->flowdata / delta_time;
 
