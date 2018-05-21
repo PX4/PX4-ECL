@@ -387,10 +387,16 @@ void Ekf::controlOpticalFlowFusion()
 		_delta_time_of += _imu_sample_delayed.delta_ang_dt;
 
 		// optical flow fusion mode selection logic
+		bool flow_quality_ok = _flow_sample_delayed.quality >= _params.flow_qual_min_init;
+		if (!flow_quality_ok) {
+			_time_bad_flow_qual = _imu_sample_delayed.time_us;
+		}
+		flow_quality_ok &= _imu_sample_delayed.time_us - _time_bad_flow_qual > (uint64_t)5E6;
 		if ((_params.fusion_mode & MASK_USE_OF) // optical flow has been selected by the user
 				&& !_control_status.flags.opt_flow // we are not yet using flow data
+				&& flow_quality_ok
 				&& _control_status.flags.tilt_align // we know our tilt attitude
-				&& !_inhibit_flow_use
+				&& !_inhibit_flow_use // the operating condition is suitable for flow use
 				&& get_terrain_valid()) // we have a valid distance to ground estimate
 		{
 			// If the heading is not aligned, reset the yaw and magnetic field states

@@ -359,6 +359,7 @@ private:
 	uint64_t _time_bad_motion_us{0};	///< last system time that on-ground motion exceeded limits (uSec)
 	uint64_t _time_good_motion_us{0};	///< last system time that on-ground motion was within limits (uSec)
 	bool _inhibit_flow_use{false};	///< true when use of optical flow and range finder is being inhibited
+	uint64_t _time_bad_flow_qual{0};	///< last system time that optical flow data quality was below start of use check limit (uSec)
 
 	float _mag_declination{0.0f};	///< magnetic declination used by reset and fusion functions (rad)
 
