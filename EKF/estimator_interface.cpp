@@ -380,29 +380,27 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 			// NOTE: the EKF uses the reverse sign convention to the flow sensor. EKF assumes positive LOS rate is produced by a RH rotation of the image about the sensor axis.
 			// copy the optical and gyro measured delta angles
 
-			// flow_quality_good = true;
 			bool no_gyro = false;
+			Vector3f matching_gyro_sample;
+			imuSample matching_imu_sample;
 
-			if( flow->gyrodata(0)==NAN && flow->gyrodata(1)==NAN && flow->gyrodata(2)==NAN ) {
+			if( !PX4_ISFINITE(flow->gyrodata(0)) && !PX4_ISFINITE(flow->gyrodata(1)) && !PX4_ISFINITE(flow->gyrodata(2)) ) {
 
 				no_gyro = true;
-
+				_imu_buffer.read_first_older_than(optflow_sample_new.time_us, &matching_imu_sample);
+				matching_gyro_sample = matching_imu_sample.delta_ang / matching_imu_sample.delta_ang_dt;
+				optflow_sample_new.gyroXYZ = matching_gyro_sample;
 			} else {
+
 				optflow_sample_new.gyroXYZ = - flow->gyrodata;
 			}
 
-			Vector3f matching_gyro_sample;
-			imuSample matching_imu_sample;
 
 			if (flow_quality_good) {
 
 				if( no_gyro ) {
 
-					_imu_buffer.read_first_older_than(optflow_sample_new.time_us, &matching_imu_sample);
-					matching_gyro_sample = matching_imu_sample.delta_ang / matching_imu_sample.delta_ang_dt;
-					optflow_sample_new.gyroXYZ = matching_gyro_sample;
 					optflow_sample_new.flowRadXY = flow->flowdata / delta_time;
-
 				} else {
 
 					optflow_sample_new.flowRadXY = - flow->flowdata;
@@ -413,9 +411,11 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 				// when on the ground with poor flow quality, assume zero ground relative velocity
 
 				if( no_gyro ) {
+
 					optflow_sample_new.flowRadXY(0) = - matching_gyro_sample(0);
 					optflow_sample_new.flowRadXY(1) = - matching_gyro_sample(1);
 				} else {
+
 					optflow_sample_new.flowRadXY(0) = - flow->gyrodata(0);
 					optflow_sample_new.flowRadXY(1) = - flow->gyrodata(1);
 				}
