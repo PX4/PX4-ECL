@@ -400,7 +400,7 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 			 * we can check this here and get the gyro data with the matching timestamp from the imu buffer. The gyro data is divided by dt to 
 			 * convert it into a rate before removing it from the flow to remove the rotation component. This is done to prevent errors when the flow
 			 * and gyro data are integrated over different times */
-			if (!PX4_ISFINITE(flow->gyrodata(0)) && !PX4_ISFINITE(flow->gyrodata(1)) && !PX4_ISFINITE(flow->gyrodata(2))) {
+			if (!ISFINITE(flow->gyrodata(0)) && !ISFINITE(flow->gyrodata(1)) && !ISFINITE(flow->gyrodata(2))) {
 				no_gyro = true;
 				_imu_buffer.read_first_older_than(optflow_sample_new.time_us, &matching_imu_sample);
 				matching_gyro_sample = matching_imu_sample.delta_ang / matching_imu_sample.delta_ang_dt;
