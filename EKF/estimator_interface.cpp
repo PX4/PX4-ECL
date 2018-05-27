@@ -415,6 +415,7 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 				optflow_sample_new.flowRadXY(1) = - flow->gyrodata(1);
 			}
 
+			// compensate for body motion to give a LOS delta angle
 			optflow_sample_new.flowRadXYcomp(0) = optflow_sample_new.flowRadXY(0) - optflow_sample_new.gyroXYZ(0);
 			optflow_sample_new.flowRadXYcomp(1) = optflow_sample_new.flowRadXY(1) - optflow_sample_new.gyroXYZ(1);
 
