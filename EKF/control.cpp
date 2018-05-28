@@ -326,7 +326,7 @@ void Ekf::controlExternalVisionFusion()
 
 void Ekf::controlOpticalFlowFusion()
 {
-	// Check if motion is un-suitable for use of optical flow
+	// Check if on ground motion is un-suitable for use of optical flow
 	if (!_control_status.flags.in_air) {
 		bool motion_is_excessive = ((_accel_mag_filt > 14.7f)
 					    || (_accel_mag_filt < 4.9f)
@@ -342,45 +342,51 @@ void Ekf::controlOpticalFlowFusion()
 		_time_good_motion_us = _imu_sample_delayed.time_us;
 	}
 
-	// Inhibit flow use if motion is un-suitable or we have good quality GPS
-	// Apply hysteresis to prevent rapid mode switching
-	float gps_err_norm_lim;
-	if (_control_status.flags.opt_flow) {
-		gps_err_norm_lim = 0.7f;
-	} else {
-		gps_err_norm_lim = 1.0f;
-	}
-	bool flow_required = !_control_status.flags.gps || (_gps_error_norm > gps_err_norm_lim);
-	if (!_inhibit_flow_use) {
-		// check if we should inhibit use of optical flow
-		bool movement_not_ok = ((_imu_sample_delayed.time_us - _time_good_motion_us) > (uint64_t)1E5)
-				&& !_range_aid_mode_enabled;
-		if (movement_not_ok || !flow_required) {
-			_inhibit_flow_use = true;
-		}
-	} else {
-		bool movement_ok = ((_imu_sample_delayed.time_us - _time_bad_motion_us) > (uint64_t)5E6)
-				|| _range_aid_mode_enabled;
-		if (movement_ok && flow_required) {
-			_inhibit_flow_use = false;
-		}
-	}
-
-	// Handle cases where we are using optical flow but are no longer able to because data is old
-	// or its use has been inhibited.
-	if (_control_status.flags.opt_flow) {
-	       if (_inhibit_flow_use) {
-		       _control_status.flags.opt_flow = false;
-		       _time_last_of_fuse = 0;
-
-	       } else if (_time_last_imu - _flow_sample_delayed.time_us > (uint64_t)_params.no_gps_timeout_max) {
-		       _control_status.flags.opt_flow = false;
-
-	       }
-	}
-
+	// New optical flow data has fallen behind the fusion time horizon and is ready to be fused
 	if (_flow_data_ready) {
-		// New optical flow data has fallen behind the fusion time horizon and is ready to be fused
+		// Inhibit flow use if motion is un-suitable or we have good quality GPS
+		// Apply hysteresis to prevent rapid mode switching
+		float gps_err_norm_lim;
+		if (_control_status.flags.opt_flow) {
+			gps_err_norm_lim = 0.7f;
+		} else {
+			gps_err_norm_lim = 1.0f;
+		}
+
+		// Check if we are in-air and require optical flow to control position drift
+		bool flow_required = _control_status.flags.in_air &&
+				(_is_dead_reckoning // is doing inertial dead-reckoning so must constrain drift urgently
+				  || (_control_status.flags.opt_flow && !_control_status.flags.gps && !_control_status.flags.ev_pos) // is completely reliant on optical flow
+				  || (_control_status.flags.gps && (_gps_error_norm > gps_err_norm_lim))); // is using GPS, but GPS is bad
+
+		if (!_inhibit_flow_use && _control_status.flags.opt_flow) {
+			// inhibit use of optical flow if motion is unsuitable and we are not reliant on it for flight navigation
+			bool preflight_motion_not_ok = !_control_status.flags.in_air && ((_imu_sample_delayed.time_us - _time_good_motion_us) > (uint64_t)1E5);
+			bool flight_motion_not_ok = _control_status.flags.in_air && !_range_aid_mode_enabled;
+			if ((preflight_motion_not_ok || flight_motion_not_ok) && !flow_required) {
+				_inhibit_flow_use = true;
+			}
+		} else if (_inhibit_flow_use && !_control_status.flags.opt_flow){
+			// allow use of optical flow if motion is suitable or we are reliant on it for flight navigation
+			bool preflight_motion_ok = !_control_status.flags.in_air && ((_imu_sample_delayed.time_us - _time_bad_motion_us) > (uint64_t)5E6);
+			bool flight_motion_ok = _control_status.flags.in_air && _range_aid_mode_enabled;
+			if (preflight_motion_ok || flight_motion_ok || flow_required) {
+				_inhibit_flow_use = false;
+			}
+		}
+
+		// Handle cases where we are using optical flow but are no longer able to because data is old
+		// or its use has been inhibited.
+		if (_control_status.flags.opt_flow) {
+		       if (_inhibit_flow_use) {
+			       _control_status.flags.opt_flow = false;
+			       _time_last_of_fuse = 0;
+
+		       } else if (_time_last_imu - _flow_sample_delayed.time_us > (uint64_t)_params.no_gps_timeout_max) {
+			       _control_status.flags.opt_flow = false;
+
+		       }
+		}
 
 		// Accumulate autopilot gyro data across the same time interval as the flow sensor
 		_imu_del_ang_of += _imu_sample_delayed.delta_ang - _state.gyro_bias;
