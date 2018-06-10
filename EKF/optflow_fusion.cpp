@@ -43,6 +43,7 @@
 #include "ekf.h"
 #include <ecl.h>
 #include <mathlib/mathlib.h>
+#include <cfloat>
 
 void Ekf::fuseOptFlow()
 {
@@ -95,7 +96,7 @@ void Ekf::fuseOptFlow()
 	opt_flow_rate(0) = _flow_sample_delayed.flowRadXYcomp(0) / _flow_sample_delayed.dt + _flow_gyro_bias(0);
 	opt_flow_rate(1) = _flow_sample_delayed.flowRadXYcomp(1) / _flow_sample_delayed.dt + _flow_gyro_bias(1);
 
-	if (opt_flow_rate.norm() < _params.flow_rate_max) {
+	if (opt_flow_rate.norm() < _flow_max_rate) {
 		_flow_innov[0] =  vel_body(1) / range - opt_flow_rate(0); // flow around the X axis
 		_flow_innov[1] = -vel_body(0) / range - opt_flow_rate(1); // flow around the Y axis
 
@@ -500,7 +501,6 @@ void Ekf::fuseOptFlow()
 			fuse(gain, _flow_innov[obs_index]);
 
 			_time_last_of_fuse = _time_last_imu;
-			_gps_check_fail_status.value = 0;
 		}
 	}
 }
@@ -539,7 +539,7 @@ void Ekf::calcOptFlowBias()
 
 	// if accumulation time differences are not excessive and accumulation time is adequate
 	// compare the optical flow and and navigation rate data and calculate a bias error
-	if ((fabsf(_delta_time_of - _flow_sample_delayed.dt) < 0.1f) && (_delta_time_of > 0.01f)) {
+	if ((fabsf(_delta_time_of - _flow_sample_delayed.dt) < 0.1f) && (_delta_time_of > FLT_EPSILON)) {
 		// calculate a reference angular rate
 		Vector3f reference_body_rate;
 		reference_body_rate = _imu_del_ang_of * (1.0f / _delta_time_of);

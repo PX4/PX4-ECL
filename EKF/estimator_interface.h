@@ -152,12 +152,8 @@ public:
 	// get the 1-sigma horizontal and vertical velocity uncertainty
 	virtual void get_ekf_vel_accuracy(float *ekf_evh, float *ekf_evv) = 0;
 
-	/*
-	Returns the following vehicle control limits required by the estimator.
-	vxy_max : Maximum ground relative horizontal speed (metres/sec). NaN when no limiting required.
-	limit_hagl : Boolean true when height above ground needs to be controlled to remain between optical flow focus and rang efinder max range limits.
-	*/
-	virtual void get_ekf_ctrl_limits(float *vxy_max, bool *limit_hagl) = 0;
+	// get the vehicle control limits required by the estimator to keep within sensor limitations
+	virtual void get_ekf_ctrl_limits(float *vxy_max, float *vz_max, float *hagl_min, float *hagl_max) = 0;
 
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	virtual bool collect_gps(uint64_t time_usec, struct gps_message *gps) { return true; }
@@ -232,6 +228,21 @@ public:
 
 	// set air density used by the multi-rotor specific drag force fusion
 	void set_air_density(float air_density) {_air_density = air_density;}
+
+	// set sensor limitations reported by the rangefinder
+	void set_rangefinder_limits(float min_distance, float max_distance)
+	{
+		_rng_min_distance = min_distance;
+		_rng_max_distance = max_distance;
+	}
+
+	// set sensor limitations reported by the optical flow sensor
+	void set_optical_flow_limits(float max_flow_rate, float min_distance, float max_distance)
+	{
+		_flow_max_rate = max_flow_rate;
+		_flow_min_distance = min_distance;
+		_flow_max_distance = max_distance;
+	}
 
 	// return true if the global position estimate is valid
 	virtual bool global_position_is_valid() = 0;
@@ -420,6 +431,13 @@ protected:
 	float _drag_sample_time_dt{0.0f};	// time integral across all samples used to form _drag_down_sampled (sec)
 	float _air_density{CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C};		// air density (kg/m**3)
 
+	// Sensor limitations
+	float _rng_min_distance{0.0f};	///< minimum distance that the rangefinder can measure (m)
+	float _rng_max_distance{0.0f};	///< maximum distance that the rangefinder can measure (m)
+	float _flow_max_rate{0.0f}; ///< maximum angular flow rate that the optical flow sensor can measure (rad/s)
+	float _flow_min_distance{0.0f};	///< minimum distance that the optical flow sensor can operate at (m)
+	float _flow_max_distance{0.0f};	///< maximum distance that the optical flow sensor can operate at (m)
+
 	// Output Predictor
 	outputSample _output_sample_delayed{};	// filter output on the delayed time horizon
 	outputSample _output_new{};		// filter output on the non-delayed time horizon
@@ -457,13 +475,15 @@ protected:
 	bool _deadreckon_time_exceeded{false};	// true if the horizontal nav solution has been deadreckoning for too long and is invalid
 	bool _is_wind_dead_reckoning{false};	// true if we are navigating reliant on wind relative measurements
 
-	// IMU vibration monitoring
+	// IMU vibration and movement monitoring
 	Vector3f _delta_ang_prev;	// delta angle from the previous IMU measurement
 	Vector3f _delta_vel_prev;	// delta velocity from the previous IMU measurement
 	float _vibe_metrics[3] {};	// IMU vibration metrics
 					// [0] Level of coning vibration in the IMU delta angles (rad^2)
 					// [1] high frequency vibraton level in the IMU delta angle data (rad)
 					// [2] high frequency vibration level in the IMU delta velocity data (m/s)
+	bool _vehicle_at_rest{false};	// true when the vehicle is at rest
+	uint64_t _time_last_move_detect_us{0};	// timestamp of last movement detection event in microseconds
 
 	// data buffer instances
 	RingBuffer<imuSample> _imu_buffer;

@@ -337,13 +337,13 @@ void Ekf::controlExternalVisionFusion()
 
 void Ekf::controlOpticalFlowFusion()
 {
-	// Check if motion is un-suitable for use of optical flow
+	// Check if on ground motion is un-suitable for use of optical flow
 	if (!_control_status.flags.in_air) {
 		// When on ground check if the vehicle is being shaken or moved in a way that could cause a loss of navigation
 		float accel_norm = _accel_vec_filt.norm();
 		bool motion_is_excessive = ((accel_norm > 14.7f) // accel greater than 1.5g
 					    || (accel_norm < 4.9f) // accel less than 0.5g
-					    || (_ang_rate_mag_filt > _params.flow_rate_max) // angular rate exceeds flow sensor limit
+					    || (_ang_rate_mag_filt > _flow_max_rate) // angular rate exceeds flow sensor limit
 					    || (_R_to_earth(2,2) < 0.866f)); // tilted more than 30 degrees
 		if (motion_is_excessive) {
 			_time_bad_motion_us = _imu_sample_delayed.time_us;
@@ -353,44 +353,55 @@ void Ekf::controlOpticalFlowFusion()
 		}
 
 	} else {
-		bool good_gps_aiding = _control_status.flags.gps && ((_time_last_imu - _last_gps_fail_us) > (uint64_t)6e6);
-		if (good_gps_aiding && !_range_aid_mode_enabled) {
-			// Detect the special case where we are in flight, are using good quality GPS and speed and range has exceeded
-			// limits for use of range finder for height
-			_time_bad_motion_us = _imu_sample_delayed.time_us;
-		} else {
-			_time_good_motion_us = _imu_sample_delayed.time_us;
-		}
+		_time_bad_motion_us = 0;
+		_time_good_motion_us = _imu_sample_delayed.time_us;
 	}
 
-	// Inhibit flow use if motion is un-suitable
-	// Apply a time based hysteresis to prevent rapid mode switching
-	if (!_inhibit_gndobs_use) {
-		if ((_imu_sample_delayed.time_us - _time_good_motion_us) > (uint64_t)1E5) {
-			_inhibit_gndobs_use = true;
-		}
-
-	} else {
-		if ((_imu_sample_delayed.time_us - _time_bad_motion_us) > (uint64_t)5E6) {
-			_inhibit_gndobs_use = false;
-		}
-	}
-
-	// Handle cases where we are using optical flow but are no longer able to because data is old
-	// or its use has been inhibited.
-	if (_control_status.flags.opt_flow) {
-		if (_inhibit_gndobs_use) {
-			_control_status.flags.opt_flow = false;
-			_time_last_of_fuse = 0;
-
-		} else if (_time_last_imu - _flow_sample_delayed.time_us > (uint64_t)_params.no_gps_timeout_max) {
-			_control_status.flags.opt_flow = false;
-
-		}
-	}
-
+	// New optical flow data has fallen behind the fusion time horizon and is ready to be fused
 	if (_flow_data_ready) {
-		// New optical flow data has fallen behind the fusion time horizon and is ready to be fused
+		// Inhibit flow use if motion is un-suitable or we have good quality GPS
+		// Apply hysteresis to prevent rapid mode switching
+		float gps_err_norm_lim;
+		if (_control_status.flags.opt_flow) {
+			gps_err_norm_lim = 0.7f;
+		} else {
+			gps_err_norm_lim = 1.0f;
+		}
+
+		// Check if we are in-air and require optical flow to control position drift
+		bool flow_required = _control_status.flags.in_air &&
+				(_is_dead_reckoning // is doing inertial dead-reckoning so must constrain drift urgently
+				  || (_control_status.flags.opt_flow && !_control_status.flags.gps && !_control_status.flags.ev_pos) // is completely reliant on optical flow
+				  || (_control_status.flags.gps && (_gps_error_norm > gps_err_norm_lim))); // is using GPS, but GPS is bad
+
+		if (!_inhibit_flow_use && _control_status.flags.opt_flow) {
+			// inhibit use of optical flow if motion is unsuitable and we are not reliant on it for flight navigation
+			bool preflight_motion_not_ok = !_control_status.flags.in_air && ((_imu_sample_delayed.time_us - _time_good_motion_us) > (uint64_t)1E5);
+			bool flight_motion_not_ok = _control_status.flags.in_air && !_range_aid_mode_enabled;
+			if ((preflight_motion_not_ok || flight_motion_not_ok) && !flow_required) {
+				_inhibit_flow_use = true;
+			}
+		} else if (_inhibit_flow_use && !_control_status.flags.opt_flow){
+			// allow use of optical flow if motion is suitable or we are reliant on it for flight navigation
+			bool preflight_motion_ok = !_control_status.flags.in_air && ((_imu_sample_delayed.time_us - _time_bad_motion_us) > (uint64_t)5E6);
+			bool flight_motion_ok = _control_status.flags.in_air && _range_aid_mode_enabled;
+			if (preflight_motion_ok || flight_motion_ok || flow_required) {
+				_inhibit_flow_use = false;
+			}
+		}
+
+		// Handle cases where we are using optical flow but are no longer able to because data is old
+		// or its use has been inhibited.
+		if (_control_status.flags.opt_flow) {
+		       if (_inhibit_flow_use) {
+			       _control_status.flags.opt_flow = false;
+			       _time_last_of_fuse = 0;
+
+			} else if (_time_last_imu - _flow_sample_delayed.time_us > (uint64_t)_params.no_gps_timeout_max) {
+				_control_status.flags.opt_flow = false;
+
+			}
+		}
 
 		// Accumulate autopilot gyro data across the same time interval as the flow sensor
 		_imu_del_ang_of += _imu_sample_delayed.delta_ang - _state.gyro_bias;
@@ -398,21 +409,21 @@ void Ekf::controlOpticalFlowFusion()
 
 		// optical flow fusion mode selection logic
 		if ((_params.fusion_mode & MASK_USE_OF) // optical flow has been selected by the user
-		    && !_control_status.flags.opt_flow // we are not yet using flow data
-		    && _control_status.flags.tilt_align // we know our tilt attitude
-		    && get_terrain_valid()) { // we have a valid distance to ground estimate
-
+			&& !_control_status.flags.opt_flow // we are not yet using flow data
+			&& _control_status.flags.tilt_align // we know our tilt attitude
+			&& !_inhibit_flow_use
+			&& get_terrain_valid()) // we have a valid distance to ground estimate
+		{
 			// If the heading is not aligned, reset the yaw and magnetic field states
 			if (!_control_status.flags.yaw_align) {
 				_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 			}
 
-			// If the heading is valid and use is no tinhibited , start using optical flow aiding
-			if (_control_status.flags.yaw_align && !_inhibit_gndobs_use) {
+			// If the heading is valid and use is not inhibited , start using optical flow aiding
+			if (_control_status.flags.yaw_align) {
 				// set the flag and reset the fusion timeout
 				_control_status.flags.opt_flow = true;
 				_time_last_of_fuse = _time_last_imu;
-				ECL_INFO("EKF Starting Optical Flow Use");
 
 				// if we are not using GPS then the velocity and position states and covariances need to be set
 				if (!_control_status.flags.gps || !_control_status.flags.ev_pos) {
@@ -472,10 +483,18 @@ void Ekf::controlGpsFusion()
 				// If the heading is not aligned, reset the yaw and magnetic field states
 				// Do not use external vision for yaw if using GPS because yaw needs to be
 				// defined relative to an NED reference frame
-				if (!_control_status.flags.yaw_align || _control_status.flags.ev_yaw) {
+				if (!_control_status.flags.yaw_align || _control_status.flags.ev_yaw || _mag_inhibit_yaw_reset_req) {
 					_control_status.flags.yaw_align = false;
 					_control_status.flags.ev_yaw = false;
 					_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+					// Handle the special case where we have not been constraining yaw drift or learning yaw bias due
+					// to assumed invalid mag field associated with indoor operation with a downwards looking flow sensor.
+					if (_mag_inhibit_yaw_reset_req) {
+						_mag_inhibit_yaw_reset_req = false;
+						// Zero the yaw bias covariance and set the variance to the initial alignment uncertainty
+						float dt = 0.001f * (float)FILTER_UPDATE_PERIOD_MS;
+						setDiag(P, 12, 12, sq(_params.switch_on_gyro_bias * dt));
+					}
 				}
 
 				// If the heading is valid start using gps aiding
@@ -1040,15 +1059,15 @@ void Ekf::rangeAidConditionsMet()
 	// 3) Our terrain estimate is stable (needs better checks)
 	// 4) We are in-air
 	if (_control_status.flags.in_air) {
-		// check if we should use range finder measurements to estimate height, use hysteresis to avoid rapid switching
-		bool use_range_finder;
+		// check if we can use range finder measurements to estimate height, use hysteresis to avoid rapid switching
+		bool can_use_range_finder;
 		if (_range_aid_mode_enabled) {
-			use_range_finder = (_terrain_vpos - _state.pos(2) < _params.max_hagl_for_range_aid) && get_terrain_valid();
+			can_use_range_finder = (_terrain_vpos - _state.pos(2) < _params.max_hagl_for_range_aid) && get_terrain_valid();
 
 		} else {
 			// if we were not using range aid in the previous iteration then require the current height above terrain to be
 			// smaller than 70 % of the maximum allowed ground distance for range aid
-			use_range_finder = (_terrain_vpos - _state.pos(2) < 0.7f * _params.max_hagl_for_range_aid) && get_terrain_valid();
+			can_use_range_finder = (_terrain_vpos - _state.pos(2) < 0.7f * _params.max_hagl_for_range_aid) && get_terrain_valid();
 		}
 
 		bool horz_vel_valid = (_control_status.flags.gps || _control_status.flags.ev_pos || _control_status.flags.opt_flow)
@@ -1058,29 +1077,29 @@ void Ekf::rangeAidConditionsMet()
 			float ground_vel = sqrtf(_state.vel(0) * _state.vel(0) + _state.vel(1) * _state.vel(1));
 
 			if (_range_aid_mode_enabled) {
-				use_range_finder &= ground_vel < _params.max_vel_for_range_aid;
+				can_use_range_finder &= ground_vel < _params.max_vel_for_range_aid;
 
 			} else {
 				// if we were not using range aid in the previous iteration then require the ground velocity to be
 				// smaller than 70 % of the maximum allowed ground velocity for range aid
-				use_range_finder &= ground_vel < 0.7f * _params.max_vel_for_range_aid;
+				can_use_range_finder &= ground_vel < 0.7f * _params.max_vel_for_range_aid;
 			}
 
 		} else {
-			use_range_finder = false;
+			can_use_range_finder = false;
 		}
 
 		// use hysteresis to check for hagl
 		if (_range_aid_mode_enabled) {
-			use_range_finder &= ((_hagl_innov * _hagl_innov / (sq(_params.range_aid_innov_gate) * _hagl_innov_var)) < 1.0f);
+			can_use_range_finder &= ((_hagl_innov * _hagl_innov / (sq(_params.range_aid_innov_gate) * _hagl_innov_var)) < 1.0f);
 
 		} else {
 			// if we were not using range aid in the previous iteration then use a much lower (1/100) threshold to avoid
 			// switching to range finder too soon (wait for terrain to update).
-			use_range_finder &= ((_hagl_innov * _hagl_innov / (sq(_params.range_aid_innov_gate) * _hagl_innov_var)) < 0.01f);
+			can_use_range_finder &= ((_hagl_innov * _hagl_innov / (sq(_params.range_aid_innov_gate) * _hagl_innov_var)) < 0.01f);
 		}
 
-		_range_aid_mode_enabled = use_range_finder;
+		_range_aid_mode_enabled = can_use_range_finder;
 
 	} else {
 		_range_aid_mode_enabled = false;
@@ -1198,7 +1217,8 @@ void Ekf::controlBetaFusion()
 void Ekf::controlDragFusion()
 {
 	if (_params.fusion_mode & MASK_USE_DRAG) {
-		if (_control_status.flags.in_air) {
+		if (_control_status.flags.in_air
+				&& !_mag_inhibit_yaw_reset_req) {
 			if (!_control_status.flags.wind) {
 				// reset the wind states and covariances when starting drag accel fusion
 				_control_status.flags.wind = true;
@@ -1389,6 +1409,25 @@ void Ekf::controlMagFusion()
 
 		} else {
 			_control_status.flags.mag_dec = false;
+		}
+
+		// If the user has selected auto protection against indoor magnetic field errors, only use the magnetomer
+		// if a yaw angle relative to true North is required for navigation. If no GPS or other earth frame aiding
+		// is available, assume that we are operating indoors and the magnetometer should not be used.
+		bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR);
+		bool not_using_gps = !(_params.fusion_mode & MASK_USE_GPS) || !_control_status.flags.gps;
+		bool not_using_evpos = !(_params.fusion_mode & MASK_USE_EVPOS) || !_control_status.flags.ev_pos;
+		bool not_selected_evyaw =  !(_params.fusion_mode & MASK_USE_EVYAW);
+		if (user_selected && not_using_gps && not_using_evpos && not_selected_evyaw) {
+			_mag_use_inhibit = true;
+		} else {
+			_mag_use_inhibit = false;
+			_mag_use_not_inhibit_us = _imu_sample_delayed.time_us;
+		}
+
+		// If magnetomer use has been inhibited continuously then a yaw reset is required for a valid heading
+		if (uint32_t(_imu_sample_delayed.time_us - _mag_use_not_inhibit_us) > (uint32_t)5e6) {
+			_mag_inhibit_yaw_reset_req = true;
 		}
 
 		// fuse magnetometer data using the selected methods

@@ -140,12 +140,8 @@ public:
 	// get the 1-sigma horizontal and vertical velocity uncertainty
 	void get_ekf_vel_accuracy(float *ekf_evh, float *ekf_evv);
 
-	/*
-	Returns the following vehicle control limits required by the estimator.
-	vxy_max : Maximum ground relative horizontal speed (metres/sec). NaN when no limiting required.
-	tilt_rate_max : maximum allowed tilt rate against the direction of travel (rad/sec). NaN when no limiting required.
-	*/
-	void get_ekf_ctrl_limits(float *vxy_max, bool *limit_hagl);
+	// get the vehicle control limits required by the estimator to keep within sensor limitations
+	void get_ekf_ctrl_limits(float *vxy_max, float *vz_max, float *hagl_min, float *hagl_max);
 
 	/*
 	Reset all IMU bias states and covariances to initial alignment values.
@@ -322,6 +318,12 @@ private:
 	bool _yaw_angle_observable{false};	///< true when there is enough horizontal acceleration to make yaw observable
 	uint64_t _time_yaw_started{0};		///< last system time in usec that a yaw rotation moaneouvre was detected
 	uint8_t _num_bad_flight_yaw_events{0};	///< number of times a bad heading has been detected in flight and required a yaw reset
+	uint64_t _mag_use_not_inhibit_us{0};	///< last system time in usec before magnetomer use was inhibited
+	bool _mag_use_inhibit{false};		///< true when magnetomer use is being inhibited
+	bool _mag_use_inhibit_prev{false};	///< true when magnetomer use was being inhibited the previous frame
+	bool _mag_inhibit_yaw_reset_req{false};	///< true when magnetomer inhibit has been active for long enough to require a yaw reset when conditons improve.
+	float _last_static_yaw{0.0f};		///< last yaw angle recorded when on ground motion checks were passing (rad)
+	bool _vehicle_at_rest_prev{false};	///< true when the vehicle was at rest the previous time the status was checked
 
 	float P[_k_num_states][_k_num_states] {};	///< state covariance matrix
 
@@ -352,7 +354,7 @@ private:
 	float _delta_time_of{0.0f};	///< time in sec that _imu_del_ang_of was accumulated over (sec)
 	uint64_t _time_bad_motion_us{0};	///< last system time that on-ground motion exceeded limits (uSec)
 	uint64_t _time_good_motion_us{0};	///< last system time that on-ground motion was within limits (uSec)
-	bool _inhibit_gndobs_use{false};	///< true when use of ground observations (optical flow and range finder) is being temporarily inhibited due to excessive on-ground motion
+	bool _inhibit_flow_use{false};	///< true when use of optical flow and range finder is being inhibited
 
 	float _mag_declination{0.0f};	///< magnetic declination used by reset and fusion functions (rad)
 
@@ -373,6 +375,7 @@ private:
 	float _gps_velE_filt{0.0f};		///< GPS filtered East velocity (m/sec)
 	uint64_t _last_gps_fail_us{0};		///< last system time in usec that the GPS failed it's checks
 	uint64_t _last_gps_pass_us{0};		///< last system time in usec that the GPS passed it's checks
+	float _gps_error_norm{1.0f};		///< normalised gps error
 
 	// Variables used to publish the WGS-84 location of the EKF local NED origin
 	uint64_t _last_gps_origin_time_us{0};	///< time the origin was last set (uSec)
@@ -433,7 +436,7 @@ private:
 	bool _bad_vert_accel_detected{false};	///< true when bad vertical accelerometer data has been detected
 
 	// variables used to control range aid functionality
-	bool _range_aid_mode_enabled{false};	///< true when range finder can be used as the height reference instead of the primary height sensor
+	bool _range_aid_mode_enabled{false};	///< true when range finder can be used in flight as the height reference instead of the primary height sensor
 	bool _range_aid_mode_selected{false};	///< true when range finder is being used as the height reference instead of the primary height sensor
 
 	// variables used to check for "stuck" rng data
