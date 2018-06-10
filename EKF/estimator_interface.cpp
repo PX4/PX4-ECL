@@ -404,19 +404,31 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 
 			// NOTE: the EKF uses the reverse sign convention to the flow sensor. EKF assumes positive LOS rate is produced by a RH rotation of the image about the sensor axis.
 			// copy the optical and gyro measured delta angles
+			imuSample matching_imu_sample;
+			Vector3f matching_gyro_sample;
+
+			/* for optical flow boards with no gyro. The driver will set the gyro x, y and z fields in the optical_flow message to NAN so that  
+			 * we can check this here and get the gyro data with the matching timestamp from the imu buffer. The gyro data is divided by dt to 
+			 * convert it into a rate before removing it from the flow to remove the rotation component. This is done to prevent errors when the flow
+			 * and gyro data are integrated over different times */
+			if (!ISFINITE(flow->gyrodata(0)) && !ISFINITE(flow->gyrodata(1)) && !ISFINITE(flow->gyrodata(2))) {
+				_imu_buffer.read_first_older_than(optflow_sample_new.time_us, &matching_imu_sample);
+				flow->gyrodata = matching_imu_sample.delta_ang / matching_imu_sample.delta_ang_dt * delta_time;
+			}
+
 			optflow_sample_new.gyroXYZ = - flow->gyrodata;
 
+
 			if (flow_quality_good) {
-				optflow_sample_new.flowRadXY = - flow->flowdata;
+					optflow_sample_new.flowRadXY = - flow->flowdata;
 
 			} else {
 				// when on the ground with poor flow quality, assume zero ground relative velocity
 				optflow_sample_new.flowRadXY(0) = - flow->gyrodata(0);
 				optflow_sample_new.flowRadXY(1) = - flow->gyrodata(1);
-
 			}
 
-			// compensate for body motion to give a LOS rate
+			// compensate for body motion to give a LOS delta angle
 			optflow_sample_new.flowRadXYcomp(0) = optflow_sample_new.flowRadXY(0) - optflow_sample_new.gyroXYZ(0);
 			optflow_sample_new.flowRadXYcomp(1) = optflow_sample_new.flowRadXY(1) - optflow_sample_new.gyroXYZ(1);
 
