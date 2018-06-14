@@ -173,6 +173,12 @@ void EstimatorInterface::setMagData(uint64_t time_usec, float (&data)[3])
 		return;
 	}
 
+	// There are various code places that assume _time_last_imu is the latest timestamp,
+	// so make sure the mag time is not newer.
+	if (time_usec > _time_last_imu) {
+		time_usec = _time_last_imu;
+	}
+
 	// Allocate the required buffer size if not previously done
 	// Do not retry if allocation has failed previously
 	if (_mag_buffer.get_length() < _obs_buffer_length) {
@@ -203,6 +209,12 @@ void EstimatorInterface::setGpsData(uint64_t time_usec, struct gps_message *gps)
 {
 	if (!_initialised || _gps_buffer_fail) {
 		return;
+	}
+
+	// There are various code places that assume _time_last_imu is the latest timestamp,
+	// so make sure the gps time is not newer.
+	if (time_usec > _time_last_imu) {
+		time_usec = _time_last_imu;
 	}
 
 	// Allocate the required buffer size if not previously done
@@ -259,6 +271,12 @@ void EstimatorInterface::setBaroData(uint64_t time_usec, float data)
 		return;
 	}
 
+	// There are various code places that assume _time_last_imu is the latest timestamp,
+	// so make sure the baro time is not newer.
+	if (time_usec > _time_last_imu) {
+		time_usec = _time_last_imu;
+	}
+
 	// Allocate the required buffer size if not previously done
 	// Do not retry if allocation has failed previously
 	if (_baro_buffer.get_length() < _obs_buffer_length) {
@@ -292,6 +310,12 @@ void EstimatorInterface::setAirspeedData(uint64_t time_usec, float true_airspeed
 		return;
 	}
 
+	// There are various code places that assume _time_last_imu is the latest timestamp,
+	// so make sure the airspeed time is not newer.
+	if (time_usec > _time_last_imu) {
+		time_usec = _time_last_imu;
+	}
+
 	// Allocate the required buffer size if not previously done
 	// Do not retry if allocation has failed previously
 	if (_airspeed_buffer.get_length() < _obs_buffer_length) {
@@ -322,6 +346,12 @@ void EstimatorInterface::setRangeData(uint64_t time_usec, float data)
 		return;
 	}
 
+	// There are various code places that assume _time_last_imu is the latest timestamp,
+	// so make sure the range time is not newer.
+	if (time_usec > _time_last_imu) {
+		time_usec = _time_last_imu;
+	}
+
 	// Allocate the required buffer size if not previously done
 	// Do not retry if allocation has failed previously
 	if (_range_buffer.get_length() < _obs_buffer_length) {
@@ -349,6 +379,12 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 {
 	if (!_initialised || _flow_buffer_fail) {
 		return;
+	}
+
+	// There are various code places that assume _time_last_imu is the latest timestamp,
+	// so make sure the optical flow time is not newer.
+	if (time_usec > _time_last_imu) {
+		time_usec = _time_last_imu;
 	}
 
 	// Allocate the required buffer size if not previously done
@@ -471,6 +507,12 @@ void EstimatorInterface::setAuxVelData(uint64_t time_usec, float (&data)[2], flo
 {
 	if (!_initialised || _auxvel_buffer_fail) {
 		return;
+	}
+
+	// There are various code places that assume _time_last_imu is the latest timestamp,
+	// so make sure the aux vel time is not newer.
+	if (time_usec > _time_last_imu) {
+		time_usec = _time_last_imu;
 	}
 
 	// Allocate the required buffer size if not previously done
