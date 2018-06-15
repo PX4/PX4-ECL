@@ -118,14 +118,16 @@ bool Ekf::gps_is_good(struct gps_message *gps)
 	// Check the geometric dilution of precision
 	_gps_check_fail_status.flags.gdop = (gps->gdop > _params.req_gdop);
 
-	// Check the reported horizontal position accuracy
+	// Check the reported horizontal and vertical position accuracy
 	_gps_check_fail_status.flags.hacc = (gps->eph > _params.req_hacc);
-
-	// Check the reported vertical position accuracy
 	_gps_check_fail_status.flags.vacc = (gps->epv > _params.req_vacc);
 
 	// Check the reported speed accuracy
 	_gps_check_fail_status.flags.sacc = (gps->sacc > _params.req_sacc);
+
+	// check if GPS quality is degraded
+	_gps_error_norm = fmaxf((gps->eph / _params.req_hacc) , (gps->epv / _params.req_vacc));
+	_gps_error_norm = fmaxf(_gps_error_norm , (gps->sacc / _params.req_sacc));
 
 	// Calculate position movement since last measurement
 	float delta_posN = 0.0f;
