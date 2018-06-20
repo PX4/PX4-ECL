@@ -233,6 +233,10 @@ public:
 	// set air density used by the multi-rotor specific drag force fusion
 	void set_air_density(float air_density) {_air_density = air_density;}
 
+	// set baro observation noise (m)
+	// parameter defined value is used until noise is set
+	void set_baro_noise(float obs_noise) {_params.baro_noise = obs_noise;}
+
 	// return true if the global position estimate is valid
 	virtual bool global_position_is_valid() = 0;
 
