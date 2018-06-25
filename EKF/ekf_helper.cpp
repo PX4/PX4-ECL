@@ -1116,7 +1116,7 @@ bool Ekf::reset_imu_bias()
 	zeroRows(P, 10, 15);
 
 	// Set the corresponding variances to the values use for initial alignment
-	float dt = 0.001f * (float)FILTER_UPDATE_PERIOD_MS;
+	float dt = FILTER_UPDATE_PERIOD_S;
 	P[12][12] = P[11][11] = P[10][10] = sq(_params.switch_on_gyro_bias * dt);
 	P[15][15] = P[14][14] = P[13][13] = sq(_params.switch_on_accel_bias * dt);
 	_last_imu_bias_cov_reset_us = _imu_sample_delayed.time_us;
