@@ -793,7 +793,7 @@ void Ekf::constrainStates()
 	}
 
 	for (int i = 0; i < 3; i++) {
-		_state.gyro_bias(i) = math::constrain(_state.gyro_bias(i), -0.349066f * _dt_ekf_avg, 0.349066f * _dt_ekf_avg);
+		_state.gyro_bias(i) = math::constrain(_state.gyro_bias(i), -math::radians(20.f) * _dt_ekf_avg, math::radians(20.f) * _dt_ekf_avg);
 	}
 
 	for (int i = 0; i < 3; i++) {

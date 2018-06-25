@@ -598,10 +598,7 @@ private:
 	void checkForStuckRange();
 
 	// return the square of two floating point numbers - used in auto coded sections
-	inline float sq(float var)
-	{
-		return var * var;
-	}
+	static constexpr float sq(float var) { return var * var; }
 
 	// set control flags to use baro height
 	void setControlBaroHeight();

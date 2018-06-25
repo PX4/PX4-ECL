@@ -58,7 +58,7 @@ void Ekf::controlFusionModes()
 
 		// Once the tilt variances have reduced to equivalent of 3deg uncertainty, re-set the yaw and magnetic field states
 		// and declare the tilt alignment complete
-		if ((angle_err_var_vec(0) + angle_err_var_vec(1)) < sq(0.05235f)) {
+		if ((angle_err_var_vec(0) + angle_err_var_vec(1)) < sq(math::radians(3.0f))) {
 			_control_status.flags.tilt_align = true;
 			_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 

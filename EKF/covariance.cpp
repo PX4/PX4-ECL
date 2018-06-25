@@ -907,7 +907,7 @@ void Ekf::resetWindCovariance()
 		// calculate the uncertainty in wind speed and direction using the uncertainty in airspeed and sideslip angle
 		// used to calculate the initial wind speed
 		float R_spd = sq(math::constrain(_params.eas_noise, 0.5f, 5.0f) * math::constrain(_airspeed_sample_delayed.eas2tas, 0.9f, 10.0f));
-		float R_yaw = sq(0.1745f);
+		float R_yaw = sq(math::radians(10.0f));
 
 		// calculate the variance and covariance terms for the wind states
 		float cos_yaw = cosf(yaw);
