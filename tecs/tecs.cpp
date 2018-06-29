@@ -455,21 +455,21 @@ void TECS::_update_pitch_setpoint()
 	}
 
 	// Calculate the weighting applied to control of specific potential energy error
-	float SPE_weighting = 2.0f - SKE_weighting;
+	const float SPE_weighting = 2.0f - SKE_weighting;
 
 	// Calculate the specific energy balance demand which specifies how the available total
 	// energy should be allocated to speed (kinetic energy) and height (potential energy)
-	float SEB_setpoint = _SPE_setpoint * SPE_weighting - _SKE_setpoint * SKE_weighting;
+	const float SEB_setpoint = _SPE_setpoint * SPE_weighting - _SKE_setpoint * SKE_weighting;
 
 	// Calculate the specific energy balance rate demand
-	float SEB_rate_setpoint = _SPE_rate_setpoint * SPE_weighting - _SKE_rate_setpoint * SKE_weighting;
+	const float SEB_rate_setpoint = _SPE_rate_setpoint * SPE_weighting - _SKE_rate_setpoint * SKE_weighting;
 
 	// Calculate the specific energy balance and balance rate error
 	_SEB_error = SEB_setpoint - (_SPE_estimate * SPE_weighting - _SKE_estimate * SKE_weighting);
 	_SEB_rate_error = SEB_rate_setpoint - (_SPE_rate * SPE_weighting - _SKE_rate * SKE_weighting);
 
 	// Calculate derivative from change in climb angle to rate of change of specific energy balance
-	float climb_angle_to_SEB_rate = _tas_state * _pitch_time_constant * CONSTANTS_ONE_G;
+	const float climb_angle_to_SEB_rate = _tas_state * _pitch_time_constant * CONSTANTS_ONE_G;
 
 	if (_integrator_gain > 0.0f) {
 		// Calculate pitch integrator input term
@@ -508,19 +508,13 @@ void TECS::_update_pitch_setpoint()
 	// b) The offset between climb angle and pitch angle (angle of attack) is constant, excluding the effect of
 	// pitch transients due to control action or turbulence.
 	_pitch_setpoint_unc = (SEB_correction + _pitch_integ_state) / climb_angle_to_SEB_rate;
-	_pitch_setpoint = constrain(_pitch_setpoint_unc, _pitch_setpoint_min, _pitch_setpoint_max);
+
+	const float pitch_setpoint = constrain(_pitch_setpoint_unc, _pitch_setpoint_min, _pitch_setpoint_max);
 
 	// Comply with the specified vertical acceleration limit by applying a pitch rate limit
-	float ptchRateIncr = _dt * _vert_accel_limit / _tas_state;
+	const float ptchRateIncr = _dt * _vert_accel_limit / _tas_state;
 
-	if ((_pitch_setpoint - _last_pitch_setpoint) > ptchRateIncr) {
-		_pitch_setpoint = _last_pitch_setpoint + ptchRateIncr;
-
-	} else if ((_pitch_setpoint - _last_pitch_setpoint) < -ptchRateIncr) {
-		_pitch_setpoint = _last_pitch_setpoint - ptchRateIncr;
-	}
-
-	_last_pitch_setpoint = _pitch_setpoint;
+	_pitch_setpoint = constrain(pitch_setpoint, _pitch_setpoint - ptchRateIncr, _pitch_setpoint + ptchRateIncr);
 }
 
 void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_altitude, float pitch_min_climbout,
@@ -537,8 +531,8 @@ void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_alt
 		_throttle_integ_state =  0.0f;
 		_pitch_integ_state = 0.0f;
 		_throttle_setpoint = (_in_air ? throttle_cruise : 0.0f);;
-		_last_pitch_setpoint = constrain(pitch, _pitch_setpoint_min, _pitch_setpoint_max);
-		_pitch_setpoint_unc = _last_pitch_setpoint;
+		_pitch_setpoint = constrain(pitch, _pitch_setpoint_min, _pitch_setpoint_max);
+		_pitch_setpoint_unc = pitch;
 		_hgt_setpoint_adj_prev = baro_altitude;
 		_hgt_setpoint_adj = _hgt_setpoint_adj_prev;
 		_hgt_setpoint_prev = _hgt_setpoint_adj_prev;
