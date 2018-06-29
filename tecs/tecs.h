@@ -217,7 +217,6 @@ private:
 	// controller states
 	float _throttle_integ_state{0.0f};				///< throttle integrator state
 	float _pitch_integ_state{0.0f};					///< pitch integrator state (rad)
-	float _last_throttle_setpoint{0.0f};				///< throttle demand rate limiter state (1/sec)
 	float _last_pitch_setpoint{0.0f};				///< pitch demand rate limiter state (rad/sec)
 	float _speed_derivative{0.0f};					///< rate of change of speed along X axis (m/sec**2)
 
