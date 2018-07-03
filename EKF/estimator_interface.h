@@ -379,10 +379,7 @@ public:
 	}
 
 	// Getter for a flag indicating if the ekf should update (completed downsampling process)
-	bool get_imu_updated()
-	{
-		return _imu_updated;
-	}
+	bool imu_updated() const { return _imu_updated; }
 
 	void print_status();
 
