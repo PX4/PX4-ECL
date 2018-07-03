@@ -365,7 +365,7 @@ void Ekf::predictState()
 	_dt_ekf_avg = 0.99f * _dt_ekf_avg + 0.01f * input;
 }
 
-bool Ekf::collect_imu(imuSample &imu)
+bool Ekf::collect_imu(const imuSample &imu)
 {
 	// accumulate and downsample IMU data across a period FILTER_UPDATE_PERIOD_MS long
 
@@ -389,7 +389,7 @@ bool Ekf::collect_imu(imuSample &imu)
 
 	// accumulate the most recent delta velocity data at the updated rotation frame
 	// assume effective sample time is halfway between the previous and current rotation frame
-	_imu_down_sampled.delta_vel += (_imu_sample_new.delta_vel + delta_R * _imu_sample_new.delta_vel) * 0.5f;
+	_imu_down_sampled.delta_vel += (imu.delta_vel + delta_R * imu.delta_vel) * 0.5f;
 
 	// if the target time delta between filter prediction steps has been exceeded
 	// write the accumulated IMU data to the ring buffer
@@ -402,11 +402,23 @@ bool Ekf::collect_imu(imuSample &imu)
 		_imu_collection_time_adj += 0.01f * (_imu_down_sampled.delta_ang_dt - target_dt);
 		_imu_collection_time_adj = math::constrain(_imu_collection_time_adj, -0.5f * target_dt, 0.5f * target_dt);
 
-		imu.delta_ang     = _q_down_sampled.to_axis_angle();
-		imu.delta_vel     = _imu_down_sampled.delta_vel;
-		imu.delta_ang_dt  = _imu_down_sampled.delta_ang_dt;
-		imu.delta_vel_dt  = _imu_down_sampled.delta_vel_dt;
+		imuSample imu_sample_new;
+		imu_sample_new.delta_ang = _q_down_sampled.to_axis_angle();
+		imu_sample_new.delta_vel = _imu_down_sampled.delta_vel;
+		imu_sample_new.delta_ang_dt = _imu_down_sampled.delta_ang_dt;
+		imu_sample_new.delta_vel_dt = _imu_down_sampled.delta_vel_dt;
+		imu_sample_new.time_us = imu.time_us;
 
+		_imu_buffer.push(imu_sample_new);
+
+		// get the oldest data from the buffer
+		_imu_sample_delayed = _imu_buffer.get_oldest();
+
+		// calculate the minimum interval between observations required to guarantee no loss of data
+		// this will occur if data is overwritten before its time stamp falls behind the fusion time horizon
+		_min_obs_interval_us = (imu_sample_new.time_us - _imu_sample_delayed.time_us) / (_obs_buffer_length - 1);
+
+		// reset
 		_imu_down_sampled.delta_ang.setZero();
 		_imu_down_sampled.delta_vel.setZero();
 		_imu_down_sampled.delta_ang_dt = 0.0f;
@@ -414,10 +426,13 @@ bool Ekf::collect_imu(imuSample &imu)
 		_q_down_sampled(0) = 1.0f;
 		_q_down_sampled(1) = _q_down_sampled(2) = _q_down_sampled(3) = 0.0f;
 
-		return true;
+		_imu_updated = true;
+
+	} else {
+		_imu_updated = false;
 	}
 
-	return false;
+	return _imu_updated;
 }
 
 /*
