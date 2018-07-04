@@ -662,9 +662,13 @@ void Ekf::calculateOutputStates()
 	}
 }
 
+/*
+ * Predict the previous quaternion output state forward using the latest IMU delta angle data.
+*/
 Quatf Ekf::calculate_quaternion() const
 {
-	// Apply corrections to the delta angle required to track the quaternion states at the EKF fusion time horizon
+	// Correct delta angle data for bias errors using bias state estimates from the EKF and also apply
+	// corrections required to track the EKF quaternion states
 	const Vector3f delta_angle{(_imu_sample_new.delta_ang - _state.gyro_bias) * (_dt_imu_avg / _dt_ekf_avg) + _delta_angle_corr};
 
 	// convert the delta angle to an equivalent delta quaternions

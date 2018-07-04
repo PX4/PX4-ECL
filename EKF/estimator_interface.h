@@ -379,7 +379,7 @@ public:
 		return _baro_sample_delayed;
 	}
 
-	// Getter for a flag indicating if the ekf should update (completed downsampling process)
+	// Getter for a flag indicating if the ekf should update (new downsampled IMU data has been written to the buffer)
 	bool imu_updated() const { return _imu_updated; }
 
 	void print_status();
