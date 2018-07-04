@@ -126,6 +126,7 @@ struct baroSample {
 };
 
 struct rangeSample {
+	uint8_t		quality;  ///< range measurement quality
 	float       rng;	///< range (distance to ground) measurement (m)
 	uint64_t    time_us;	///< timestamp of the measurement (uSec)
 };
