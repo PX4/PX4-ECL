@@ -1308,7 +1308,7 @@ void Ekf::controlMagFusion()
 			} else if (_mag_bias_observable) {
 				// monitor yaw rotation in 45 deg sections.
 				// a rotation of 45 deg is sufficient to make the mag bias observable
-				if (fabsf(_yaw_delta_ef) > 0.7854f) {
+				if (fabsf(_yaw_delta_ef) > math::radians(45.0f)) {
 					_time_yaw_started = _imu_sample_delayed.time_us;
 					_yaw_delta_ef = 0.0f;
 				}
