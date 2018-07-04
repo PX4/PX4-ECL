@@ -110,7 +110,7 @@ bool Ekf::update()
 	}
 
 	// Only run the filter if IMU data in the buffer has been updated
-	if (imu_updated()) {
+	if (_imu_updated) {
 
 		// perform state and covariance prediction for the main filter
 		predictState();
@@ -522,7 +522,7 @@ void Ekf::calculateOutputStates()
 	}
 
 	// store the INS states in a ring buffer with the same length and time coordinates as the IMU data buffer
-	if (imu_updated()) {
+	if (_imu_updated) {
 		_output_buffer.push(_output_new);
 		_output_vert_buffer.push(_output_vert_new);
 

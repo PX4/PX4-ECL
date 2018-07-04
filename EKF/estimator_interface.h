@@ -379,9 +379,6 @@ public:
 		return _baro_sample_delayed;
 	}
 
-	// Getter for a flag indicating if the ekf should update (new downsampled IMU data has been written to the buffer)
-	bool imu_updated() const { return _imu_updated; }
-
 	void print_status();
 
 	static const unsigned FILTER_UPDATE_PERIOD_MS = 8;	// ekf prediction period in milliseconds - this should ideally be an integer multiple of the IMU time delta
