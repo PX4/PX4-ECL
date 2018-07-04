@@ -205,7 +205,7 @@ public:
 	virtual bool reset_imu_bias() = 0;
 
 	// return true if the attitude is usable
-	bool attitude_valid() { return ISFINITE(_output_new.quat_nominal(0)) && _control_status.flags.tilt_align && _control_status.flags.yaw_align; }
+	bool attitude_valid() { return ISFINITE(_output_new.quat_nominal(0)) && _control_status.flags.tilt_align; }
 
 	// get vehicle landed status data
 	bool get_in_air_status() {return _control_status.flags.in_air;}
