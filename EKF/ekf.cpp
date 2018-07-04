@@ -671,7 +671,7 @@ Quatf Ekf::calculate_quaternion() const
 	// corrections required to track the EKF quaternion states
 	const Vector3f delta_angle{_imu_sample_new.delta_ang - _state.gyro_bias * (_dt_imu_avg / _dt_ekf_avg) + _delta_angle_corr};
 
-	// convert the delta angle to an equivalent delta quaternions
+	// increment the quaternions using the corrected delta angle vector
 	// the quaternions must always be normalised after modification
 	return Quatf{_output_new.quat_nominal * AxisAnglef{delta_angle}}.unit();
 }
