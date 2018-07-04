@@ -75,6 +75,9 @@ void Ekf::runTerrainEstimator()
 	// Perform a continuity check on range finder data
 	checkRangeDataContinuity();
 
+	// Perform quality check on range finder data
+	checkRangeDataQuality();
+
 	// Perform initialisation check
 	if (!_terrain_initialised) {
 		_terrain_initialised = initHagl();
@@ -217,4 +220,11 @@ void Ekf::checkRangeDataContinuity()
 	} else {
 		_range_data_continuous = false;
 	}
+}
+
+// check that the range finder data is quality
+void Ekf::checkRangeDataQuality()
+{
+	// get most recent range measurement from buffer
+	 _rng_data_quality_good = _range_buffer.get_newest().quality >= 230;
 }
