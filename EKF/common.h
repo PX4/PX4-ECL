@@ -275,6 +275,7 @@ struct parameters {
 	float range_noise{0.1f};		///< observation noise for range finder measurements (m)
 	float range_innov_gate{5.0f};		///< range finder fusion innovation consistency gate size (STD)
 	float rng_gnd_clearance{0.1f};		///< minimum valid value for range when on ground (m)
+	float rng_variance{0.5f};		///< range finder variance threshold (cm/s/s)
 	float rng_sens_pitch{0.0f};		///< Pitch offset of the range sensor (rad). Sensor points out along Z axis when offset is zero. Positive rotation is RH about Y axis.
 	float range_noise_scaler{0.0f};		///< scaling from range measurement to noise (m/m)
 	float vehicle_variance_scaler{0.0f};	///< gain applied to vehicle height variance used in calculation of height above ground observation variance

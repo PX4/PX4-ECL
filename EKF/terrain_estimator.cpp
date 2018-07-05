@@ -226,5 +226,5 @@ void Ekf::checkRangeDataContinuity()
 void Ekf::checkRangeDataAccuracy()
 {
 	// get most recent range measurement from buffer
-	_rng_data_accuracy_good = _range_buffer.get_newest().variance <= 0.3;
+	_rng_data_accuracy_good = _range_buffer.get_newest().variance <= _params.rng_variance;
 }
