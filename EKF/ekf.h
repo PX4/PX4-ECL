@@ -424,6 +424,7 @@ private:
 	bool _range_data_continuous{false};	///< true when we are receiving range finder data faster than a 2Hz average
 	float _dt_last_range_update_filt_us{0.0f};	///< filtered value of the delta time elapsed since the last range measurement came into the filter (uSec)
 	bool _hagl_valid{false};		///< true when the height above ground estimate is valid
+	bool _rng_data_accuracy_good{false};		///< true range data accuracy is good
 
 	// height sensor fault status
 	bool _baro_hgt_faulty{false};		///< true if valid baro data is unavailable for use
@@ -648,5 +649,9 @@ private:
 
 	// check that the range finder data is continuous
 	void checkRangeDataContinuity();
+
+	// check that the range finder data accuracy
+	void checkRangeDataAccuracy();
+
 
 };
