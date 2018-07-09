@@ -393,7 +393,7 @@ void Ekf::controlOpticalFlowFusion()
 		_delta_time_of += _imu_sample_delayed.delta_ang_dt;
 
 		// optical flow fusion mode selection logic
-		bool flow_quality_ok = _flow_sample_delayed.quality >= _params.flow_qual_min_init;
+		bool flow_quality_ok = (_flow_sample_delayed.quality >= _params.flow_qual_min_init) || (!_control_status.flags.in_air && _params.flow_qual_min_check);
 		if (!flow_quality_ok) {
 			_time_bad_flow_qual = _imu_sample_delayed.time_us;
 		}
