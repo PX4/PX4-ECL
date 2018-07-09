@@ -393,9 +393,22 @@ void Ekf::controlOpticalFlowFusion()
 		_delta_time_of += _imu_sample_delayed.delta_ang_dt;
 
 		// optical flow fusion mode selection logic
-		bool flow_quality_ok = (_flow_sample_delayed.quality >= _params.flow_qual_min_init) || (!_control_status.flags.in_air && _params.flow_qual_min_check);
+		bool flow_quality_ok = _flow_sample_delayed.quality >= _params.flow_qual_min_init;
+
+		if (!_control_status.flags.in_air) {
+			_time_takeoff = 0;
+		} else if (_time_takeoff == 0) {
+			_time_takeoff = _imu_sample_delayed.time_us;
+		}
+
 		if (!flow_quality_ok) {
-			_time_bad_flow_qual = _imu_sample_delayed.time_us;
+			if ((!_control_status.flags.in_air || (_control_status.flags.in_air && _imu_sample_delayed.time_us - _time_takeoff < (uint64_t)5E6))
+				&& _params.flow_qual_min_check) {
+				flow_quality_ok = true;
+				_time_bad_flow_qual = 0;
+			} else {
+				_time_bad_flow_qual = _imu_sample_delayed.time_us;
+			}
 		}
 		flow_quality_ok &= _imu_sample_delayed.time_us - _time_bad_flow_qual > (uint64_t)5E6;
 		if ((_params.fusion_mode & MASK_USE_OF) // optical flow has been selected by the user
@@ -426,7 +439,7 @@ void Ekf::controlOpticalFlowFusion()
 
 				}
 			}
-		} else if (!(_params.fusion_mode & MASK_USE_OF) || (_params.fusion_mode & MASK_USE_OF && !flow_quality_ok)) {
+		} else if (!(_params.fusion_mode & MASK_USE_OF) || ((_params.fusion_mode & MASK_USE_OF) && !flow_quality_ok)) {
 			_control_status.flags.opt_flow = false;
 
 		}
