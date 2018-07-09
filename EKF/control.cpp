@@ -426,7 +426,7 @@ void Ekf::controlOpticalFlowFusion()
 
 				}
 			}
-		} else if (!(_params.fusion_mode & MASK_USE_OF)) {
+		} else if (!(_params.fusion_mode & MASK_USE_OF) || (_params.fusion_mode & MASK_USE_OF && !flow_quality_ok)) {
 			_control_status.flags.opt_flow = false;
 
 		}
