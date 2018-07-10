@@ -395,6 +395,7 @@ void Ekf::controlOpticalFlowFusion()
 		// optical flow fusion mode selection logic
 		bool flow_quality_ok = _flow_sample_delayed.quality >= _params.flow_qual_min_init;
 
+		// record the takeoff time once if we are in-air
 		if (!_control_status.flags.in_air) {
 			_time_takeoff = 0;
 		} else if (_time_takeoff == 0) {
@@ -402,8 +403,9 @@ void Ekf::controlOpticalFlowFusion()
 		}
 
 		if (!flow_quality_ok) {
-			if ((!_control_status.flags.in_air || (_control_status.flags.in_air && _imu_sample_delayed.time_us - _time_takeoff < (uint64_t)5E6))
-				&& _params.flow_qual_min_check) {
+			// disable minimum acceptable quality integer check on the ground and 5 seconds after takeoff if optical flow condition is unsuitable
+			if ((!_control_status.flags.in_air || ((_imu_sample_delayed.time_us - _time_takeoff) < (uint64_t)5E6))
+				&& !_params.flow_qual_check_on_ground) {
 				flow_quality_ok = true;
 				_time_bad_flow_qual = 0;
 			} else {
@@ -439,7 +441,7 @@ void Ekf::controlOpticalFlowFusion()
 
 				}
 			}
-		} else if (!(_params.fusion_mode & MASK_USE_OF) || ((_params.fusion_mode & MASK_USE_OF) && !flow_quality_ok)) {
+		} else if (!(_params.fusion_mode & MASK_USE_OF) || !flow_quality_ok) {
 			_control_status.flags.opt_flow = false;
 
 		}
