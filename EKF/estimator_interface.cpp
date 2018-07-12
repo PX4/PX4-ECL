@@ -300,7 +300,7 @@ void EstimatorInterface::setAirspeedData(uint64_t time_usec, float true_airspeed
 	}
 }
 
-void EstimatorInterface::setRangeData(uint64_t time_usec, float data)
+void EstimatorInterface::setRangeData(uint64_t time_usec, float data, float variance)
 {
 	if (!_initialised || _range_buffer_fail) {
 		return;
@@ -321,6 +321,7 @@ void EstimatorInterface::setRangeData(uint64_t time_usec, float data)
 	if (time_usec - _time_last_range > _min_obs_interval_us) {
 		rangeSample range_sample_new;
 		range_sample_new.rng = data;
+		range_sample_new.variance = variance;
 		range_sample_new.time_us = time_usec - _params.range_delay_ms * 1000;
 		_time_last_range = time_usec;
 

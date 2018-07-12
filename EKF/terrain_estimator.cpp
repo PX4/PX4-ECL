@@ -75,6 +75,9 @@ void Ekf::runTerrainEstimator()
 	// Perform a continuity check on range finder data
 	checkRangeDataContinuity();
 
+	// Perform accuracy check on range finder data
+	checkRangeDataAccuracy();
+
 	// Perform initialisation check
 	if (!_terrain_initialised) {
 		_terrain_initialised = initHagl();
@@ -172,7 +175,7 @@ bool Ekf::get_terrain_valid()
 void Ekf::update_terrain_valid()
 {
 	if (_terrain_initialised && _range_data_continuous && !_control_status.flags.rng_stuck &&
-	    (_time_last_imu - _time_last_hagl_fuse < (uint64_t)5e6)) {
+	    (_time_last_imu - _time_last_hagl_fuse < (uint64_t)5e6) && _rng_data_accuracy_good) {
 
 		_hagl_valid = true;
 
@@ -217,4 +220,11 @@ void Ekf::checkRangeDataContinuity()
 	} else {
 		_range_data_continuous = false;
 	}
+}
+
+// check that the range finder data accuracy
+void Ekf::checkRangeDataAccuracy()
+{
+	// get most recent range measurement from buffer
+	_rng_data_accuracy_good = _range_buffer.get_newest().variance <= _params.rng_variance;
 }
