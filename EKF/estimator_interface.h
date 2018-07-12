@@ -42,6 +42,7 @@
 #include "common.h"
 #include "RingBuffer.h"
 
+#include <ecl.h>
 #include <geo/geo.h>
 #include <matrix/math.hpp>
 #include <mathlib/mathlib.h>
@@ -159,7 +160,7 @@ public:
 	virtual bool collect_gps(uint64_t time_usec, struct gps_message *gps) { return true; }
 
 	// accumulate and downsample IMU data to the EKF prediction rate
-	virtual bool collect_imu(imuSample &imu) { return true; }
+	virtual bool collect_imu(const imuSample &imu) = 0;
 
 	// set delta angle imu data
 	void setIMUData(uint64_t time_usec, uint64_t delta_ang_dt, uint64_t delta_vel_dt, float (&delta_ang)[3], float (&delta_vel)[3]);
@@ -202,6 +203,9 @@ public:
 	Returns true if reset performed, false if rejected due to less than 10 seconds lapsed since last reset.
 	*/
 	virtual bool reset_imu_bias() = 0;
+
+	// return true if the attitude is usable
+	bool attitude_valid() { return ISFINITE(_output_new.quat_nominal(0)) && _control_status.flags.tilt_align; }
 
 	// get vehicle landed status data
 	bool get_in_air_status() {return _control_status.flags.in_air;}
@@ -361,10 +365,7 @@ public:
 	virtual void get_ekf_soln_status(uint16_t *status) = 0;
 
 	// Getter for the average imu update period in s
-	float get_dt_imu_avg()
-	{
-		return _dt_imu_avg;
-	}
+	float get_dt_imu_avg() const { return _dt_imu_avg; }
 
 	// Getter for the imu sample on the delayed time horizon
 	imuSample get_imu_sample_delayed()
@@ -378,15 +379,10 @@ public:
 		return _baro_sample_delayed;
 	}
 
-	// Getter for a flag indicating if the ekf should update (completed downsampling process)
-	bool get_imu_updated()
-	{
-		return _imu_updated;
-	}
-
 	void print_status();
 
-	static const unsigned FILTER_UPDATE_PERIOD_MS = 8;	// ekf prediction period in milliseconds - this should ideally be an integer multiple of the IMU time delta
+	static constexpr unsigned FILTER_UPDATE_PERIOD_MS{8};	// ekf prediction period in milliseconds - this should ideally be an integer multiple of the IMU time delta
+	static constexpr float FILTER_UPDATE_PERIOD_S{FILTER_UPDATE_PERIOD_MS * 0.001f};
 
 protected:
 
@@ -396,7 +392,7 @@ protected:
 	 OBS_BUFFER_LENGTH defines how many observations (non-IMU measurements) we can buffer
 	 which sets the maximum frequency at which we can process non-IMU measurements. Measurements that
 	 arrive too soon after the previous measurement will not be processed.
-	 max freq (Hz) = (OBS_BUFFER_LENGTH - 1) / (IMU_BUFFER_LENGTH * FILTER_UPDATE_PERIOD_MS * 0.001)
+	 max freq (Hz) = (OBS_BUFFER_LENGTH - 1) / (IMU_BUFFER_LENGTH * FILTER_UPDATE_PERIOD_S)
 	 This can be adjusted to match the max sensor data rate plus some margin for jitter.
 	*/
 	uint8_t _obs_buffer_length{0};
@@ -448,8 +444,6 @@ protected:
 	Matrix3f _R_to_earth_now;		// rotation matrix from body to earth frame at current time
 	Vector3f _vel_imu_rel_body_ned;		// velocity of IMU relative to body origin in NED earth frame
 	Vector3f _vel_deriv_ned;		// velocity derivative at the IMU in NED earth frame (m/s/s)
-
-	uint64_t _imu_ticks{0};	// counter for imu updates
 
 	bool _imu_updated{false};      // true if the ekf should update (completed downsampling process)
 	bool _initialised{false};      // true if the ekf interface instance (data buffering) is initialized

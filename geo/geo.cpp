@@ -319,17 +319,16 @@ void waypoint_from_heading_and_distance(double lat_start, double lon_start, floa
 
 float get_bearing_to_next_waypoint(double lat_now, double lon_now, double lat_next, double lon_next)
 {
-	double lat_now_rad = math::radians(lat_now);
-	double lon_now_rad = math::radians(lon_now);
-	double lat_next_rad = math::radians(lat_next);
-	double lon_next_rad = math::radians(lon_next);
+	const double lat_now_rad = math::radians(lat_now);
+	const double lat_next_rad = math::radians(lat_next);
 
-	double d_lon = lon_next_rad - lon_now_rad;
+	const double cos_lat_next = cos(lat_next_rad);
+	const double d_lon = math::radians(lon_next - lon_now);
 
 	/* conscious mix of double and float trig function to maximize speed and efficiency */
 
-	const float y = static_cast<float>(sin(d_lon) * cos(lat_next_rad));
-	const float x = static_cast<float>(cos(lat_now_rad) * sin(lat_next_rad) - sin(lat_now_rad) * cos(lat_next_rad) * cos(d_lon));
+	const float y = static_cast<float>(sin(d_lon) * cos_lat_next);
+	const float x = static_cast<float>(cos(lat_now_rad) * sin(lat_next_rad) - sin(lat_now_rad) * cos_lat_next * cos(d_lon));
 
 	return wrap_pi(atan2f(y, x));
 }
@@ -501,8 +500,8 @@ int get_distance_to_arc(struct crosstrack_error_s *crosstrack_error, double lat_
 		double lat_start = lat_now + start_disp_y * cos(lat_now) / 111111.0;
 		double lon_end = lon_now + end_disp_x / 111111.0;
 		double lat_end = lat_now + end_disp_y * cos(lat_now) / 111111.0;
-		double dist_to_start = get_distance_to_next_waypoint(lat_now, lon_now, lat_start, lon_start);
-		double dist_to_end = get_distance_to_next_waypoint(lat_now, lon_now, lat_end, lon_end);
+		float dist_to_start = get_distance_to_next_waypoint(lat_now, lon_now, lat_start, lon_start);
+		float dist_to_end = get_distance_to_next_waypoint(lat_now, lon_now, lat_end, lon_end);
 
 		if (dist_to_start < dist_to_end) {
 			crosstrack_error->distance = dist_to_start;
