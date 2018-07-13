@@ -291,6 +291,7 @@ struct parameters {
 	float flow_noise_qual_min{0.5f};	///< observation noise for optical flow LOS rate measurements when flow sensor quality is at the minimum useable (rad/sec)
 	int32_t flow_qual_min{1};		///< minimum acceptable quality integer required once fusion of data has commenced
 	int32_t flow_qual_min_init{128};	///< minimum acceptable quality integer required to commence fusion
+	int32_t flow_qual_check_on_ground{1};	///< set to 1 to enable, 0 to disable application of the flow_qual_min_init threshhold check when the vehicle is on ground
 	float flow_innov_gate{3.0f};		///< optical flow fusion innovation consistency gate size (STD)
 	float flow_rate_max{2.5f};		///< maximum valid optical flow rate (rad/sec)
 

@@ -392,12 +392,30 @@ void Ekf::controlOpticalFlowFusion()
 		_imu_del_ang_of += _imu_sample_delayed.delta_ang - _state.gyro_bias;
 		_delta_time_of += _imu_sample_delayed.delta_ang_dt;
 
-		// optical flow fusion mode selection logic
+		// Check minimum flow quality required to commence optical flow fusion
 		bool flow_quality_ok = _flow_sample_delayed.quality >= _params.flow_qual_min_init;
-		if (!flow_quality_ok) {
-			_time_bad_flow_qual = _imu_sample_delayed.time_us;
+
+		// Record the takeoff time once if we are in-air
+		if (!_control_status.flags.in_air) {
+			_time_takeoff = 0;
+		} else if (_time_takeoff == 0) {
+			_time_takeoff = _imu_sample_delayed.time_us;
 		}
+
+		if (!flow_quality_ok) {
+			// Disable minimum acceptable quality integer check on the ground and 5 seconds after takeoff if optical flow condition is unsuitable
+			if ((!_control_status.flags.in_air || ((_imu_sample_delayed.time_us - _time_takeoff) < (uint64_t)5E6))
+				&& !_params.flow_qual_check_on_ground) {
+				flow_quality_ok = true;
+				_time_bad_flow_qual = 0;
+			} else {
+				_time_bad_flow_qual = _imu_sample_delayed.time_us;
+			}
+		}
+
+		// Require 5 continuous seconds of quality check passing to commence use of flow data
 		flow_quality_ok &= _imu_sample_delayed.time_us - _time_bad_flow_qual > (uint64_t)5E6;
+
 		if ((_params.fusion_mode & MASK_USE_OF) // optical flow has been selected by the user
 				&& !_control_status.flags.opt_flow // we are not yet using flow data
 				&& flow_quality_ok
@@ -426,7 +444,7 @@ void Ekf::controlOpticalFlowFusion()
 
 				}
 			}
-		} else if (!(_params.fusion_mode & MASK_USE_OF)) {
+		} else if (!(_params.fusion_mode & MASK_USE_OF) || !flow_quality_ok) {
 			_control_status.flags.opt_flow = false;
 
 		}
