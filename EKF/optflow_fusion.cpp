@@ -67,9 +67,6 @@ void Ekf::fuseOptFlow()
 	float H_LOS[2][24] = {}; // Optical flow observation Jacobians
 	float Kfusion[24][2] = {}; // Optical flow Kalman gains
 
-	// constrain height above ground to be above minimum height when sitting on ground
-	float heightAboveGndEst = math::max((_terrain_vpos - _state.pos(2)), gndclearance);
-
 	// get rotation nmatrix from earth to body
 	Dcmf earth_to_body(_state.quat_nominal);
 	earth_to_body = earth_to_body.transpose();
@@ -85,6 +82,19 @@ void Ekf::fuseOptFlow()
 
 	// rotate into body frame
 	Vector3f vel_body = earth_to_body * vel_rel_earth;
+
+	// height above ground of the IMU
+	float heightAboveGndEst = _terrain_vpos - _state.pos(2);
+
+	// calculate the sensor position relative to the IMU in earth frame
+	Vector3f pos_offset_earth = _R_to_earth * pos_offset_body;
+
+	// calculate the height above the ground of the optical flow camera. Since earth frame is NED
+	// a positve offset in earth frame leads to a a smaller height above the ground.
+	heightAboveGndEst -= pos_offset_earth(2);
+
+	// constrain minimum height above ground
+	heightAboveGndEst = math::max(heightAboveGndEst, gndclearance);
 
 	// calculate range from focal point to centre of image
 	float range = heightAboveGndEst / earth_to_body(2, 2); // absolute distance to the frame region in view
