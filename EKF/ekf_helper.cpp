@@ -1057,13 +1057,21 @@ void Ekf::get_ekf_ctrl_limits(float *vxy_max, bool *limit_hagl)
 	bool flow_limit_hagl;
 
 	// If relying on optical flow for navigation we need to keep within flow and range sensor limits
-	bool relying_on_optical_flow = _control_status.flags.opt_flow && !(_control_status.flags.gps || _control_status.flags.ev_pos);
-	if (relying_on_optical_flow) {
-		// Allow ground relative velocity to use 50% of available flow sensor range to allow for angular motion
+	if (_control_status.flags.opt_flow) {
+		// If using optical flow data we need to remain within flow rate limtis to avoid bad flow data
+		// causing large velocity estnation errors. Allow ground relative velocity to use 50% of available
+		// flow rate to allow for body angular motion.
 		flow_gnd_spd_max = 0.5f * _params.flow_rate_max * (_terrain_vpos - _state.pos(2));
 		flow_gnd_spd_max = fmaxf(flow_gnd_spd_max , 0.0f);
 
-		flow_limit_hagl = true;
+		// If we have another source of aiding available, allow the vehicle to climb to a height
+		// where flow aiding ceases.
+		bool relying_on_optical_flow = !(_control_status.flags.gps || _control_status.flags.ev_pos);
+		if (relying_on_optical_flow) {
+			flow_limit_hagl = true;
+		} else {
+			flow_limit_hagl = false;
+		}
 
 	} else {
 		flow_gnd_spd_max = NAN;
