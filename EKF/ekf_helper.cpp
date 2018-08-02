@@ -1000,8 +1000,8 @@ bool Ekf::get_gps_drift_metrics(float drift[3], bool *blocked)
 	memcpy(drift, _gps_drift_metrics, 3 * sizeof(float));
 	*blocked = !_vehicle_at_rest;
 	if (_gps_drift_updated) {
-		return true;
 		_gps_drift_updated = false;
+		return true;
 	}
 	return false;
 }

@@ -175,7 +175,7 @@ public:
 	Second argument returns true when IMU movement is blocking the drift calculation
 	Function returns true if the metrics have been updated and not returned previously by this function
 	*/
-	bool get_gps_drift_metrics(float vibe[3], bool *blocked);
+	bool get_gps_drift_metrics(float drift[3], bool *blocked);
 
 	// return true if the global position estimate is valid
 	bool global_position_is_valid();
