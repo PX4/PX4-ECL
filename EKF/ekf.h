@@ -531,6 +531,9 @@ private:
 	// reset height state of the ekf
 	void resetHeight();
 
+	// reset baro datum to current state estimate
+	void resetBaroDatum();
+
 	// modify output filter to match the the EKF state at the fusion time horizon
 	void alignOutputFilter();
 
