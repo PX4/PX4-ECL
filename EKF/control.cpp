@@ -1179,10 +1179,10 @@ void Ekf::checkRangeDataValidity()
 	}
 
 	// If landed, check to make sure current measurements are within 10cm of the ground clearance value (EKF2_MIN_RNG).
-	if(! _control_status.flags.in_air) {
+	if(!_control_status.flags.in_air) {
 		float acceptable_error = 0.1f; // 10cm of acceptable measurement error when landed
-		_rng_hgt_faulty = _range_sample_delayed.rng < (_params.rng_gnd_clearance + acceptable_error) 
-				&& _range_sample_delayed.rng > (_params.rng_gnd_clearance - acceptable_error);
+		_rng_hgt_faulty = _range_sample_delayed.rng > (_params.rng_gnd_clearance + acceptable_error) 
+				|| _range_sample_delayed.rng < (_params.rng_gnd_clearance - acceptable_error);
 	}
 
 	// Check for "stuck" range finder measurements when range was not valid for certain period
