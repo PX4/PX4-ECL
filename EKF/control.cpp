@@ -934,7 +934,8 @@ void Ekf::controlHeightFusion()
 			setControlBaroHeight();
 			_fuse_height = true;
 
-			// we have just switched to using baro height, we don't need to set a height sensor offset
+			// we have just switched to using baro height, use current estimate to recalculate the height offset
+			resetBaroDatum();
 			// since we track a separate _baro_hgt_offset
 			if (_control_status_prev.flags.baro_hgt != _control_status.flags.baro_hgt) {
 				_hgt_sensor_offset = 0.0f;
@@ -1083,12 +1084,11 @@ void Ekf::rangeAidConditionsMet()
 {
 	// if the parameter for range aid is enabled we allow to switch from using the primary height source to using range finder as height source
 	// under the following conditions
-	// 1) Vehicle is in-air
-	// 2) Range data is valid
-	// 3) Vehicle is no further than max_hagl_for_range_aid away from the ground
-	// 4) Ground speed is not higher than max_vel_for_range_aid
-	// 5) Terrain estimate is stable (needs better checks)
-	if (_control_status.flags.in_air && !_rng_hgt_faulty) {
+	// 1) Range data is valid
+	// 2) Vehicle is no further than max_hagl_for_range_aid away from the ground
+	// 3) Ground speed is not higher than max_vel_for_range_aid
+	// 4) Terrain estimate is stable (needs better checks)
+	if (!_rng_hgt_faulty) {
 		// check if we can use range finder measurements to estimate height, use hysteresis to avoid rapid switching
 		bool can_use_range_finder;
 		if (_range_aid_mode_enabled) {
@@ -1176,6 +1176,13 @@ void Ekf::checkRangeDataValidity()
 			_range_sample_delayed.rng = _params.rng_gnd_clearance;
 			return;
 		}
+	}
+
+	// If landed, check to make sure current measurements are within 10cm of the ground clearance value (EKF2_MIN_RNG).
+	if(!_control_status.flags.in_air) {
+		float acceptable_error = 0.1f; // 10cm of acceptable measurement error when landed
+		_rng_hgt_faulty = _range_sample_delayed.rng > (_params.rng_gnd_clearance + acceptable_error) 
+				|| _range_sample_delayed.rng < (_params.rng_gnd_clearance - acceptable_error);
 	}
 
 	// Check for "stuck" range finder measurements when range was not valid for certain period

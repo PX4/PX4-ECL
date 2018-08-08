@@ -199,6 +199,14 @@ bool Ekf::resetPosition()
 	return true;
 }
 
+// Reset baro datum when another high accuracy source is available (i.e high resolution rangefinder)
+void Ekf::resetBaroDatum()
+{
+	// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
+	const baroSample &baro_newest = _baro_buffer.get_newest();
+	_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+}
+
 // Reset height state using the last height measurement
 void Ekf::resetHeight()
 {
@@ -236,8 +244,7 @@ void Ekf::resetHeight()
 			vert_pos_reset = true;
 
 			// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
-			const baroSample &baro_newest = _baro_buffer.get_newest();
-			_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+			resetBaroDatum();
 
 		} else {
 			// TODO: reset to last known range based estimate
@@ -278,9 +285,7 @@ void Ekf::resetHeight()
 
 			vert_pos_reset = true;
 
-			// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
-			const baroSample &baro_newest = _baro_buffer.get_newest();
-			_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+			resetBaroDatum();
 
 		} else {
 			// TODO: reset to last known gps based estimate
