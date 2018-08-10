@@ -40,7 +40,7 @@
  *
  *    This implementation has been built for PX4 based on the original
  *    publication from [1] and does include a lot of the ideas (not code)
- *    from [2]. It has been further adapted by [3].
+ *    from [2]. It has been further adapted / extended by [3].
  *
  *
  *    [1] S. Park, J. Deyst, and J. P. How, "A New Nonlinear Guidance Logic for Trajectory Tracking,"
@@ -55,9 +55,22 @@
  *     - Modified to enable period and damping of guidance loop to be set explicitly
  *     - Modified to provide explicit control over capture angle
  *
- *		[3] T. Stastny (thomas.stasnty@mavt.ethz.ch), "L1 guidance logic extension for small UAVs: handling high winds and small loiter radii,"
+ *		[3] T. Stastny, "L1 guidance logic extension for small UAVs: handling high winds and small loiter radii,"
  *		arXiv pre-print, 2018. http://arxiv.org/abs/1804.04209.
  *		 - Removed PD controller, adapt period with L1 ratio if radius smaller than L1 length
+ *		 - Add robustness to high winds (including wind speed > airspeed)
+ *        - continuity in lateral acceleration commands during transition to run-away mitigation (no command jumps)
+ *        - airspeed reference incrementing logic for run-away prevention and maintaining a minimum ground speed
+ *				  > IF airsp. incr. enabled & min. ground sp. > 0 m/s: increase airspeed reference to maintain min. ground sp.
+ *					  when nav bearing is infeasible and max airspeed reference allows
+ *          > IF airsp. incr. enabled & min. ground sp. = 0 m/s: increase airspeed reference to match wind speed
+ * 					  when nav bearing is infeasible and max airspeed reference allows
+ *          > IF airsp. incr. disabled: follow path while nav bearing feasible and turn against wind to minimize
+ *            run-away when infeasible
+ *     - Some concepts adapted from:
+ *        L.Furieri, T. Stastny, L. Marconi, R. Siegwart, and I. Gilitschenski. "Gone with the wind:
+ *        Nonlinear guidance for small fixed-wing aircraft in arbitrarily strong windfields". American
+ *        Control Conference (ACC). 2017.
  */
 
 #ifndef ECL_L1_POS_CONTROLLER_H
@@ -67,6 +80,11 @@
 #include <matrix/math.hpp>
 #include <geo/geo.h>
 #include <ecl.h>
+
+/* bearing feasibility constants */
+#define LAMBDA_CO 0.02f // linear finite cut-off angle [rad] (= approx. 1 deg)
+#define ONE_OVER_S_LAMBDA_CO 50.003333488895450f // 1/sin(lambda_co)
+#define M_CO 2499.833309998360f // linear finite cut-off slope = cos(lambda_co)/sin(lambda_co)^2
 
 /**
  * L1 Nonlinear Guidance Logic
@@ -139,6 +157,18 @@ public:
 	float switch_distance(float waypoint_switch_radius);
 
 	/**
+	 * Increment airspeed reference as needed for high winds
+	 *
+	 * An added increment to the airspeed reference in high wind
+	 * scenarios. Zero unless wind speed is greater than the airspeed reference
+	 * or the minimum ground speed is exceeded.
+	 *
+	 * @return airspeed_incr in meters per second.
+	 */
+	float airspeed_incr(float airspeed, const float airsp_ref, const float airsp_max, const float wind_speed,
+			    float min_ground_speed);
+
+	/**
 	 * Navigate between two waypoints
 	 *
 	 * Calling this function with two waypoints results in the
@@ -149,7 +179,8 @@ public:
 	 * @return sets _lateral_accel setpoint
 	 */
 	void navigate_waypoints(const matrix::Vector2f &vector_A, const matrix::Vector2f &vector_B,
-				const matrix::Vector2f &vector_curr_position, const matrix::Vector2f &ground_speed);
+				const matrix::Vector2f &vector_curr_position, const matrix::Vector2f &ground_speed,
+				const matrix::Vector2f &wind_speed_vector);
 
 	/**
 	 * Navigate on an orbit around a loiter waypoint.
@@ -160,7 +191,7 @@ public:
 	 * @return sets _lateral_accel setpoint
 	 */
 	void navigate_loiter(const matrix::Vector2f &vector_A, const matrix::Vector2f &vector_curr_position, float radius,
-			     int8_t loiter_direction, const matrix::Vector2f &ground_speed_vector);
+			     int8_t loiter_direction, const matrix::Vector2f &ground_speed_vector, const matrix::Vector2f &wind_speed_vector);
 
 	/**
 	 * Navigate on a fixed bearing.
@@ -171,7 +202,8 @@ public:
 	 *
 	 * @return sets _lateral_accel setpoint
 	 */
-	void navigate_heading(float navigation_heading, float current_heading, const matrix::Vector2f &ground_speed);
+	void navigate_heading(float navigation_heading, float current_heading, const matrix::Vector2f &ground_speed,
+			      const matrix::Vector2f &wind_speed_vector);
 
 	/**
 	 * Keep the wings level.
@@ -210,24 +242,25 @@ public:
 
 private:
 
-	float _lateral_accel{0.0f};		///< Lateral acceleration setpoint in m/s^2
-	float _L1_distance{20.0f};		///< L1 lead distance, defined by period and damping
-	bool _circle_mode{false};		///< flag for loiter mode
-	float _nav_bearing{0.0f};		///< bearing to L1 reference point
-	float _bearing_error{0.0f};		///< bearing error
+	float _lateral_accel{0.0f}; 		///< Lateral acceleration setpoint in m/s^2
+	float _L1_distance{20.0f}; 			///< L1 lead distance, defined by period and damping
+	bool _circle_mode{false}; 			///< flag for loiter mode
+	float _nav_bearing{0.0f};				///< bearing to L1 reference point
+	float _bearing_error{0.0f};			///< bearing error
 	float _crosstrack_error{0.0f};	///< crosstrack error in meters
 	float _target_bearing{0.0f};		///< the heading setpoint
 
-	float _L1_period{25.0f};		///< L1 tracking period in seconds
+	float _L1_period{25.0f}; 		///< L1 tracking period in seconds
 	float _L1_damping{0.75f};		///< L1 damping ratio
-	float _L1_ratio{5.0f};		///< L1 ratio for navigation
-	float _K_L1{2.0f};			///< L1 control gain for _L1_damping
-	float _heading_omega{1.0f};		///< Normalized frequency
+	float _L1_ratio{5.0f};			///< L1 ratio for navigation
+	float _K_L1{2.0f}; 					///< L1 control gain for _L1_damping
+	float _heading_omega{1.0f};	///< Normalized frequency
+	float _lambda{0.0f};				///< angle between wind speed vector and nav bearing
 
-	float _roll_lim_rad{math::radians(30.0f)};  ///<maximum roll angle in radians
-	float _roll_setpoint{0.0f};	///< current roll angle setpoint in radians
-	float _roll_slew_rate{0.0f};	///< roll angle setpoint slew rate limit in rad/s
-	float _dt{0};				///< control loop time in seconds
+	float _roll_lim_rad{math::radians(30.0f)}; 	///<maximum roll angle in radians
+	float _roll_setpoint{0.0f}; 								///< current roll angle setpoint in radians
+	float _roll_slew_rate{0.0f};								///< roll angle setpoint slew rate limit in rad/s
+	float _dt{0};																///< control loop time in seconds
 
 	/**
 	 * Convert a 2D vector from WGS84 to planar coordinates.
@@ -247,6 +280,15 @@ private:
 	 *
 	 */
 	void update_roll_setpoint();
+
+	/**
+	 * Determine the bearing feasibility.
+	 *
+	 * Use the wind speed to airspeed ratio and angle "lambda" between the nav bearing and wind direction
+	 * to determine the feasibility of the given nav bearing. Includes a buffer zone near wind ratio = 1
+	 * and when lambda is nearing and beyond 90 degrees (this mitigates some numerical stability issues).
+	 */
+	float get_bearing_feasibility(float lambda, const float wind_ratio, const float wind_ratio_buf);
 
 };
 
