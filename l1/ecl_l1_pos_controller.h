@@ -40,7 +40,7 @@
  *
  *    This implementation has been built for PX4 based on the original
  *    publication from [1] and does include a lot of the ideas (not code)
- *    from [2].
+ *    from [2]. It has been further adapted by [3].
  *
  *
  *    [1] S. Park, J. Deyst, and J. P. How, "A New Nonlinear Guidance Logic for Trajectory Tracking,"
@@ -55,6 +55,9 @@
  *     - Modified to enable period and damping of guidance loop to be set explicitly
  *     - Modified to provide explicit control over capture angle
  *
+ *		[3] T. Stastny (thomas.stasnty@mavt.ethz.ch), "L1 guidance logic extension for small UAVs: handling high winds and small loiter radii,"
+ *		arXiv pre-print, 2018. http://arxiv.org/abs/1804.04209.
+ *		 - Removed PD controller, adapt period with L1 ratio if radius smaller than L1 length
  */
 
 #ifndef ECL_L1_POS_CONTROLLER_H
@@ -105,7 +108,7 @@ public:
 	 *
 	 * @return Roll angle (in NED frame)
 	 */
-	float get_roll_setpoint(){ return _roll_setpoint; }
+	float get_roll_setpoint() { return _roll_setpoint; }
 
 	/**
 	 * Get the current crosstrack error.
