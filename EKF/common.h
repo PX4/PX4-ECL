@@ -80,8 +80,9 @@ struct flow_message {
 struct ext_vision_message {
 	Vector3f posNED;	///< measured NED position relative to the local origin (m)
 	Quatf quat;		///< measured quaternion orientation defining rotation from NED to body frame
-	float posErr;		///< 1-Sigma spherical position accuracy (m)
+	float posErr;		///< 1-Sigma horizontal position accuracy (m)
 	float angErr;		///< 1-Sigma angular error (rad)
+	float hgtErr;		///< 1-Sigma height error (rad)
 };
 
 struct outputSample {
@@ -148,8 +149,9 @@ struct flowSample {
 struct extVisionSample {
 	Vector3f posNED;	///< measured NED position relative to the local origin (m)
 	Quatf quat;		///< measured quaternion orientation defining rotation from NED to body frame
-	float posErr;		///< 1-Sigma spherical position accuracy (m)
+	float posErr;		///< 1-Sigma horizontal position accuracy (m)
 	float angErr;		///< 1-Sigma angular error (rad)
+	float hgtErr;		///< 1-Sigma height error (rad)
 	uint64_t time_us;	///< timestamp of the measurement (uSec)
 };
 
