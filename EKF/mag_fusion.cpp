@@ -385,8 +385,8 @@ void Ekf::fuseMag()
 		for (int i = 0; i < _k_num_states; i++) {
 			if (P[i][i] < KHP[i][i]) {
 				// zero rows and columns
-				zeroRows(P, i, i);
-				zeroCols(P, i, i);
+				zeroRows(i, i);
+				zeroCols(i, i);
 
 				//flag as unhealthy
 				healthy = false;
@@ -763,8 +763,8 @@ void Ekf::fuseHeading()
 	for (int i = 0; i < _k_num_states; i++) {
 		if (P[i][i] < KHP[i][i]) {
 			// zero rows and columns
-			zeroRows(P, i, i);
-			zeroCols(P, i, i);
+			zeroRows(i, i);
+			zeroCols(i, i);
 
 			//flag as unhealthy
 			healthy = false;
@@ -901,8 +901,8 @@ void Ekf::fuseDeclination(float decl_sigma)
 	for (int i = 0; i < _k_num_states; i++) {
 		if (P[i][i] < KHP[i][i]) {
 			// zero rows and columns
-			zeroRows(P, i, i);
-			zeroCols(P, i, i);
+			zeroRows(i, i);
+			zeroCols(i, i);
 
 			//flag as unhealthy
 			healthy = false;

@@ -491,8 +491,11 @@ void Ekf::predictCovariance()
 
 	} else {
 		// Inhibit delta velocity bias learning by zeroing the covariance terms
-		zeroRows(nextP, 13, 15);
-		zeroCols(nextP, 13, 15);
+		for (int i = 13; i <= 15; i++) {
+			for (int j = 13; j <= 15; j++) {
+				nextP[i][j] = 0.0f;
+			}
+		}
 	}
 
 	// Don't do covariance prediction on magnetic field states unless we are using 3-axis fusion
@@ -756,8 +759,8 @@ void Ekf::fixCovarianceErrors()
 
 	// accelerometer bias states
 	if ((_params.fusion_mode & MASK_INHIBIT_ACC_BIAS) || _accel_bias_inhibit) {
-		zeroRows(P, 13, 15);
-		zeroCols(P, 13, 15);
+		zeroRows(13, 15);
+		zeroCols(13, 15);
 
 	} else {
 		// Find the maximum delta velocity bias state variance and request a covariance reset if any variance is below the safe minimum
@@ -794,7 +797,7 @@ void Ekf::fixCovarianceErrors()
 			}
 
 			// reset all delta velocity bias covariances
-			zeroCols(P, 13, 15);
+			zeroCols(13, 15);
 
 			// restore all delta velocity bias variances
 			for (uint8_t stateIndex = 13; stateIndex <= 15; stateIndex++) {
@@ -831,8 +834,8 @@ void Ekf::fixCovarianceErrors()
 			float varX = P[13][13];
 			float varY = P[14][14];
 			float varZ = P[15][15];
-			zeroRows(P, 13, 15);
-			zeroCols(P, 13, 15);
+			zeroRows(13, 15);
+			zeroCols(13, 15);
 			P[13][13] = varX;
 			P[14][14] = varY;
 			P[15][15] = varZ;
@@ -849,8 +852,8 @@ void Ekf::fixCovarianceErrors()
 
 	// magnetic field states
 	if (!_control_status.flags.mag_3D) {
-		zeroRows(P, 16, 21);
-		zeroCols(P, 16, 21);
+		zeroRows(16, 21);
+		zeroCols(16, 21);
 
 	} else {
 		// constrain variances
@@ -868,8 +871,8 @@ void Ekf::fixCovarianceErrors()
 
 	// wind velocity states
 	if (!_control_status.flags.wind) {
-		zeroRows(P, 22, 23);
-		zeroCols(P, 22, 23);
+		zeroRows(22, 23);
+		zeroCols(22, 23);
 
 	} else {
 		// constrain variances
@@ -885,12 +888,12 @@ void Ekf::fixCovarianceErrors()
 void Ekf::resetMagCovariance()
 {
 	// set the quaternion covariance terms to zero
-	zeroRows(P, 0, 3);
-	zeroCols(P, 0, 3);
+	zeroRows(0, 3);
+	zeroCols(0, 3);
 
 	// set the magnetic field covariance terms to zero
-	zeroRows(P, 16, 21);
-	zeroCols(P, 16, 21);
+	zeroRows(16, 21);
+	zeroCols(16, 21);
 	_mag_decl_cov_reset = false;
 
 	// set the field state variance to the observation variance
@@ -905,8 +908,8 @@ void Ekf::resetMagCovariance()
 void Ekf::resetWindCovariance()
 {
 	// set the wind  covariance terms to zero
-	zeroRows(P, 22, 23);
-	zeroCols(P, 22, 23);
+	zeroRows(22, 23);
+	zeroCols(22, 23);
 
 	if (_tas_data_ready && (_imu_sample_delayed.time_us - _airspeed_sample_delayed.time_us < (uint64_t)5e5)) {
 		// Use airspeed and zer sideslip assumption to set initial covariance values for wind states

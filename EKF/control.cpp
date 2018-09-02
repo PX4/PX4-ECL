@@ -115,7 +115,7 @@ void Ekf::controlFusionModes()
 		Vector3f pos_offset_earth = _R_to_earth * pos_offset_body;
 		_range_sample_delayed.rng += pos_offset_earth(2) / _R_rng_to_earth_2_2;
 	}
-	
+
 	// We don't fuse flow data immediately because we have to wait for the mid integration point to fall behind the fusion time horizon.
 	// This means we stop looking for new data until the old data has been fused.
 	if (!_flow_data_ready) {
@@ -575,7 +575,7 @@ void Ekf::controlGpsFusion()
 					if (_mag_inhibit_yaw_reset_req) {
 						_mag_inhibit_yaw_reset_req = false;
 						// Zero the yaw bias covariance and set the variance to the initial alignment uncertainty
-						setDiag(P, 12, 12, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
+						setDiag(12, 12, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
 					}
 				}
 
@@ -697,7 +697,7 @@ void Ekf::controlGpsFusion()
 		_control_status.flags.gps = false;
 		ECL_WARN("EKF GPS data stopped");
 	}  else if (_control_status.flags.gps && (_imu_sample_delayed.time_us - _gps_sample_delayed.time_us > (uint64_t)1e6) && (_control_status.flags.opt_flow || _control_status.flags.ev_pos)) {
-		// Handle the case where we are fusing another position source along GPS, 
+		// Handle the case where we are fusing another position source along GPS,
 		// stop waiting for GPS after 1 s of lost signal
 		_control_status.flags.gps = false;
 		ECL_WARN("EKF GPS data stopped, using only EV or OF");
@@ -1366,8 +1366,8 @@ void Ekf::controlMagFusion()
 			save_mag_cov_data();
 			_control_status.flags.mag_3D = false;
 		}
-		zeroRows(P, 16, 21);
-		zeroCols(P, 16, 21);
+		zeroRows(16, 21);
+		zeroCols(16, 21);
 		_mag_decl_cov_reset = false;
 		_control_status.flags.mag_hdg = false;
 
@@ -1473,8 +1473,8 @@ void Ekf::controlMagFusion()
 			if (use_3D_fusion) {
 				if (!_control_status.flags.mag_3D) {
 					// reset the mag field covariances
-					zeroRows(P, 16, 21);
-					zeroCols(P, 16, 21);
+					zeroRows(16, 21);
+					zeroCols(16, 21);
 
 					// re-instate variances for the D earth axis and XYZ body axis field
 					for (uint8_t index = 0; index <= 3; index ++) {
@@ -1519,8 +1519,8 @@ void Ekf::controlMagFusion()
 				// When re-commencing use of magnetometer to correct vehicle states
 				// set the field state variance to the observation variance and zero
 				// the covariance terms to allow the field states re-learn rapidly
-				zeroRows(P, 16, 21);
-				zeroCols(P, 16, 21);
+				zeroRows(16, 21);
+				zeroCols(16, 21);
 				_mag_decl_cov_reset = false;
 
 				for (uint8_t index = 0; index <= 5; index ++) {
