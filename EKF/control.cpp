@@ -418,38 +418,31 @@ void Ekf::controlOpticalFlowFusion()
 			}
 		}
 
-		// Handle cases where we are using optical flow but are no longer able to because data is old
-		// or its use has been inhibited.
-		if (_control_status.flags.opt_flow) {
-		       if (_inhibit_flow_use) {
-			       _control_status.flags.opt_flow = false;
-			       _time_last_of_fuse = 0;
-
-			} else if ((_time_last_imu - _time_last_of_fuse) > (uint64_t)_params.reset_timeout_max) {
-				_control_status.flags.opt_flow = false;
-
-			}
+		// Handle cases where we are using optical flow but are no longer able to because
+		// its use has been inhibited.
+		if (_control_status.flags.opt_flow && _inhibit_flow_use) {
+			ECL_WARN("Optical flow data quality poor - stopping use");
+			_control_status.flags.opt_flow = false;
 		}
 
 		// optical flow fusion mode selection logic
 		if ((_params.fusion_mode & MASK_USE_OF) // optical flow has been selected by the user
-			&& !_control_status.flags.opt_flow // we are not yet using flow data
+			&& !_control_status.flags.opt_flow 	// we are not yet using flow data
 			&& _control_status.flags.tilt_align // we know our tilt attitude
-			&& !_inhibit_flow_use
-			&& get_terrain_valid()) // we have a valid distance to ground estimate
+			&& !_inhibit_flow_use				// use is not inhibited
+			&& get_terrain_valid()) 			// we have a valid distance to ground estimate
 		{
 			// If the heading is not aligned, reset the yaw and magnetic field states
 			if (!_control_status.flags.yaw_align) {
 				_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 			}
 
-			// If the heading is valid and use is not inhibited , start using optical flow aiding
+			// If the heading is valid, start using optical flow aiding
 			if (_control_status.flags.yaw_align) {
-				// set the flag and reset the fusion timeout
 				_control_status.flags.opt_flow = true;
-				_time_last_of_fuse = _time_last_imu;
+				ECL_INFO("Commencing optical flow fusion");
 
-				// if we are not using GPS then the velocity and position states and covariances need to be set
+				// if we are not using GPS then the velocity and position states and covariances need to be reset
 				if (!_control_status.flags.gps || !_control_status.flags.ev_pos) {
 					resetVelocity();
 					resetPosition();
@@ -491,10 +484,16 @@ void Ekf::controlOpticalFlowFusion()
 				_flowRadXYcomp(0) = _flow_sample_delayed.flowRadXY(0) - _flow_sample_delayed.gyroXYZ(0);
 				_flowRadXYcomp(1) = _flow_sample_delayed.flowRadXY(1) - _flow_sample_delayed.gyroXYZ(1);
 			}
+
 		} else {
 			// don't use this flow data and wait for the next data to arrive
 			_flow_data_ready = false;
 		}
+
+	} else if (_control_status.flags.opt_flow && _imu_sample_delayed.time_us - _flow_sample_delayed.time_us > (uint64_t)_params.reset_timeout_max) {
+		ECL_INFO("Optical flow data stopped");
+		_control_status.flags.opt_flow = false;
+
 	}
 
 	// Wait until the midpoint of the flow sample has fallen behind the fusion time horizon
