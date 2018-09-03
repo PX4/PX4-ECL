@@ -588,7 +588,6 @@ void Ekf::controlGpsFusion()
 
 					if (_control_status.flags.gps) {
 						ECL_INFO("EKF commencing GPS fusion");
-						_time_last_gps = _time_last_imu;
 					}
 				}
 			}
