@@ -119,8 +119,7 @@ void Ekf::controlFusionModes()
 	// We don't fuse flow data immediately because we have to wait for the mid integration point to fall behind the fusion time horizon.
 	// This means we stop looking for new data until the old data has been fused.
 	if (!_flow_data_ready) {
-		_flow_data_ready = _flow_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_flow_sample_delayed)
-				   && (_R_to_earth(2, 2) > _params.range_cos_max_tilt);
+		_flow_data_ready = _flow_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_flow_sample_delayed);
 	}
 
 	_ev_data_ready = _ext_vision_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_ev_sample_delayed);
