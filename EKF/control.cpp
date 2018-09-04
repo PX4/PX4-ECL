@@ -446,10 +446,6 @@ void Ekf::controlOpticalFlowFusion()
 				if (!_control_status.flags.gps || !_control_status.flags.ev_pos) {
 					resetVelocity();
 					resetPosition();
-
-					// align the output observer to the EKF states
-					alignOutputFilter();
-
 				}
 			}
 
