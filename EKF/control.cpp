@@ -1440,6 +1440,10 @@ void Ekf::controlMagFusion()
 			// before they are used to constrain heading drift
 			_flt_mag_align_converging = ((_imu_sample_delayed.time_us - _flt_mag_align_start_time) < (uint64_t)5e6);
 
+			// If the yaw reset has been large enough to require rewt of the quaternion covariance sub-matrix
+			// we continue to use heading fusion to constrain heading drift to give the covariance time to stabilise
+			_flt_yaw_align_converging = ((_imu_sample_delayed.time_us - _flt_yaw_align_start_time) < (uint64_t)5e6);
+
 			if (!_control_status.flags.update_mag_states_only && _control_status_prev.flags.update_mag_states_only) {
 				// When re-commencing use of magnetometer to correct vehicle states
 				// set the field state variance to the observation variance and zero
@@ -1503,6 +1507,12 @@ void Ekf::controlMagFusion()
 
 		// fuse magnetometer data using the selected methods
 		if (_control_status.flags.mag_3D && _control_status.flags.yaw_align) {
+			// Always heading fusion to assit with initial yaw convergence if
+			// quaternion state covariances have been reset.
+			if (_flt_yaw_align_converging) {
+				fuseHeading();
+			}
+
 			fuseMag();
 
 			if (_control_status.flags.mag_dec) {

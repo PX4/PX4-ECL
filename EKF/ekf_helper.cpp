@@ -722,6 +722,9 @@ bool Ekf::resetMagHeading(Vector3f &mag_init)
 		// reset the quaternion covariances using the rotation vector variances
 		initialiseQuatCovariances(angle_err_var_vec);
 
+		// record the start time for the yaw alignment
+		_flt_yaw_align_start_time = _imu_sample_delayed.time_us;
+
 		// add the reset amount to the output observer buffered data
 		for (uint8_t i = 0; i < _output_buffer.get_length(); i++) {
 			// Note q1 *= q2 is equivalent to q1 = q2 * q1
