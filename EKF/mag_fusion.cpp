@@ -474,7 +474,7 @@ void Ekf::fuseHeading()
 		predicted_hdg = euler321(2); // we will need the predicted heading to calculate the innovation
 
 		// calculate the observed yaw angle
-		if (_control_status.flags.mag_hdg) {
+		if (_control_status.flags.mag_hdg || _flt_yaw_align_converging) {
 			// Set the yaw angle to zero and rotate the measurements into earth frame using the zero yaw angle
 			euler321(2) = 0.0f;
 			Dcmf R_to_earth(euler321);
@@ -550,7 +550,7 @@ void Ekf::fuseHeading()
 		predicted_hdg = yaw; // we will need the predicted heading to calculate the innovation
 
 		// calculate the observed yaw angle
-		if (_control_status.flags.mag_hdg) {
+		if (_control_status.flags.mag_hdg || _flt_yaw_align_converging) {
 			// Set the first rotation (yaw) to zero and rotate the measurements into earth frame
 			yaw = 0.0f;
 
@@ -599,7 +599,7 @@ void Ekf::fuseHeading()
 	}
 
 	// Calculate the observation variance
-	if (_control_status.flags.mag_hdg) {
+	if (_control_status.flags.mag_hdg || _flt_yaw_align_converging) {
 		// using magnetic heading tuning parameter
 		R_YAW = sq(fmaxf(_params.mag_heading_noise, 1.0e-2f));
 
