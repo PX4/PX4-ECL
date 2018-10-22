@@ -108,6 +108,9 @@ void Ekf::fuseGpsAntYaw()
 		float t23 = q1*t3*2.0f;
 		float t24 = q2*t2*2.0f;
 		float t25 = t23+t24;
+		if (fabsf(t20) < 1e-6f) {
+			return;
+		}
 		float t26 = 1.0f/t20;
 		float t27 = q1*t2*2.0f;
 		float t28 = t21*t22;
