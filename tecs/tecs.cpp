@@ -361,14 +361,6 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		_throttle_setpoint = (_STE_error + _STE_rate_error * _throttle_damping_gain) * STE_to_throttle + throttle_predicted;
 		_throttle_setpoint = constrain(_throttle_setpoint, _throttle_setpoint_min, _throttle_setpoint_max);
 
-		// Rate limit the throttle demand
-		if (fabsf(_throttle_slewrate) > 0.01f) {
-			float throttle_increment_limit = _dt * (_throttle_setpoint_max - _throttle_setpoint_min) * _throttle_slewrate;
-			_throttle_setpoint = constrain(_throttle_setpoint, _last_throttle_setpoint - throttle_increment_limit,
-						       _last_throttle_setpoint + throttle_increment_limit);
-		}
-
-		_last_throttle_setpoint = _throttle_setpoint;
 
 		if (_integrator_gain > 0.0f) {
 			// Calculate throttle integrator state upper and lower limits with allowance for
@@ -404,7 +396,16 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 
 		}
 
+		// Rate limit the throttle demand
+		if (fabsf(_throttle_slewrate) > 0.01f) {
+			float throttle_increment_limit = _dt * (_throttle_setpoint_max - _throttle_setpoint_min) * _throttle_slewrate;
+			_throttle_setpoint = constrain(_throttle_setpoint, _last_throttle_setpoint - throttle_increment_limit,
+						       _last_throttle_setpoint + throttle_increment_limit);
+		}
+
 		_throttle_setpoint = constrain(_throttle_setpoint, _throttle_setpoint_min, _throttle_setpoint_max);
+
+		_last_throttle_setpoint = _throttle_setpoint;
 	}
 }
 
