@@ -541,9 +541,7 @@ void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_alt
 		_tas_state = _EAS * EAS2TAS;
 		_throttle_integ_state =  0.0f;
 		_pitch_integ_state = 0.0f;
-
 		_last_throttle_setpoint = (_in_air ? throttle_cruise : 0.0f);
-
 		_last_pitch_setpoint = constrain(pitch, _pitch_setpoint_min, _pitch_setpoint_max);
 		_pitch_setpoint_unc = _last_pitch_setpoint;
 		_hgt_setpoint_adj_prev = baro_altitude;
@@ -601,6 +599,11 @@ void TECS::update_pitch_throttle(const matrix::Dcmf &rotMat, float pitch, float 
 	// Calculate the time since last update (seconds)
 	uint64_t now = ecl_absolute_time();
 	_dt = constrain((now - _pitch_update_timestamp) * 1e-6f, DT_MIN, DT_MAX);
+
+	// if this is the first time we run the loop, set _dt to default value
+	if (_pitch_update_timestamp == 0) {
+		_dt = DT_DEFAULT;
+	}
 
 	// Set class variables from inputs
 	_throttle_setpoint_max = throttle_max;
