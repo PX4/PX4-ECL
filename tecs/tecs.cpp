@@ -303,6 +303,18 @@ void TECS::_update_energy_estimates()
 
 void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::Dcmf &rotMat)
 {
+	if (_in_front_transition) {
+
+		if (_throttle_setpoint < _throttle_setpoint_max)
+			_throttle_setpoint += 0.5f * _dt;
+
+		_throttle_setpoint = constrain(_throttle_setpoint, 0.0f, _throttle_setpoint_max);
+
+		// update slew rate state
+		_last_throttle_setpoint = _throttle_setpoint;
+		return;
+	}
+
 	// Calculate total energy error
 	_STE_error = _SPE_setpoint - _SPE_estimate + _SKE_setpoint - _SKE_estimate;
 
@@ -528,7 +540,9 @@ void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_alt
 		_tas_state = _EAS * EAS2TAS;
 		_throttle_integ_state =  0.0f;
 		_pitch_integ_state = 0.0f;
-		_last_throttle_setpoint = (_in_air ? throttle_cruise : 0.0f);;
+
+		_last_throttle_setpoint = (_in_air ? throttle_cruise : 0.0f);
+
 		_last_pitch_setpoint = constrain(pitch, _pitch_setpoint_min, _pitch_setpoint_max);
 		_pitch_setpoint_unc = _last_pitch_setpoint;
 		_hgt_setpoint_adj_prev = baro_altitude;
@@ -633,7 +647,9 @@ void TECS::update_pitch_throttle(const matrix::Dcmf &rotMat, float pitch, float 
 	_pitch_update_timestamp = now;
 
 	// Set TECS mode for next frame
-	if (_underspeed_detected) {
+	if (_in_front_transition) {
+		_tecs_mode = ECL_TECS_MODE_VTOL_FRONT_TRANSITION;
+	} else if (_underspeed_detected) {
 		_tecs_mode = ECL_TECS_MODE_UNDERSPEED;
 
 	} else if (_uncommanded_descent_recovery) {

@@ -59,7 +59,7 @@ public:
 	 *
 	 * @return true if airspeed is enabled for control
 	 */
-	bool airspeed_sensor_enabled() { return _airspeed_enabled; }
+	bool airspeed_sensor_enabled() { return _airspeed_enabled && !_in_front_transition; }
 
 	/**
 	 * Set the airspeed enable state
@@ -95,7 +95,8 @@ public:
 		ECL_TECS_MODE_NORMAL = 0,
 		ECL_TECS_MODE_UNDERSPEED,
 		ECL_TECS_MODE_BAD_DESCENT,
-		ECL_TECS_MODE_CLIMBOUT
+		ECL_TECS_MODE_CLIMBOUT,
+		ECL_TECS_MODE_VTOL_FRONT_TRANSITION
 	};
 
 	void set_detect_underspeed_enabled(bool enabled) { _detect_underspeed_enabled = enabled; }
@@ -152,6 +153,23 @@ public:
 
 	float throttle_integ_state() { return _throttle_integ_state; }
 	float pitch_integ_state() { return _pitch_integ_state; }
+
+	/**
+	 * Activate front transition for VTOL
+	 *
+	 * If active, TECS will ramp up the throttle and try to hold the altitude setpoint.
+	 * Airspeed is not controlled, only height.
+	 *
+	 */
+	void activate_front_transition() {
+		_in_front_transition = true;
+	}
+
+	void deactivate_front_transition() {
+		_in_front_transition = false;
+	}
+
+	bool in_front_transition() {return _in_front_transition;}
 
 	/**
 	 * Handle the altitude reset
@@ -276,6 +294,8 @@ private:
 	bool _airspeed_enabled{false};					///< true when airspeed use has been enabled
 	bool _states_initalized{false};					///< true when TECS states have been iniitalized
 	bool _in_air{false};						///< true when the vehicle is flying
+
+	bool _in_front_transition{false};			///< vehicle is doing a front transition
 
 	/**
 	 * Update the airspeed internal state using a second order complementary filter
