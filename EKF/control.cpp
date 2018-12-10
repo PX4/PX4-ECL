@@ -1350,6 +1350,7 @@ void Ekf::controlMagFusion()
 	if (!_control_status.flags.in_air) {
 		_last_on_ground_posD = _state.pos(2);
 		_flt_mag_align_complete = false;
+		_height_achieved_once = false;
 		_num_bad_flight_yaw_events = 0;
 	}
 
