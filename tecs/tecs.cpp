@@ -272,7 +272,7 @@ void TECS::_detect_underspeed()
 		return;
 	}
 
-        if (_tas_state < _TAS_min || ((_STE_error > 0) && _underspeed_detected)) {
+        if (_tas_state < _TAS_min * 0.9f || ((_vert_pos_state < _hgt_setpoint_adj) && _underspeed_detected)) {
 
 		_underspeed_detected = true;
 
