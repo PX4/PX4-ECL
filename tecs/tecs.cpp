@@ -221,6 +221,11 @@ void TECS::_update_speed_setpoint()
 
 void TECS::_update_height_setpoint(float desired, float state)
 {
+        // Don't try to change the altitude if underspeed.
+        if (_underspeed_detected) {
+                desired = state;
+        }
+
 	// Detect first time through and initialize previous value to demand
 	if (ISFINITE(desired) && fabsf(_hgt_setpoint_in_prev) < 0.1f) {
 		_hgt_setpoint_in_prev = desired;
@@ -314,6 +319,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 
 	// Calculate the throttle demand
 	if (_underspeed_detected) {
+
 		// always use max throttle to recover from an underspeed condition
 		_throttle_setpoint = _throttle_setpoint_max;
 
