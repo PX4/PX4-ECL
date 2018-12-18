@@ -325,38 +325,38 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		float cosPhi = sqrtf((rotMat(0, 1) * rotMat(0, 1)) + (rotMat(1, 1) * rotMat(1, 1)));
 		STE_rate_setpoint = STE_rate_setpoint + _load_factor_correction * (1.0f / constrain(cosPhi, 0.1f, 1.0f) - 1.0f);
 
-		// Calculate a predicted throttle from the demanded rate of change of energy, using the cruise throttle
-		// as the starting point. Assume:
+                // Calculate a predicted throttle from the demanded rate of change of energy, using the cruise throttle
+                // as the starting point. Assume:
 		// Specific total energy rate = _STE_rate_max is achieved when throttle is set to _throttle_setpoint_max
-		// Specific total energy rate = 0 at cruise throttle
-		// Specific total energy rate = _STE_rate_min is achieved when throttle is set to _throttle_setpoint_min
+                // Specific total energy rate = 0 at cruise throttle
+                // Specific total energy rate = _STE_rate_min is achieved when throttle is set to _throttle_setpoint_min
 		float throttle_predicted = 0.0f;
 
-		if (STE_rate_setpoint >= 0) {
-			// throttle is between cruise and maximum
-			throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_max * (_throttle_setpoint_max - throttle_cruise);
+                if (STE_rate_setpoint >= 0) {
+                        // throttle is between cruise and maximum
+                        throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_max * (_throttle_setpoint_max - throttle_cruise);
 
-		} else {
-			// throttle is between cruise and minimum
-			throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_min * (_throttle_setpoint_min - throttle_cruise);
+                } else {
+                        // throttle is between cruise and minimum
+                        throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_min * (_throttle_setpoint_min - throttle_cruise);
 
-		}
+                }
 
-		// Calculate gain scaler from specific energy error to throttle
-		float STE_to_throttle = 1.0f / (_throttle_time_constant * (_STE_rate_max - _STE_rate_min));
+                // Calculate gain scaler from specific energy error to throttle
+                float STE_to_throttle = 1.0f / (_throttle_time_constant * (_STE_rate_max - _STE_rate_min));
 
-		// Add proportional and derivative control feedback to the predicted throttle and constrain to throttle limits
-		_throttle_setpoint = (_STE_error + _STE_rate_error * _throttle_damping_gain) * STE_to_throttle + throttle_predicted;
-		_throttle_setpoint = constrain(_throttle_setpoint, _throttle_setpoint_min, _throttle_setpoint_max);
+                // Add proportional and derivative control feedback to the predicted throttle and constrain to throttle limits
+                _throttle_setpoint = (_STE_error + _STE_rate_error * _throttle_damping_gain) * STE_to_throttle + throttle_predicted;
+                _throttle_setpoint = constrain(_throttle_setpoint, _throttle_setpoint_min, _throttle_setpoint_max);
 
-		// Rate limit the throttle demand
-		if (fabsf(_throttle_slewrate) > 0.01f) {
-			float throttle_increment_limit = _dt * (_throttle_setpoint_max - _throttle_setpoint_min) * _throttle_slewrate;
-			_throttle_setpoint = constrain(_throttle_setpoint, _last_throttle_setpoint - throttle_increment_limit,
-						       _last_throttle_setpoint + throttle_increment_limit);
-		}
+                // Rate limit the throttle demand
+                if (fabsf(_throttle_slewrate) > 0.01f) {
+                        float throttle_increment_limit = _dt * (_throttle_setpoint_max - _throttle_setpoint_min) * _throttle_slewrate;
+                        _throttle_setpoint = constrain(_throttle_setpoint, _last_throttle_setpoint - throttle_increment_limit,
+                                                       _last_throttle_setpoint + throttle_increment_limit);
+                }
 
-		_last_throttle_setpoint = _throttle_setpoint;
+                _last_throttle_setpoint = _throttle_setpoint;
 
 		if (_integrator_gain > 0.0f) {
 			// Calculate throttle integrator state upper and lower limits with allowance for
@@ -512,7 +512,7 @@ void TECS::_update_pitch_setpoint()
 		_pitch_setpoint = _last_pitch_setpoint - ptchRateIncr;
 	}
 
-	_last_pitch_setpoint = _pitch_setpoint;
+        _last_pitch_setpoint = _pitch_setpoint;
 }
 
 void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_altitude, float pitch_min_climbout,
@@ -591,7 +591,7 @@ void TECS::_update_STE_rate_lim()
 
         // Depending on whether we have too little or too much total energy, choose the drag power (=_STE_rate_min)
         // that will give more safety margin.
-        // Eg. _STE_error > 0 and _EAS < _EAS_setpoint -> too little energy and speed -> choosing the drag power which is greater -> more throttle
+        // Eg. _STE_error > 0 -> too little energy -> choosing the drag power which is greater -> more throttle
         if (_STE_error < 0) {
                 _STE_rate_min = - min((_Cd_i_specific / _EAS + _Cd_o_specific * _EAS * _EAS * _EAS),
                                       (_Cd_i_specific / _EAS_setpoint + _Cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
