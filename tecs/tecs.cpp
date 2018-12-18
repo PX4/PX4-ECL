@@ -208,8 +208,8 @@ void TECS::_update_speed_setpoint()
 
 	// Calculate limits for the demanded rate of change of speed based on physical performance limits
 	// with a 50% margin to allow the total energy controller to correct for errors.
-	float velRateMax = 0.5f * _STE_rate_max / _tas_state;
-	float velRateMin = 0.5f * _STE_rate_min / _tas_state;
+        float velRateMax = 0.5f * _STE_rate_max / _tas_state;
+        float velRateMin = 0.5f * _STE_rate_min / _tas_state;
 
 	_TAS_setpoint_adj = constrain(_TAS_setpoint, _TAS_min, _TAS_max);
 
@@ -572,11 +572,33 @@ void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_alt
 
 void TECS::_update_STE_rate_lim()
 {
-	// Calculate the specific total energy upper rate limits from the max throttle climb rate
-	_STE_rate_max = _max_climb_rate * CONSTANTS_ONE_G;
+        // Calculate the specific total energy upper rate limits from the max throttle climb rate
+        const float rate_max = _max_climb_rate * CONSTANTS_ONE_G;
 
-	// Calculate the specific total energy lower rate limits from the min throttle sink rate
-	_STE_rate_min = - _min_sink_rate * CONSTANTS_ONE_G;
+        // Calculate the specific total energy lower rate limits from the min throttle sink rate
+        const float rate_min = - _min_sink_rate * CONSTANTS_ONE_G;
+
+        //Cd_i_specific = ... assuming planar wing with elliptical lift distribution
+        _Cd_i_specific = _auw * CONSTANTS_ONE_G; //lift
+        _Cd_i_specific = _Cd_i_specific * _Cd_i_specific / (0.5f * M_PI_F * CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C * _wingspan * _wingspan);
+
+        //Cd_o_specific: subtracting induced drag from total drag at a known airspeed to calculate parasitic drag
+        _Cd_o_specific = (-rate_min - _Cd_i_specific / _indicated_airspeed_trim) / (_indicated_airspeed_trim * _indicated_airspeed_trim * _indicated_airspeed_trim);
+
+        //_STE_rate_min_adj equals to the sum of parasitic and induced drag power.
+        // Drag force = _Cd_i / _EAS /_EAS + _Cd_o_specific * _EAS *_EAS;
+        // Drag power = Drag force * _EAS
+
+        // Take the greater one to converge better if too much total energy and the smaller one if underspeed -> smaller throttle at overspeed and vice versa
+        if (_STE_error < 0) {
+                _STE_rate_min = - min((_Cd_i_specific / _EAS + _Cd_o_specific * _EAS * _EAS * _EAS),
+                                      (_Cd_i_specific / _EAS_setpoint + _Cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
+        } else {
+                _STE_rate_min = - max((_Cd_i_specific / _EAS + _Cd_o_specific * _EAS * _EAS * _EAS),
+                                      (_Cd_i_specific / _EAS_setpoint + _Cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
+        }
+
+        _STE_rate_max = rate_max + _STE_rate_min - rate_min;
 }
 
 void TECS::update_pitch_throttle(const matrix::Dcmf &rotMat, float pitch, float baro_altitude, float hgt_setpoint,

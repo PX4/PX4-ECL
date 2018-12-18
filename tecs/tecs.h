@@ -114,6 +114,7 @@ public:
 
 	void set_indicated_airspeed_max(float airspeed) { _indicated_airspeed_max = airspeed; }
 	void set_indicated_airspeed_min(float airspeed) { _indicated_airspeed_min = airspeed; }
+        void set_indicated_airspeed_trim(float airspeed) { _indicated_airspeed_trim = airspeed; }
 
 	void set_pitch_damping(float damping) { _pitch_damping_gain = damping; }
 	void set_vertical_accel_limit(float limit) { _vert_accel_limit = limit; }
@@ -127,6 +128,9 @@ public:
 	void set_throttle_slewrate(float slewrate) { _throttle_slewrate = slewrate; }
 
 	void set_roll_throttle_compensation(float compensation) { _load_factor_correction = compensation; }
+
+        void set_wingspan(float wingspan) { _wingspan = wingspan; }
+        void set_auw(float auw) { _auw = auw; }
 
 	// TECS status
 	uint64_t timestamp() { return _pitch_update_timestamp; }
@@ -201,6 +205,7 @@ private:
 	float _speed_error_gain{0.0f};					///< gain from speed error to demanded speed rate (1/sec)
 	float _indicated_airspeed_min{3.0f};				///< equivalent airspeed demand lower limit (m/sec)
 	float _indicated_airspeed_max{30.0f};				///< equivalent airspeed demand upper limit (m/sec)
+        float _indicated_airspeed_trim{15.0f};                          ///< equivalent airspeed demand default (m/sec)
 	float _throttle_slewrate{0.0f};					///< throttle demand slew rate limit (1/sec)
 
 	// controller outputs
@@ -276,6 +281,14 @@ private:
 	bool _airspeed_enabled{false};					///< true when airspeed use has been enabled
 	bool _states_initalized{false};					///< true when TECS states have been iniitalized
 	bool _in_air{false};						///< true when the vehicle is flying
+
+        //Drag coefficients
+        float _Cd_o_specific{0.04f};                                    ///< Vehicle specific parasitic drag coefficient, which equals to 1/2*A*rho*Cd_o
+        float _Cd_i_specific{10.0f};                                    ///< Vehicle specific induced drag coefficient, which equals to 1/2*S*rho*Cd_i
+
+        //Other
+        float _wingspan{1.0f};                                          ///< Wingspan used for induced drag calculation
+        float _auw{1.0f};                                               ///< All-up-weight used for induced drag calculation
 
 	/**
 	 * Update the airspeed internal state using a second order complementary filter
