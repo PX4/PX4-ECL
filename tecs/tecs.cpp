@@ -578,18 +578,20 @@ void TECS::_update_STE_rate_lim()
         // Calculate the specific total energy lower rate limits from the min throttle sink rate
         const float rate_min = - _min_sink_rate * CONSTANTS_ONE_G;
 
-        //Cd_i_specific = ... assuming planar wing with elliptical lift distribution
+        // Cd_i_specific = ... assuming planar wing with elliptical lift distribution
         _Cd_i_specific = _auw * CONSTANTS_ONE_G; //lift
         _Cd_i_specific = _Cd_i_specific * _Cd_i_specific / (0.5f * M_PI_F * CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C * _wingspan * _wingspan);
 
-        //Cd_o_specific: subtracting induced drag from total drag at a known airspeed to calculate parasitic drag
+        // Cd_o_specific: subtracting induced drag from total drag at a known airspeed to calculate parasitic drag
         _Cd_o_specific = (-rate_min - _Cd_i_specific / _indicated_airspeed_trim) / (_indicated_airspeed_trim * _indicated_airspeed_trim * _indicated_airspeed_trim);
 
-        //_STE_rate_min_adj equals to the sum of parasitic and induced drag power.
+        // _STE_rate_min equals to the sum of parasitic and induced drag power.
         // Drag force = _Cd_i / _EAS /_EAS + _Cd_o_specific * _EAS *_EAS;
         // Drag power = Drag force * _EAS
 
-        // Take the greater one to converge better if too much total energy and the smaller one if underspeed -> smaller throttle at overspeed and vice versa
+        // Depending on whether we have too little or too much total energy, choose the drag power (=_STE_rate_min)
+        // that will give more safety margin.
+        // Eg. _STE_error > 0 and _EAS < _EAS_setpoint -> too little energy and speed -> choosing the drag power which is greater -> more throttle
         if (_STE_error < 0) {
                 _STE_rate_min = - min((_Cd_i_specific / _EAS + _Cd_o_specific * _EAS * _EAS * _EAS),
                                       (_Cd_i_specific / _EAS_setpoint + _Cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
