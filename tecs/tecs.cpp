@@ -302,14 +302,14 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 	_STE_error = _SPE_setpoint - _SPE_estimate + _SKE_setpoint - _SKE_estimate;
 
 	// Calculate demanded rate of change of total energy, taking the SPE rate setpoint
-	// from the actual pitch setpoint
+	// from the actual pitch setpoint.
 	float STE_rate_setpoint = _SPE_rate_setpoint_pitch + _SKE_rate_setpoint;
 
 	// Calculate the total energy rate error, applying a first order IIR filter
-	// to reduce the effect of accelerometer noise
+	// to reduce the effect of accelerometer noise.
 	_STE_rate_error = 0.2f * (STE_rate_setpoint - _SPE_rate - _SKE_rate) + 0.8f * _STE_rate_error;
 
-	// Calculate the kinetic energy rate error
+	// Calculate the kinetic energy rate error.
 	_SKE_rate_error = 0.2f * (_SKE_rate_setpoint - _SKE_rate) + 0.8f * _SKE_rate_error;
 
 	// Calculate the throttle demand
@@ -328,6 +328,8 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		// Assume:
 		// Specific total energy rate = _STE_rate_max is achieved when throttle is set to _throttle_setpoint_max
 		// Specific total energy rate = _STE_rate_min is achieved when throttle is set to _throttle_setpoint_min
+		// Anywhere between the throttle setting is dependent of the square root of the desired potential and kinetic energy rates
+		// relative to the maximum and minimum STE rates.
 
 		// The generated power is proportional to the cube of the throttle setting, and cannot be under 0.
 		// On the other hand the efficiency also increases at mid-rpm -> setting throttle as sqrt of the required thrust.
@@ -339,13 +341,13 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		// Calculate gain scaler from specific energy error to throttle
 		float STE_to_throttle = 1.0f / (_throttle_time_constant * (_STE_rate_max - _STE_rate_min));
 
-		// Add proportional and derivative control feedback to kinetic energy error
+		// Add proportional and derivative control feedback to kinetic energy error.
+		// Question: Should this be compensated for the pitch-driven kinetic energy control?
 		float SKE_feedback = (SKE_error + _SKE_rate_error * _throttle_damping_gain) * STE_to_throttle;
 
-		// Calculate throttle and constrain to throttle limits
-		_throttle_setpoint = sqrtf(constrain(SPE_rate_setpoint_pitch_adj + SKE_feedback - _STE_rate_min_adj, 0.01f,
-						     _STE_rate_max_adj - _STE_rate_min_adj)/(max(_STE_rate_max_adj,_STE_rate_min_adj + 0.01f)
-											     - _STE_rate_min_adj))
+		// Calculate throttle and constrain to throttle limits.
+		_throttle_setpoint = sqrtf(constrain(SPE_rate_setpoint_pitch_adj + SKE_feedback - _STE_rate_min, 0.01f, _STE_rate_max - _STE_rate_min)
+					   / (max(_STE_rate_max,_STE_rate_min + 0.01f) - _STE_rate_min))
 				     * thr_range + _throttle_setpoint_min;
 		_throttle_setpoint = constrain(_throttle_setpoint, _throttle_setpoint_min, _throttle_setpoint_max);
 
@@ -377,7 +379,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 				// If the throttle would be over max/min, decay the integrator to settle the output value at max/min throttle
 				// (maximum effect to _throttle_integ_state is +-0.1 and is used to speed up the integrator recovery from low/high values)
 
-				// If the STE error is converging, do not add to the integrator. This is used to prevent integrator overshoots.
+				// If the absolute STE error is decreasing, do not add to the integrator. This is used to prevent integrator overshoots.
 
 				float thr_integ = _throttle_setpoint + _throttle_integ_state;
 
@@ -509,7 +511,7 @@ void TECS::_update_pitch_setpoint()
 	float SEB_correction = _SEB_error + _SEB_rate_error * _pitch_damping_gain + SEB_rate_setpoint * _pitch_time_constant;
 
 	// Divide it into kinetic and potential proportions for throttle calculations. Also normalise it in relation to _pitch_time_constant
-	// These will be the actual values controlling the pitch.
+	// These will be the actual values controlled by the pitch setpoint.
 	float SEB_rate_setpoint_pitch = constrain(SEB_correction / climb_angle_to_SEB_rate, _pitch_setpoint_min, _pitch_setpoint_max) * (_tas_state * CONSTANTS_ONE_G);
 	_SKE_rate_setpoint_pitch = - SEB_rate_setpoint_pitch * SKE_weighting / (SKE_weighting + SPE_weighting);
 	_SPE_rate_setpoint_pitch = SEB_rate_setpoint_pitch + _SKE_rate_setpoint_pitch;
