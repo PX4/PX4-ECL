@@ -346,7 +346,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 
 		// Add proportional and derivative control feedback to kinetic energy error.
 		// Question: Should this be compensated for the pitch-driven kinetic energy control?
-		float SKE_feedback = (SKE_error + SKE_rate_error * _throttle_damping_gain) * STE_to_throttle;
+		float SKE_feedback = (SKE_error + _SKE_rate_error * _throttle_damping_gain) * STE_to_throttle;
 
 		// Calculate throttle and constrain to throttle limits.
 		_throttle_setpoint = sqrtf(constrain(turn_compensation + _SPE_rate_setpoint_pitch + SKE_feedback - _STE_rate_min, 0.01f, _STE_rate_max - _STE_rate_min)
