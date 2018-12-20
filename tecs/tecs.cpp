@@ -272,7 +272,7 @@ void TECS::_detect_underspeed()
 		return;
 	}
 
-        if (_tas_state < _TAS_min * 0.9f || ((_vert_pos_state < _hgt_setpoint_adj) && _underspeed_detected)) {
+	if (_tas_state < _TAS_min * 0.9f || ((_vert_pos_state < _hgt_setpoint_adj) && _underspeed_detected)) {
 
 		_underspeed_detected = true;
 
@@ -315,7 +315,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 	// Calculate the throttle demand
 	if (_underspeed_detected) {
 		// always use full throttle to recover from an underspeed condition
-                _throttle_setpoint = _throttle_setpoint_max;
+		_throttle_setpoint = _throttle_setpoint_max;
 
 	} else {
 		// Adjust the demanded total energy rate to compensate for induced drag rise in turns.
