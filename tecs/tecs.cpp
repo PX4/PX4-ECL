@@ -578,12 +578,16 @@ void TECS::_update_STE_rate_lim()
 	// Calculate the specific total energy lower rate limits from the min throttle sink rate
 	const float rate_min = - _min_sink_rate * CONSTANTS_ONE_G;
 
-	// Cd_i_specific = ... assuming planar wing with elliptical lift distribution
-	_Cd_i_specific = _auw * CONSTANTS_ONE_G; //lift
-	_Cd_i_specific = _Cd_i_specific * _Cd_i_specific / (0.5f * M_PI_F * CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C * _wingspan * _wingspan);
 
+	const float lift = _auw * CONSTANTS_ONE_G;
+
+	// _Cd_i_specific: Vehicle specific induced drag coefficient, which equals to 1/2*S*rho*Cd_i
+	// Cd_i_specific = ... assuming planar wing with elliptical lift distribution
+	const float _Cd_i_specific = lift * lift / (0.5f * M_PI_F * CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C * _wingspan * _wingspan);
+
+	// _Cd_o_specific: Vehicle specific parasitic drag coefficient, which equals to 1/2*A*rho*Cd_o
 	// Cd_o_specific: subtracting induced drag from total drag at a known airspeed to calculate parasitic drag
-	_Cd_o_specific = (-rate_min - _Cd_i_specific / _indicated_airspeed_trim) / (_indicated_airspeed_trim * _indicated_airspeed_trim * _indicated_airspeed_trim);
+	const float _Cd_o_specific = (-rate_min - _Cd_i_specific / _indicated_airspeed_trim) / (_indicated_airspeed_trim * _indicated_airspeed_trim * _indicated_airspeed_trim);
 
 	// _STE_rate_min equals to the sum of parasitic and induced drag power.
 	// Drag force = _Cd_i / _EAS /_EAS + _Cd_o_specific * _EAS *_EAS;
