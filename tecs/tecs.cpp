@@ -310,6 +310,9 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 	// to reduce the effect of accelerometer noise
 	_STE_rate_error = 0.2f * (STE_rate_setpoint - _SPE_rate - _SKE_rate) + 0.8f * _STE_rate_error;
 
+	// Calculate kinetic energy error
+	float SKE_error = _SKE_setpoint - _SKE_estimate;
+
 	// Calculate the kinetic energy rate error
 	_SKE_rate_error = 0.2f * (_SKE_rate_setpoint - _SKE_rate) + 0.8f * _SKE_rate_error;
 
@@ -319,11 +322,13 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		_throttle_setpoint = 1.0f;
 
 	} else {
-		// Adjust the demanded potential energy rate to compensate for induced drag rise in turns.
+		// Adjust the demanded potential and kinetic energy rate to compensate for induced drag rise in turns.
 		// Assume induced drag scales linearly with normal load factor.
 		// The additional normal load factor is given by (1/cos(bank angle) - 1)
 		float cosPhi = sqrtf((rotMat(0, 1) * rotMat(0, 1)) + (rotMat(1, 1) * rotMat(1, 1)));
-		float SPE_rate_setpoint_pitch_adj = _SPE_rate_setpoint_pitch + _load_factor_correction * (1.0f / constrain(cosPhi, 0.1f, 1.0f) - 1.0f);
+		float turn_correction = _load_factor_correction * (1.0f / constrain(cosPhi, 0.1f, 1.0f) - 1.0f);
+		float SPE_rate_setpoint_pitch_adj = _SPE_rate_setpoint_pitch + turn_correction;
+		float SKE_rate_error_adj = _SKE_rate_error + turn_correction;
 
 		// Calculate a predicted throttle from the demanded rate of change of energy.
 		// Assume:
@@ -337,14 +342,13 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		// This is just a rough estimation
 
 		float thr_range = _throttle_setpoint_max - _throttle_setpoint_min;
-		float SKE_error = _SKE_setpoint - _SKE_estimate;
 
 		// Calculate gain scaler from specific energy error to throttle
 		float STE_to_throttle = 1.0f / (_throttle_time_constant * (_STE_rate_max - _STE_rate_min));
 
 		// Add proportional and derivative control feedback to kinetic energy error.
 		// Question: Should this be compensated for the pitch-driven kinetic energy control?
-		float SKE_feedback = (SKE_error + _SKE_rate_error * _throttle_damping_gain) * STE_to_throttle;
+		float SKE_feedback = (SKE_error + SKE_rate_error_adj * _throttle_damping_gain) * STE_to_throttle;
 
 		// Calculate throttle and constrain to throttle limits.
 		_throttle_setpoint = sqrtf(constrain(SPE_rate_setpoint_pitch_adj + SKE_feedback - _STE_rate_min, 0.01f, _STE_rate_max - _STE_rate_min)
