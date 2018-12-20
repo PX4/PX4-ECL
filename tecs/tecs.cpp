@@ -594,10 +594,10 @@ void TECS::_update_STE_rate_lim()
 	// Eg. _STE_error > 0 -> too little energy -> choosing the drag power which is greater -> more throttle
 	if (_STE_error < 0) {
 		_STE_rate_min = - min((_Cd_i_specific / _EAS + _Cd_o_specific * _EAS * _EAS * _EAS),
-                                      (_Cd_i_specific / _EAS_setpoint + _Cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
+				      (_Cd_i_specific / _EAS_setpoint + _Cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
 	} else {
 		_STE_rate_min = - max((_Cd_i_specific / _EAS + _Cd_o_specific * _EAS * _EAS * _EAS),
-                                      (_Cd_i_specific / _EAS_setpoint + _Cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
+				      (_Cd_i_specific / _EAS_setpoint + _Cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
 	}
 
 	_STE_rate_max = rate_max + _STE_rate_min - rate_min;
