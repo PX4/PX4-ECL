@@ -282,10 +282,6 @@ private:
 	bool _states_initalized{false};					///< true when TECS states have been iniitalized
 	bool _in_air{false};						///< true when the vehicle is flying
 
-	//Drag coefficients
-	float _Cd_o_specific{0.04f};					///< Vehicle specific parasitic drag coefficient, which equals to 1/2*A*rho*Cd_o
-	float _Cd_i_specific{10.0f};					///< Vehicle specific induced drag coefficient, which equals to 1/2*S*rho*Cd_i
-
 	//Other
 	float _wingspan{1.0f};						///< Wingspan used for induced drag calculation
 	float _auw{1.0f};						///< All-up-weight used for induced drag calculation
