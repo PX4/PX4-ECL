@@ -353,7 +353,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		if (fabsf(_throttle_slewrate) > 0.01f) {
 			float throttle_increment_limit = _dt * (_throttle_setpoint_max - _throttle_setpoint_min) * _throttle_slewrate;
 			_throttle_setpoint = constrain(_throttle_setpoint, _last_throttle_setpoint - throttle_increment_limit,
-                                                       _last_throttle_setpoint + throttle_increment_limit);
+						       _last_throttle_setpoint + throttle_increment_limit);
 		}
 
 		_last_throttle_setpoint = _throttle_setpoint;
@@ -572,7 +572,7 @@ void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_alt
 
 void TECS::_update_STE_rate_lim()
 {
-// Calculate the specific total energy upper rate limits from the max throttle climb rate
+	// Calculate the specific total energy upper rate limits from the max throttle climb rate
 	const float rate_max = _max_climb_rate * CONSTANTS_ONE_G;
 
 	// Calculate the specific total energy lower rate limits from the min throttle sink rate
