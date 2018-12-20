@@ -322,13 +322,11 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		_throttle_setpoint = 1.0f;
 
 	} else {
-		// Adjust the demanded potential and kinetic energy rate to compensate for induced drag rise in turns.
+		// Adjust the demanded energy rate to compensate for induced drag rise in turns.
 		// Assume induced drag scales linearly with normal load factor.
 		// The additional normal load factor is given by (1/cos(bank angle) - 1)
 		float cosPhi = sqrtf((rotMat(0, 1) * rotMat(0, 1)) + (rotMat(1, 1) * rotMat(1, 1)));
-		float turn_correction = _load_factor_correction * (1.0f / constrain(cosPhi, 0.1f, 1.0f) - 1.0f);
-		float SPE_rate_setpoint_pitch_adj = _SPE_rate_setpoint_pitch + turn_correction;
-		float SKE_rate_error_adj = _SKE_rate_error + turn_correction;
+		float turn_compensation = _load_factor_correction * (1.0f / constrain(cosPhi, 0.1f, 1.0f) - 1.0f);
 
 		// Calculate a predicted throttle from the demanded rate of change of energy.
 		// Assume:
@@ -348,10 +346,10 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 
 		// Add proportional and derivative control feedback to kinetic energy error.
 		// Question: Should this be compensated for the pitch-driven kinetic energy control?
-		float SKE_feedback = (SKE_error + SKE_rate_error_adj * _throttle_damping_gain) * STE_to_throttle;
+		float SKE_feedback = (SKE_error + SKE_rate_error * _throttle_damping_gain) * STE_to_throttle;
 
 		// Calculate throttle and constrain to throttle limits.
-		_throttle_setpoint = sqrtf(constrain(SPE_rate_setpoint_pitch_adj + SKE_feedback - _STE_rate_min, 0.01f, _STE_rate_max - _STE_rate_min)
+		_throttle_setpoint = sqrtf(constrain(turn_compensation + _SPE_rate_setpoint_pitch + SKE_feedback - _STE_rate_min, 0.01f, _STE_rate_max - _STE_rate_min)
 					   / (max(_STE_rate_max,_STE_rate_min + 0.01f) - _STE_rate_min))
 				     * thr_range + _throttle_setpoint_min;
 		_throttle_setpoint = constrain(_throttle_setpoint, _throttle_setpoint_min, _throttle_setpoint_max);
