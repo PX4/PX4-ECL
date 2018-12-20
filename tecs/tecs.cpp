@@ -303,14 +303,14 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 	_STE_error = _SPE_setpoint - _SPE_estimate + _SKE_setpoint - _SKE_estimate;
 
 	// Calculate demanded rate of change of total energy, taking the SPE rate setpoint
-	// from the actual pitch setpoint.
+	// from the actual pitch setpoint
 	float STE_rate_setpoint = _SPE_rate_setpoint_pitch + _SKE_rate_setpoint;
 
 	// Calculate the total energy rate error, applying a first order IIR filter
-	// to reduce the effect of accelerometer noise.
+	// to reduce the effect of accelerometer noise
 	_STE_rate_error = 0.2f * (STE_rate_setpoint - _SPE_rate - _SKE_rate) + 0.8f * _STE_rate_error;
 
-	// Calculate the kinetic energy rate error.
+	// Calculate the kinetic energy rate error
 	_SKE_rate_error = 0.2f * (_SKE_rate_setpoint - _SKE_rate) + 0.8f * _SKE_rate_error;
 
 	// Calculate the throttle demand
