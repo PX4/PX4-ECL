@@ -102,7 +102,8 @@ public:
 
 	// setters for controller parameters
 	void set_time_const(float time_const) { _pitch_time_constant = time_const; }
-	void set_integrator_gain(float gain) { _integrator_gain = gain; }
+	void set_throttle_integrator_gain(float gain) { _throttle_integrator_gain = gain; }
+	void set_pitch_integrator_gain(float gain) { _pitch_integrator_gain = gain; }
 
 	void set_min_sink_rate(float rate) { _min_sink_rate = rate; }
 	void set_max_sink_rate(float sink_rate) { _max_sink_rate = sink_rate; }
@@ -138,7 +139,7 @@ public:
 	float TAS_setpoint_adj() { return _TAS_setpoint_adj; }
 	float tas_state() { return _tas_state; }
 
-	float hgt_rate_setpoint() { return _hgt_rate_setpoint; }
+	float hgt_rate_setpoint() { return _hgt_rate_setpoint_actual; }
 	float vert_vel_state() { return _vert_vel_state; }
 
 	float TAS_rate_setpoint() { return _TAS_rate_setpoint; }
@@ -192,7 +193,8 @@ private:
 	float _throttle_time_constant{8.0f};				///< control time constant used by the throttle demand calculation (sec)
 	float _pitch_damping_gain{0.0f};				///< damping gain of the pitch demand calculation (sec)
 	float _throttle_damping_gain{0.0f};				///< damping gain of the throttle demand calculation (sec)
-	float _integrator_gain{0.0f};					///< integrator gain used by the throttle and pitch demand calculation
+	float _throttle_integrator_gain{0.0f};				///< integrator gain used by the throttle demand calculation
+	float _pitch_integrator_gain{0.0f};				///< integrator gain used by the pitch demand calculation
 	float _vert_accel_limit{0.0f};					///< magnitude of the maximum vertical acceleration allowed (m/sec**2)
 	float _load_factor_correction{0.0f};				///< gain from normal load factor increase to total energy rate demand (m**2/sec**3)
 	float _pitch_speed_weight{1.0f};				///< speed control weighting used by pitch demand calculation
@@ -238,6 +240,7 @@ private:
 	float _hgt_setpoint_adj{0.0f};					///< demanded height used by the control loops after all filtering has been applied (m)
 	float _hgt_setpoint_adj_prev{0.0f};				///< value of _hgt_setpoint_adj from previous frame (m)
 	float _hgt_rate_setpoint{0.0f};					///< demanded climb rate tracked by the TECS algorithm
+	float _hgt_rate_setpoint_actual{0.0f};				///< demanded climb rate calculated from pitch setpoint.
 
 	// vehicle physical limits
 	float _pitch_setpoint_unc{0.0f};				///< pitch demand before limiting (rad)
@@ -257,12 +260,16 @@ private:
 	float _SKE_estimate{0.0f};					///< specific kinetic energy estimate (m**2/sec**2)
 	float _SPE_rate{0.0f};						///< specific potential energy rate estimate (m**2/sec**3)
 	float _SKE_rate{0.0f};						///< specific kinetic energy rate estimate (m**2/sec**3)
+	float _SKE_rate_setpoint_pitch{0.0f};				///< specific kinetic energy rate demand used for pitch control (m**2/sec**3)
+	float _SPE_rate_setpoint_pitch{0.0f};				///< specific potential energy rate demand used for pitch control (m**2/sec**3)
 
 	// specific energy error quantities
 	float _STE_error{0.0f};						///< specific total energy error (m**2/sec**2)
 	float _STE_rate_error{0.0f};					///< specific total energy rate error (m**2/sec**3)
 	float _SEB_error{0.0f};						///< specific energy balance error (m**2/sec**2)
 	float _SEB_rate_error{0.0f};					///< specific energy balance rate error (m**2/sec**3)
+	float _SKE_rate_error{0.0f};					///< specific kinetic energy rate error (m**2/sec**3)
+	float _STE_error_prev_abs{0.0f};				///< specific total energy previous iteration absolute error (m**2/sec**3)
 
 	// time steps (non-fixed)
 	float _dt{DT_DEFAULT};						///< Time since last update of main TECS loop (sec)
