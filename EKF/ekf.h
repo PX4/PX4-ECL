@@ -122,8 +122,28 @@ public:
 	// get the true airspeed in m/s
 	void get_true_airspeed(float *tas);
 
-	// get the diagonal elements of the covariance matrix
+	void propagate_covariances_from_quat_to_euler(matrix::SquareMatrix<float, 3> &euler_cov);
+
+	// get the full covariance matrix
 	void get_covariances(float *covariances);
+
+	// get the diagonal elements of the covariance matrix
+	void get_covariances_diagonal(float *covariances);
+
+	// get the position covariances
+	void get_position_covariances(float *covariances);
+
+	// get the quaternion covariances
+	void get_quaternion_covariances(float *covariances);
+
+	// get the euler angles covariances
+	void get_euler_covariances(float *covariances);
+
+	// get the pose covariances (position + orientation in euler angles)
+	void get_pose_covariances(float *covariances);
+
+	// get the linear velocity covariances
+	void get_velocity_covariances(float *covariances);
 
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	bool collect_gps(const gps_message &gps);

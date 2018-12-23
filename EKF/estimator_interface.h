@@ -104,7 +104,21 @@ public:
 
 	virtual void get_true_airspeed(float *tas) = 0;
 
+	virtual void propagate_covariances_from_quat_to_euler(matrix::SquareMatrix<float, 3> &euler_cov) = 0;
+
 	virtual void get_covariances(float *covariances) = 0;
+
+	virtual void get_covariances_diagonal(float *covariances) = 0;
+
+	virtual void get_position_covariances(float *covariances) = 0;
+
+	virtual void get_quaternion_covariances(float *covariances) = 0;
+
+	virtual void get_euler_covariances(float *covariances) = 0;
+
+	virtual void get_pose_covariances(float *covariances) = 0;
+
+	virtual void get_velocity_covariances(float *covariances) = 0;
 
 	// gets the variances for the NED velocity states
 	virtual void get_vel_var(Vector3f &vel_var) = 0;

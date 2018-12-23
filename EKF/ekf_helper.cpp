@@ -982,12 +982,125 @@ void Ekf::get_gyro_bias(float bias[3])
 	memcpy(bias, temp, 3 * sizeof(float));
 }
 
-// get the diagonal elements of the covariance matrix
+// covariance propagation from quaternions to euler angles using the covariance law
+// source: "Development of a Real-Time Attitude System Using a Quaternion
+// Parameterization and Non-Dedicated GPS Receivers", John B. Schleppe 1996
+void Ekf::propagate_covariances_from_quat_to_euler(matrix::SquareMatrix<float, 3> &euler_cov)
+{
+	// Jacobian matrix (3x4) containing the partial derivatives of the
+	// Euler angle equations with respect to the quaternions
+	matrix::Matrix<float, 3, 4> G;
+
+	float q1 = _output_new.quat_nominal(0);
+	float q2 = _output_new.quat_nominal(1);
+	float q3 = _output_new.quat_nominal(2);
+	float q4 = _output_new.quat_nominal(3);
+
+	G(0,0) = -(q3+q2) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) + (q3-q2)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
+	G(0,1) =  (q4+q1) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) - (q4-q1)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
+	G(0,2) =  (q4+q1) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) + (q4-q1)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
+	G(0,3) = -(q3+q2) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) - (q3-q2)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
+	G(1,0) = 2 * q4 / sqrt(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
+	G(1,1) = 2 * q3 / sqrt(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
+	G(1,2) = 2 * q2 / sqrt(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
+	G(1,3) = 2 * q1 / sqrt(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
+	G(2,0) = G(0,3);
+	G(2,1) = G(0,2);
+	G(2,2) = G(0,1);
+	G(2,3) = G(0,0);
+
+	float quat_cov[16];
+	get_quaternion_covariances(quat_cov);
+	matrix::SquareMatrix<float, 4> Cq(quat_cov);
+	euler_cov = G * Cq * G.transpose();
+}
+
+// get the full covariance matrix
 void Ekf::get_covariances(float *covariances)
+{
+	for (unsigned n = 0; n < _k_num_states; n++) {
+		for (unsigned m = 0; m < _k_num_states; m++) {
+			covariances[n * _k_num_states + m] = P[n][m];
+		}
+	}
+}
+
+// get the diagonal elements of the covariance matrix
+void Ekf::get_covariances_diagonal(float *covariances)
 {
 	for (unsigned i = 0; i < _k_num_states; i++) {
 		covariances[i] = P[i][i];
 	}
+}
+
+// get the position covariances
+void Ekf::get_position_covariances(float *covariances)
+{
+	covariances[0] = P[7][7];	// P(X,X)
+	covariances[1] = P[7][8];
+	covariances[2] = P[7][9];
+	covariances[3] = P[8][7];
+	covariances[4] = P[8][8];	// P(Y,Y)
+	covariances[5] = P[8][9];
+	covariances[6] = P[9][7];
+	covariances[7] = P[9][8];
+	covariances[8] = P[9][9];	// P(Z,Z)
+}
+
+// get the quaternion covariances
+void Ekf::get_quaternion_covariances(float *covariances)
+{
+	for (unsigned n = 0; n < 4; n++) {
+		for (unsigned m = 0; m < 4; m++) {
+			covariances[n * 4 + m] = P[n][m];
+		}
+	}
+}
+
+// get the euler angles covariances
+void Ekf::get_euler_covariances(float *covariances)
+{
+	matrix::SquareMatrix<float, 3> euler_cov = matrix::eye<float, 3>();
+	propagate_covariances_from_quat_to_euler(euler_cov);
+
+	(*covariances) = *euler_cov.data();
+}
+
+// get the pose covariances (position + orientation in euler angles)
+void Ekf::get_pose_covariances(float *covariances)
+{
+	matrix::SquareMatrix<float, 6> pose_cov = matrix::eye<float, 6>();
+
+	// get position covariances
+	float pos_cov[9];
+	get_position_covariances(pos_cov);
+	matrix::SquareMatrix<float, 3> position_cov(pos_cov);
+
+	// get orientation covariances
+	float euler_cov[9];
+	get_euler_covariances(euler_cov);
+	matrix::SquareMatrix<float, 3> orientation_cov(euler_cov);
+
+	// Fill the pose covariance matrix
+	// It's not a cross-covariance matrix but simplifies propagating th data
+	pose_cov.set(position_cov, 0, 0);
+	pose_cov.set(orientation_cov, 3, 3);
+
+	(*covariances) = *pose_cov.data();
+}
+
+// get the linear velocity covariances
+void Ekf::get_velocity_covariances(float *covariances)
+{
+	covariances[0] = P[4][4];	// P(VX,VX)
+	covariances[1] = P[4][5];
+	covariances[2] = P[4][6];
+	covariances[3] = P[5][4];
+	covariances[4] = P[5][5];	// P(VY,VY)
+	covariances[5] = P[5][6];
+	covariances[6] = P[6][4];
+	covariances[7] = P[6][5];
+	covariances[8] = P[6][6];	// P(VZ,VZ)
 }
 
 // get the position and height of the ekf origin in WGS-84 coordinates and time the origin was set
