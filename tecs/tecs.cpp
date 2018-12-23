@@ -314,7 +314,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 
 	// Calculate the throttle demand
 	if (_underspeed_detected) {
-		// always use full throttle to recover from an underspeed condition
+		// always use max throttle to recover from an underspeed condition
 		_throttle_setpoint = _throttle_setpoint_max;
 
 	} else {
