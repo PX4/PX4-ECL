@@ -1000,10 +1000,10 @@ void Ekf::propagate_covariances_from_quat_to_euler(matrix::SquareMatrix<float, 3
 	G(0,1) =  (q4+q1) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) - (q4-q1)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
 	G(0,2) =  (q4+q1) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) + (q4-q1)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
 	G(0,3) = -(q3+q2) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) - (q3-q2)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
-	G(1,0) = 2 * q4 / sqrt(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
-	G(1,1) = 2 * q3 / sqrt(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
-	G(1,2) = 2 * q2 / sqrt(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
-	G(1,3) = 2 * q1 / sqrt(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
+	G(1,0) = 2 * q4 / sqrtf(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
+	G(1,1) = 2 * q3 / sqrtf(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
+	G(1,2) = 2 * q2 / sqrtf(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
+	G(1,3) = 2 * q1 / sqrtf(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
 	G(2,0) = G(0,3);
 	G(2,1) = G(0,2);
 	G(2,2) = G(0,1);
