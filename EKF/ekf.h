@@ -49,7 +49,7 @@ class Ekf : public EstimatorInterface
 public:
 
 	Ekf() = default;
-	~Ekf() = default;
+	virtual ~Ekf() = default;
 
 	// initialise variables to sane values (also interface class)
 	bool init(uint64_t timestamp);
@@ -122,28 +122,29 @@ public:
 	// get the true airspeed in m/s
 	void get_true_airspeed(float *tas);
 
-	void propagate_covariances_from_quat_to_euler(matrix::SquareMatrix<float, 3> &euler_cov);
+	// covariance propagation from quaternions to euler angles using the covariance law
+	const matrix::SquareMatrix<float, 3> propagate_covariances_from_quat_to_euler() const;
 
 	// get the full covariance matrix
-	void get_covariances(float *covariances);
+	const matrix::SquareMatrix<float, 24> covariances() const;
 
 	// get the diagonal elements of the covariance matrix
-	void get_covariances_diagonal(float *covariances);
+	const matrix::Vector<float, 24> covariances_diagonal() const;
 
 	// get the position covariances
-	void get_position_covariances(float *covariances);
+	const matrix::SquareMatrix<float, 3> position_covariances() const;
 
 	// get the quaternion covariances
-	void get_quaternion_covariances(float *covariances);
+	const matrix::SquareMatrix<float, 4> quaternion_covariances() const;
 
 	// get the euler angles covariances
-	void get_euler_covariances(float *covariances);
+	const matrix::SquareMatrix<float, 3> euler_covariances() const;
 
 	// get the pose covariances (position + orientation in euler angles)
-	void get_pose_covariances(float *covariances);
+	const matrix::SquareMatrix<float, 6> pose_covariances() const;
 
 	// get the linear velocity covariances
-	void get_velocity_covariances(float *covariances);
+	const matrix::SquareMatrix<float, 3> velocity_covariances() const;
 
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	bool collect_gps(const gps_message &gps);

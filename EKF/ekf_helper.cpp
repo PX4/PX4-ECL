@@ -985,7 +985,7 @@ void Ekf::get_gyro_bias(float bias[3])
 // covariance propagation from quaternions to euler angles using the covariance law
 // source: "Development of a Real-Time Attitude System Using a Quaternion
 // Parameterization and Non-Dedicated GPS Receivers", John B. Schleppe 1996
-void Ekf::propagate_covariances_from_quat_to_euler(matrix::SquareMatrix<float, 3> &euler_cov)
+const matrix::SquareMatrix<float, 3> Ekf::propagate_covariances_from_quat_to_euler() const
 {
 	// Jacobian matrix (3x4) containing the partial derivatives of the
 	// Euler angle equations with respect to the quaternions
@@ -1009,98 +1009,82 @@ void Ekf::propagate_covariances_from_quat_to_euler(matrix::SquareMatrix<float, 3
 	G(2,2) = G(0,1);
 	G(2,3) = G(0,0);
 
-	float quat_cov[16];
-	get_quaternion_covariances(quat_cov);
-	matrix::SquareMatrix<float, 4> Cq(quat_cov);
-	euler_cov = G * Cq * G.transpose();
+	return G * quaternion_covariances() * G.transpose();
 }
 
 // get the full covariance matrix
-void Ekf::get_covariances(float *covariances)
+const matrix::SquareMatrix<float, 24> Ekf::covariances() const
 {
+	matrix::SquareMatrix<float, 24> cov;
 	for (unsigned n = 0; n < _k_num_states; n++) {
 		for (unsigned m = 0; m < _k_num_states; m++) {
-			covariances[n * _k_num_states + m] = P[n][m];
+			cov(n, m) = P[n][m];
 		}
 	}
+	return cov;
 }
 
 // get the diagonal elements of the covariance matrix
-void Ekf::get_covariances_diagonal(float *covariances)
+const matrix::Vector<float, 24> Ekf::covariances_diagonal() const
 {
+	matrix::Vector<float, 24> diag;
 	for (unsigned i = 0; i < _k_num_states; i++) {
-		covariances[i] = P[i][i];
+		diag(i) = P[i][i];
 	}
+	return diag;
 }
 
 // get the position covariances
-void Ekf::get_position_covariances(float *covariances)
+const matrix::SquareMatrix<float, 3> Ekf::position_covariances() const
 {
-	covariances[0] = P[7][7];	// P(X,X)
-	covariances[1] = P[7][8];
-	covariances[2] = P[7][9];
-	covariances[3] = P[8][7];
-	covariances[4] = P[8][8];	// P(Y,Y)
-	covariances[5] = P[8][9];
-	covariances[6] = P[9][7];
-	covariances[7] = P[9][8];
-	covariances[8] = P[9][9];	// P(Z,Z)
+	matrix::SquareMatrix<float, 3> cov;
+	for (unsigned n = 0; n < 3; n++) {
+		for (unsigned m = 0; m < 3; m++) {
+			cov(n, m) = P[n + 7][m + 7];
+		}
+	}
+	return cov;
 }
 
 // get the quaternion covariances
-void Ekf::get_quaternion_covariances(float *covariances)
+const matrix::SquareMatrix<float, 4> Ekf::quaternion_covariances() const
 {
+	matrix::SquareMatrix<float, 4> cov;
 	for (unsigned n = 0; n < 4; n++) {
 		for (unsigned m = 0; m < 4; m++) {
-			covariances[n * 4 + m] = P[n][m];
+			cov(n, m) = P[n][m];
 		}
 	}
+	return cov;
 }
 
 // get the euler angles covariances
-void Ekf::get_euler_covariances(float *covariances)
+const matrix::SquareMatrix<float, 3> Ekf::euler_covariances() const
 {
-	matrix::SquareMatrix<float, 3> euler_cov = matrix::eye<float, 3>();
-	propagate_covariances_from_quat_to_euler(euler_cov);
-
-	(*covariances) = *euler_cov.data();
+	return propagate_covariances_from_quat_to_euler();
 }
 
 // get the pose covariances (position + orientation in euler angles)
-void Ekf::get_pose_covariances(float *covariances)
+const matrix::SquareMatrix<float, 6> Ekf::pose_covariances() const
 {
-	matrix::SquareMatrix<float, 6> pose_cov = matrix::eye<float, 6>();
-
-	// get position covariances
-	float pos_cov[9];
-	get_position_covariances(pos_cov);
-	matrix::SquareMatrix<float, 3> position_cov(pos_cov);
-
-	// get orientation covariances
-	float euler_cov[9];
-	get_euler_covariances(euler_cov);
-	matrix::SquareMatrix<float, 3> orientation_cov(euler_cov);
-
 	// Fill the pose covariance matrix
-	// It's not a cross-covariance matrix but simplifies propagating th data
-	pose_cov.set(position_cov, 0, 0);
-	pose_cov.set(orientation_cov, 3, 3);
-
-	(*covariances) = *pose_cov.data();
+	// It's not a cross-covariance matrix but simplifies propagating the data
+	matrix::SquareMatrix<float, 6> cov = matrix::eye<float, 6>();
+	cov.set(position_covariances(), 0, 0);
+	cov.set(euler_covariances(), 3, 3);
+	return cov;
 }
 
 // get the linear velocity covariances
-void Ekf::get_velocity_covariances(float *covariances)
+const matrix::SquareMatrix<float, 3> Ekf::velocity_covariances() const
 {
-	covariances[0] = P[4][4];	// P(VX,VX)
-	covariances[1] = P[4][5];
-	covariances[2] = P[4][6];
-	covariances[3] = P[5][4];
-	covariances[4] = P[5][5];	// P(VY,VY)
-	covariances[5] = P[5][6];
-	covariances[6] = P[6][4];
-	covariances[7] = P[6][5];
-	covariances[8] = P[6][6];	// P(VZ,VZ)
+	matrix::SquareMatrix<float, 3> cov;
+	for (unsigned n = 0; n < 3; n++) {
+		for (unsigned m = 0; m < 3; m++) {
+			cov(n, m) = P[n + 4][m + 4];
+		}
+	}
+	return cov;
 }
 
 // get the position and height of the ekf origin in WGS-84 coordinates and time the origin was set
