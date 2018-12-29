@@ -335,6 +335,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		if (_advanced_thr_calc_initialized) {
 			const float EAS_squared = _EAS * _EAS;
 			/* Throttle calculations */
+
 			// This is (v2 at max throttle at  _EAS) / (v2 at max throttle at _indicated_airspeed_trim). Used to scale the required v2 for throttle.
 			const float max_v2_airspeed_coefficient = sqrtf(EAS_squared + (_max_thrust_as_coefficient *
 										       (_EAS - _indicated_airspeed_trim) + _thrust_trim_as_max_climb)
@@ -613,7 +614,8 @@ void TECS::_update_STE_rate_lim(float throttle_cruise)
 			// The variables set here could also be parameters...
 
 			// Some error checks
-			if (_auw < 0.01f || _wingspan < 0.01f || _indicated_airspeed_max > 0.95f * _indicated_airspeed_max){
+			if (_auw < 0.01f || _wingspan < 0.01f || _indicated_airspeed_max > 0.95f * _indicated_airspeed_max ||
+					throttle_cruise > 0.95f * _throttle_setpoint_max){
 				goto throttle_calculation_default;
 			}
 
@@ -641,7 +643,7 @@ void TECS::_update_STE_rate_lim(float throttle_cruise)
 			// This tells how much the maximum thrust changes as airspeed changes. Assuming a linear relationship.
 			// Sources: https://www.electricrcaircraftguy.com/2014/04/propeller-static-dynamic-thrust-equation-background.html (part "Application & Conjecturing")
 			// But! Not that simple. The relationship is not linear if the airspeed decreases too much, ie. not for static thrust. Probably because the
-			// propeller stalling. No source for this. Picture: https://www.researchgate.net/figure/Typical-propeller-thrust-curves-as-a-function-of-advance-ratio-J_fig4_281946347
+			// propeller stalling. No source for this stall hypothesis. Picture: https://www.researchgate.net/figure/Typical-propeller-thrust-curves-as-a-function-of-advance-ratio-J_fig4_281946347
 			_max_thrust_as_coefficient = (thrust_max_as_level - _thrust_trim_as_max_climb) / (_indicated_airspeed_max - _indicated_airspeed_trim);
 
 			// v2 is the speed of airflow after the propeller. Source: https://www.grc.nasa.gov/www/k-12/airplane/propth.html
@@ -652,8 +654,8 @@ void TECS::_update_STE_rate_lim(float throttle_cruise)
 			_v2_trim_as_max_climb = sqrtf(_indicated_airspeed_trim * _indicated_airspeed_trim + _thrust_trim_as_max_climb
 							     / _thrust_coefficient);
 
-			//constants a and b for the (throttle, v2) curve. v2 = a*sqrt(throttle/max_throttle) + b*(throttle/max_throttle)
-			const float throttle_ratio = max(throttle_cruise / _throttle_setpoint_max, 0.95f);
+			//constants a and b for the (throttle, v2) curve. v2 = a*sqrt(cruise_throttle/max_throttle) + b*(cruise_throttle/max_throttle)
+			const float throttle_ratio = throttle_cruise / _throttle_setpoint_max;
 			_throttle_calc_constant_a = (v2_trim_as_level - _v2_trim_as_max_climb * throttle_ratio) / (sqrtf(throttle_ratio) - throttle_ratio);
 			_throttle_calc_constant_b = _v2_trim_as_max_climb - _throttle_calc_constant_a;
 
