@@ -131,6 +131,8 @@ public:
 
 	void set_wingspan(float wingspan) { _wingspan = wingspan; }
 	void set_auw(float auw) { _auw = auw; }
+	void set_propeller_diameter(float diameter) {_propeller_diameter = diameter; }
+	void set_use_advanced_thr_calculation(bool value) {_use_advanced_thr_calculation = value; }
 
 	// TECS status
 	uint64_t timestamp() { return _pitch_update_timestamp; }
@@ -282,9 +284,21 @@ private:
 	bool _states_initalized{false};					///< true when TECS states have been iniitalized
 	bool _in_air{false};						///< true when the vehicle is flying
 
-	//Other
+	// advanced throttle calculation
+	bool  _use_advanced_thr_calculation{false};
+	bool  _advanced_thr_calc_initialized{false};
 	float _wingspan{1.0f};						///< Wingspan used for induced drag calculation
 	float _auw{1.0f};						///< All-up-weight used for induced drag calculation
+	float _cd_i_specific{10.0f};
+	float _cd_o_specific{0.04f};
+	float _propeller_diameter{0.2f};				///< Propeller/fan diameter in meters
+	float _thrust_trim_as_max_climb{1.0f};
+	float _max_thrust_as_coefficient{1.0f};
+	float _thrust_coefficient{0.0f};
+	float _v2_trim_as_max_climb{0.0f};
+	float _throttle_calc_constant_a{10.0f};
+	float _throttle_calc_constant_b{-1.0f};
+
 
 	/**
 	 * Update the airspeed internal state using a second order complementary filter
@@ -335,6 +349,6 @@ private:
 	/**
 	 * Calculate specific total energy rate limits
 	 */
-	void _update_STE_rate_lim();
+	void _update_STE_rate_lim(float throttle_cruise);
 
 };
