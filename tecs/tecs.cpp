@@ -306,8 +306,42 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 	// Calculate total energy error
 	_STE_error = _SPE_setpoint - _SPE_estimate + _SKE_setpoint - _SKE_estimate;
 
-	// Calculate demanded rate of change of total energy, respecting vehicle limits
-	float STE_rate_setpoint = constrain((_SPE_rate_setpoint + _SKE_rate_setpoint), _STE_rate_min, _STE_rate_max);
+	float SKE_error = _SKE_setpoint - _SKE_estimate;
+
+	float SKE_rate_error = 0.2f * (_SKE_rate_setpoint - _SKE_rate) + 0.8f * _SKE_rate_error;
+
+	// Calculate demanded rate of change of total energy
+	float STE_rate_setpoint = _SPE_rate_setpoint + _SKE_rate_setpoint;
+
+	// Add derivative control
+	STE_rate_setpoint = STE_rate_setpoint + (STE_rate_error * _throttle_damping_gain) / _throttle_time_constant;
+
+	// Add integral control
+	if (_integrator_gain > 0.0f && airspeed_sensor_enabled()) {
+		// Calculate throttle integrator state upper and lower limits with allowance for
+		// 10% throttle saturation to accommodate noise on the demand.
+		float integ_state_max = _throttle_setpoint_max - _throttle_setpoint + 0.1f;
+		float integ_state_min = _throttle_setpoint_min - _throttle_setpoint - 0.1f;
+
+		// Calculate a throttle demand from the integrated total energy error
+		// This will be added to the total throttle demand to compensate for steady state errors
+		_throttle_integ_state = _throttle_integ_state + (_STE_error * _integrator_gain) * _dt / _throttle_time_constant;
+
+		if (_climbout_mode_active) {
+			// During climbout, set the integrator to maximum throttle to prevent transient throttle drop
+			// at end of climbout when we transition to closed loop throttle control
+			_throttle_integ_state = integ_state_max;
+
+		} else {
+			// Respect integrator limits during closed loop operation.
+			_throttle_integ_state = constrain(_throttle_integ_state, integ_state_min, integ_state_max);
+		}
+
+	} else {
+		_throttle_integ_state = 0.0f;
+	}
+
+	STE_rate_setpoint = STE_rate_setpoint + _throttle_integ_state;
 
 	// Calculate the total energy rate error, applying a first order IIR filter
 	// to reduce the effect of accelerometer noise
@@ -331,7 +365,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		// Specific total energy rate = 0 at cruise throttle
 		// Specific total energy rate = _STE_rate_min is achieved when throttle is set to _throttle_setpoint_min
 		float throttle_predicted = 0.0f;
-
+---
 		if (STE_rate_setpoint >= 0) {
 			// throttle is between cruise and maximum
 			throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_max * (_throttle_setpoint_max - throttle_cruise);
@@ -341,7 +375,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 			throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_min * (_throttle_setpoint_min - throttle_cruise);
 
 		}
-
+---
 		// Calculate gain scaler from specific energy error to throttle
 		float STE_to_throttle = 1.0f / (_throttle_time_constant * (_STE_rate_max - _STE_rate_min));
 
