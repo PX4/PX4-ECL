@@ -263,6 +263,10 @@ void TECS::_update_height_setpoint(float desired, float state)
 	} else if (_hgt_rate_setpoint < -_max_sink_rate) {
 		_hgt_rate_setpoint = -_max_sink_rate;
 	}
+
+	// Limit the rate of change of height demand to respect vehicle performance limits
+	// Limit the rate setpoint to 2 times the hgt setpoint rate to accomodate for short changes
+	_hgt_rate_setpoint = constrain(_hgt_rate_setpoint, -2.0f * _max_sink_rate, 2.0f * _max_climb_rate);
 }
 
 void TECS::_detect_underspeed()
@@ -306,15 +310,15 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 	// Calculate total energy error
 	_STE_error = _SPE_setpoint - _SPE_estimate + _SKE_setpoint - _SKE_estimate;
 
-	float SKE_error = _SKE_setpoint - _SKE_estimate;
-
-	float SKE_rate_error = 0.2f * (_SKE_rate_setpoint - _SKE_rate) + 0.8f * _SKE_rate_error;
-
 	// Calculate demanded rate of change of total energy
-	float STE_rate_setpoint = _SPE_rate_setpoint + _SKE_rate_setpoint;
+	float STE_rate_setpoint = _SPE_rate_setpoint_pitch + _SKE_rate_setpoint;
+
+	// Calculate the total energy rate error, applying a first order IIR filter
+	// to reduce the effect of accelerometer noise
+	_STE_rate_error = 0.2f * (STE_rate_setpoint - _SPE_rate - _SKE_rate) + 0.8f * _STE_rate_error;
 
 	// Add derivative control
-	STE_rate_setpoint = STE_rate_setpoint + (STE_rate_error * _throttle_damping_gain) / _throttle_time_constant;
+	STE_rate_setpoint = STE_rate_setpoint + (_STE_rate_error * _throttle_damping_gain) / _throttle_time_constant;
 
 	// Add integral control
 	if (_integrator_gain > 0.0f && airspeed_sensor_enabled()) {
@@ -343,10 +347,6 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 
 	STE_rate_setpoint = STE_rate_setpoint + _throttle_integ_state;
 
-	// Calculate the total energy rate error, applying a first order IIR filter
-	// to reduce the effect of accelerometer noise
-	_STE_rate_error = 0.2f * (STE_rate_setpoint - _SPE_rate - _SKE_rate) + 0.8f * _STE_rate_error;
-
 	// Calculate the throttle demand
 	if (_underspeed_detected) {
 		// always use full throttle to recover from an underspeed condition
@@ -365,7 +365,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		// Specific total energy rate = 0 at cruise throttle
 		// Specific total energy rate = _STE_rate_min is achieved when throttle is set to _throttle_setpoint_min
 		float throttle_predicted = 0.0f;
----
+
 		if (STE_rate_setpoint >= 0) {
 			// throttle is between cruise and maximum
 			throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_max * (_throttle_setpoint_max - throttle_cruise);
@@ -375,12 +375,9 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 			throttle_predicted = throttle_cruise + STE_rate_setpoint / _STE_rate_min * (_throttle_setpoint_min - throttle_cruise);
 
 		}
----
-		// Calculate gain scaler from specific energy error to throttle
-		float STE_to_throttle = 1.0f / (_throttle_time_constant * (_STE_rate_max - _STE_rate_min));
 
-		// Add proportional and derivative control feedback to the predicted throttle and constrain to throttle limits
-		_throttle_setpoint = (_STE_error + _STE_rate_error * _throttle_damping_gain) * STE_to_throttle + throttle_predicted;
+		// Constrain to throttle limits
+		_throttle_setpoint = throttle_predicted;
 		_throttle_setpoint = constrain(_throttle_setpoint, _throttle_setpoint_min, _throttle_setpoint_max);
 
 		// Rate limit the throttle demand
@@ -391,40 +388,6 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		}
 
 		_last_throttle_setpoint = _throttle_setpoint;
-
-		if (_integrator_gain > 0.0f) {
-			// Calculate throttle integrator state upper and lower limits with allowance for
-			// 10% throttle saturation to accommodate noise on the demand.
-			float integ_state_max = _throttle_setpoint_max - _throttle_setpoint + 0.1f;
-			float integ_state_min = _throttle_setpoint_min - _throttle_setpoint - 0.1f;
-
-			// Calculate a throttle demand from the integrated total energy error
-			// This will be added to the total throttle demand to compensate for steady state errors
-			_throttle_integ_state = _throttle_integ_state + (_STE_error * _integrator_gain) * _dt * STE_to_throttle;
-
-			if (_climbout_mode_active) {
-				// During climbout, set the integrator to maximum throttle to prevent transient throttle drop
-				// at end of climbout when we transition to closed loop throttle control
-				_throttle_integ_state = integ_state_max;
-
-			} else {
-				// Respect integrator limits during closed loop operation.
-				_throttle_integ_state = constrain(_throttle_integ_state, integ_state_min, integ_state_max);
-			}
-
-		} else {
-			_throttle_integ_state = 0.0f;
-		}
-
-		if (airspeed_sensor_enabled()) {
-			// Add the integrator feedback during closed loop operation with an airspeed sensor
-			_throttle_setpoint = _throttle_setpoint + _throttle_integ_state;
-
-		} else {
-			// when flying without an airspeed sensor, use the predicted throttle only
-			_throttle_setpoint = throttle_predicted;
-
-		}
 
 		_throttle_setpoint = constrain(_throttle_setpoint, _throttle_setpoint_min, _throttle_setpoint_max);
 	}
@@ -483,6 +446,9 @@ void TECS::_update_pitch_setpoint()
 	// Calculate the weighting applied to control of specific potential energy error
 	float SPE_weighting = 2.0f - SKE_weighting;
 
+	SKE_weighting = min(SKE_weighting, 1.0f);
+	SPE_weighting = min(SPE_weighting, 1.0f);
+
 	// Calculate the specific energy balance demand which specifies how the available total
 	// energy should be allocated to speed (kinetic energy) and height (potential energy)
 	float SEB_setpoint = _SPE_setpoint * SPE_weighting - _SKE_setpoint * SKE_weighting;
@@ -520,7 +486,11 @@ void TECS::_update_pitch_setpoint()
 	}
 
 	// Calculate a specific energy correction that doesn't include the integrator contribution
-	float SEB_correction = _SEB_error + _SEB_rate_error * _pitch_damping_gain + SEB_rate_setpoint * _pitch_time_constant;
+	float SEB_correction = _SEB_rate_error * _pitch_damping_gain + SEB_rate_setpoint * _pitch_time_constant;
+
+	// Divide it into kinetic and potential proportions for throttle calculations. Also normalise it in relation to _pitch_time_constant
+	float SEB_rate_setpoint_pitch = constrain(SEB_rate_setpoint / climb_angle_to_SEB_rate, _pitch_setpoint_min, _pitch_setpoint_max) * (_tas_state * CONSTANTS_ONE_G);
+	_SPE_rate_setpoint_pitch = SEB_rate_setpoint_pitch * SPE_weighting / (SKE_weighting + SPE_weighting);
 
 	// During climbout, bias the demanded pitch angle so that a zero speed error produces a pitch angle
 	// demand equal to the minimum pitch angle set by the mission plan. This prevents the integrator
@@ -657,11 +627,11 @@ void TECS::update_pitch_throttle(const matrix::Dcmf &rotMat, float pitch, float 
 	// Calculate the specific energy values required by the control loop
 	_update_energy_estimates();
 
-	// Calculate the throttle demand
-	_update_throttle_setpoint(throttle_cruise, rotMat);
-
 	// Calculate the pitch demand
 	_update_pitch_setpoint();
+
+	// Calculate the throttle demand
+	_update_throttle_setpoint(throttle_cruise, rotMat);
 
 	// Update time stamps
 	_pitch_update_timestamp = now;

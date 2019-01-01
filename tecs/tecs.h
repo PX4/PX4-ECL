@@ -252,6 +252,7 @@ private:
 	float _SPE_setpoint{0.0f};					///< specific potential energy demand (m**2/sec**2)
 	float _SKE_setpoint{0.0f};					///< specific kinetic energy demand (m**2/sec**2)
 	float _SPE_rate_setpoint{0.0f};					///< specific potential energy rate demand (m**2/sec**3)
+	float _SPE_rate_setpoint_pitch{0.0f};				///< actual specific potential energy rate demand (m**2/sec**3)
 	float _SKE_rate_setpoint{0.0f};					///< specific kinetic energy rate demand (m**2/sec**3)
 	float _SPE_estimate{0.0f};					///< specific potential energy estimate (m**2/sec**2)
 	float _SKE_estimate{0.0f};					///< specific kinetic energy estimate (m**2/sec**2)
