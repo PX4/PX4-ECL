@@ -337,6 +337,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 			/* Throttle calculations */
 
 			// This is (v2 at max throttle at  _EAS) / (v2 at max throttle at _indicated_airspeed_trim). Used to scale the required v2 for throttle.
+			// The adjusted v2 is calculated from thrust, which is assumed to have a linear relationship to airspeed.
 			const float max_v2_airspeed_coefficient = sqrtf(EAS_squared + (_max_thrust_as_coefficient *
 										       (_EAS - _indicated_airspeed_trim) + _thrust_trim_as_max_climb)
 									/ _thrust_coefficient) / _v2_trim_as_max_climb;
@@ -354,7 +355,15 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 			const float a_sq = a_adj * a_adj;
 			const float two_b = 2.0f * b_adj;
 
-			throttle_predicted = (a_sq - sqrtf(a_sq * a_sq + 2.0f * two_b * a_sq * required_v2) + two_b * required_v2) /
+			// Solving throttle from required_v2
+			// https://www.wolframalpha.com/input/?i=v+%3D+a*sqrt(x)+%2B+bx+solve+x
+			float sqrt_part = sqrtf(a_sq * a_sq + 4.0f * b_adj * a_sq * required_v2);
+
+			if (a_adj < 0){
+				sqrt_part = - sqrt_part;
+			}
+
+			throttle_predicted = (a_sq - sqrt_part + two_b * required_v2) /
 					(two_b * b_adj) * (_throttle_setpoint_max - _throttle_setpoint_min) + _throttle_setpoint_min;
 		}
 		else{
@@ -374,7 +383,6 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 
 		// Add proportional and derivative control feedback to the predicted throttle and constrain to throttle limits
 		_throttle_setpoint = (_STE_error + _STE_rate_error * _throttle_damping_gain) * STE_to_throttle + throttle_predicted;
-
 		_throttle_setpoint = constrain(_throttle_setpoint, _throttle_setpoint_min, _throttle_setpoint_max);
 
 		// Rate limit the throttle demand
@@ -611,8 +619,6 @@ void TECS::_update_STE_rate_lim(float throttle_cruise)
 	if (_use_advanced_thr_calculation) {
 
 		if (!_advanced_thr_calc_initialized){
-			// The variables set here could also be parameters...
-
 			// Some error checks
 			if (_auw < 0.01f || _wingspan < 0.01f || _indicated_airspeed_max > 0.95f * _indicated_airspeed_max ||
 					throttle_cruise > 0.95f * _throttle_setpoint_max){
@@ -654,7 +660,8 @@ void TECS::_update_STE_rate_lim(float throttle_cruise)
 			_v2_trim_as_max_climb = sqrtf(_indicated_airspeed_trim * _indicated_airspeed_trim + _thrust_trim_as_max_climb
 							     / _thrust_coefficient);
 
-			//constants a and b for the (throttle, v2) curve. v2 = a*sqrt(cruise_throttle/max_throttle) + b*(cruise_throttle/max_throttle)
+			// Constants a and b for the (throttle, v2) curve. v2 = a*sqrt(cruise_throttle/max_throttle) + b*(cruise_throttle/max_throttle).
+			// This gives a nice fit for the (throttle, v2) curve, assuming that at throttle = 0 -> v2 = 0.
 			const float throttle_ratio = throttle_cruise / _throttle_setpoint_max;
 			_throttle_calc_constant_a = (v2_trim_as_level - _v2_trim_as_max_climb * throttle_ratio) / (sqrtf(throttle_ratio) - throttle_ratio);
 			_throttle_calc_constant_b = _v2_trim_as_max_climb - _throttle_calc_constant_a;
@@ -680,17 +687,7 @@ void TECS::_update_STE_rate_lim(float throttle_cruise)
 			// _STE_rate_min equals to the sum of parasitic and induced drag power.
 			// Drag force = _Cd_i / _EAS /_EAS + _Cd_o_specific * _EAS *_EAS;
 			// Drag power = Drag force * _EAS
-
-			// Depending on whether we have too little or too much total energy, choose the drag power (=_STE_rate_min)
-			// that will give more safety margin.
-			// Eg. _STE_error > 0 -> too little energy -> choosing the drag power which is greater -> more throttle
-			if (_STE_error < 0) {
-				_STE_rate_min = - min((_cd_i_specific / _EAS + _cd_o_specific * _EAS * _EAS * _EAS),
-						      (_cd_i_specific / _EAS_setpoint + _cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
-			} else {
-				_STE_rate_min = - max((_cd_i_specific / _EAS + _cd_o_specific * _EAS * _EAS * _EAS),
-						      (_cd_i_specific / _EAS_setpoint + _cd_o_specific * _EAS_setpoint * _EAS_setpoint * _EAS_setpoint));
-			}
+			_STE_rate_min = - (_cd_i_specific / _EAS + _cd_o_specific * _EAS * _EAS * _EAS),
 
 			_STE_rate_max = (rate_max - rate_min) + (_EAS - _indicated_airspeed_trim) * _max_thrust_as_coefficient * _EAS / _auw + _STE_rate_min;
 		} else {
