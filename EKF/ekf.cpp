@@ -266,7 +266,11 @@ bool Ekf::initialiseFilter()
 			// so it can be used as a backup ad set the initial height using the range finder
 			const baroSample &baro_newest = _baro_buffer.get_newest();
 			_baro_hgt_offset = baro_newest.hgt;
-			_state.pos(2) = -math::max(_rng_filt_state * _R_rng_to_earth_2_2, _params.rng_gnd_clearance);
+			if (!_params.rng_abs){
+				_state.pos(2) = -math::max(_rng_filt_state * _R_rng_to_earth_2_2, _params.rng_gnd_clearance);
+			} else {
+				_state.pos(2) = -math::max(_rng_filt_state, _params.rng_gnd_clearance);
+			}
 			ECL_INFO("EKF using range finder height - commencing alignment");
 
 		} else if (_control_status.flags.ev_hgt) {

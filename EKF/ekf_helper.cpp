@@ -65,7 +65,13 @@ bool Ekf::resetVelocity()
 		float heightAboveGndEst = fmaxf((_terrain_vpos - _state.pos(2)), _params.rng_gnd_clearance);
 
 		// calculate absolute distance from focal point to centre of frame assuming a flat earth
-		float range = heightAboveGndEst / _R_rng_to_earth_2_2;
+		float range;
+		if (!_params.rng_abs){
+			range = heightAboveGndEst / _R_rng_to_earth_2_2;
+		} else {
+			range = heightAboveGndEst;
+		}
+		
 
 		if ((range - _params.rng_gnd_clearance) > 0.3f && _flow_sample_delayed.dt > 0.05f) {
 			// we should have reliable OF measurements so
@@ -219,9 +225,18 @@ void Ekf::resetHeight()
 			// correct the range data for position offset relative to the IMU
 			Vector3f pos_offset_body = _params.rng_pos_body - _params.imu_pos_body;
 			Vector3f pos_offset_earth = _R_to_earth * pos_offset_body;
-			range_newest.rng += pos_offset_earth(2) / _R_rng_to_earth_2_2;
+			if (!_params.rng_abs){
+				range_newest.rng += pos_offset_earth(2) / _R_rng_to_earth_2_2;
+			} else {
+				range_newest.rng += pos_offset_earth(2);
+			}
 			// calculate the new vertical position using range sensor
-			float new_pos_down = _hgt_sensor_offset - range_newest.rng * _R_rng_to_earth_2_2;
+			float new_pos_down;
+			if (!_params.rng_abs){
+				new_pos_down = _hgt_sensor_offset - range_newest.rng * _R_rng_to_earth_2_2;
+			} else {	
+				new_pos_down = _hgt_sensor_offset - range_newest.rng;
+			}
 
 			// update the state and assoicated variance
 			_state.pos(2) = new_pos_down;

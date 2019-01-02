@@ -116,7 +116,11 @@ void Ekf::controlFusionModes()
 		// correct the range data for position offset relative to the IMU
 		Vector3f pos_offset_body = _params.rng_pos_body - _params.imu_pos_body;
 		Vector3f pos_offset_earth = _R_to_earth * pos_offset_body;
-		_range_sample_delayed.rng += pos_offset_earth(2) / _R_rng_to_earth_2_2;
+		if (!_params.rng_abs){
+			_range_sample_delayed.rng += pos_offset_earth(2) / _R_rng_to_earth_2_2;
+		} else {
+			_range_sample_delayed.rng += pos_offset_earth(2);
+		}
 	}
 	
 	// We don't fuse flow data immediately because we have to wait for the mid integration point to fall behind the fusion time horizon.
@@ -952,7 +956,11 @@ void Ekf::controlHeightFusion()
 					_hgt_sensor_offset = _terrain_vpos;
 
 				} else {
-					_hgt_sensor_offset = _R_rng_to_earth_2_2 * _range_sample_delayed.rng + _state.pos(2);
+					if (!_params.rng_abs){
+						_hgt_sensor_offset = _R_rng_to_earth_2_2 * _range_sample_delayed.rng + _state.pos(2);
+					} else {
+						_hgt_sensor_offset = _range_sample_delayed.rng + _state.pos(2);
+					}
 				}
 			}
 
@@ -1003,9 +1011,11 @@ void Ekf::controlHeightFusion()
 				_hgt_sensor_offset = _terrain_vpos;
 
 			} else if (_control_status.flags.in_air) {
-
-				_hgt_sensor_offset = _R_rng_to_earth_2_2 * _range_sample_delayed.rng + _state.pos(2);
-
+				if (!_params.rng_abs){
+					_hgt_sensor_offset = _R_rng_to_earth_2_2 * _range_sample_delayed.rng + _state.pos(2);
+				} else {
+					_hgt_sensor_offset = _range_sample_delayed.rng + _state.pos(2);
+				}
 			} else {
 
 				_hgt_sensor_offset = _params.rng_gnd_clearance;
@@ -1037,7 +1047,11 @@ void Ekf::controlHeightFusion()
 					_hgt_sensor_offset = _terrain_vpos;
 
 				} else {
-					_hgt_sensor_offset = _R_rng_to_earth_2_2 * _range_sample_delayed.rng + _state.pos(2);
+					if (!_params.rng_abs){
+						_hgt_sensor_offset = _R_rng_to_earth_2_2 * _range_sample_delayed.rng + _state.pos(2);
+					} else {
+						_hgt_sensor_offset = _range_sample_delayed.rng + _state.pos(2);
+					}
 				}
 			}
 

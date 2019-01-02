@@ -291,6 +291,7 @@ struct parameters {
 	float range_aid_innov_gate{1.0f}; 	///< gate size used for innovation consistency checks for range aid fusion
 	float range_cos_max_tilt{0.7071f};	///< cosine of the maximum tilt angle from the vertical that permits use of range finder and flow data
 	float range_stuck_threshold{0.1f};	///< minimum variation in range finder reading required to declare a range finder 'unstuck' when readings recommence after being out of range (m)
+	int32_t rng_abs{0};			///< Boolean. A value of 1 indicates that the range finder sensor always gives an absolute altitude independently from the orientation of the vehicle.
 
 	// vision position fusion
 	float ev_innov_gate{5.0f};		///< vision estimator fusion innovation consistency gate size (STD)
