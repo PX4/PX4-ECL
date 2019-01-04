@@ -336,35 +336,31 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 			const float EAS_squared = _EAS * _EAS;
 			/* Throttle calculations */
 
-			// This is (v2 at max throttle at  _EAS) / (v2 at max throttle at _indicated_airspeed_trim). Used to scale the required v2 for throttle.
-			// The adjusted v2 is calculated from thrust, which is assumed to have a linear relationship to airspeed.
-			const float max_v2_airspeed_coefficient = sqrtf(EAS_squared + (_max_thrust_as_coefficient *
+			// This is (delta v at max throttle at  _EAS) / (v2 at max throttle at _indicated_airspeed_trim). Used to scale the required delta v for throttle.
+			// The adjusted delt v is calculated from thrust, which is assumed to have a linear relationship to airspeed.
+			const float max_delta_v_airspeed_coefficient = (sqrtf(EAS_squared + (_max_thrust_as_coefficient *
 										       (_EAS - _indicated_airspeed_trim) + _thrust_trim_as_max_climb)
-									/ _thrust_coefficient) / _v2_trim_as_max_climb;
+									/ _thrust_coefficient) - _EAS) / _delta_v_trim_as_max_climb;
 
 			// required thrust to overcome air drag, climb rate and acceleration. Also de-normalizimg this from _auw.
 			const float required_thrust = (_cd_i_specific / EAS_squared + _cd_o_specific * EAS_squared + STE_rate_setpoint) * _auw;
 
-			// The calculated v2 to produce the required thrust at the current airspeed
-			const float required_v2 = sqrtf(required_thrust / _thrust_coefficient + EAS_squared);
+			// The calculated delta v to produce the required thrust at the current airspeed
+			const float required_delta_v = sqrtf(required_thrust / _thrust_coefficient + EAS_squared);
 
-			// Adjusting the throttle curve for the new maximum airspeed.
-			const float a_adj = _throttle_calc_constant_a * max_v2_airspeed_coefficient;
-			const float b_adj = _throttle_calc_constant_b * max_v2_airspeed_coefficient;
+			// Adjusting the delta v to match the new maximum delta v at the current airspeed
+			const float delta_v_trim_as_level_adj = _delta_v_trim_as_level * max_delta_v_airspeed_coefficient;
+			const float delta_v_trim_as_max_climb_adj = _delta_v_trim_as_max_climb * max_delta_v_airspeed_coefficient;
 
-			const float a_sq = a_adj * a_adj;
-			const float two_b = 2.0f * b_adj;
-
-			// Solving throttle from required_v2
-			// https://www.wolframalpha.com/input/?i=v+%3D+a*sqrt(x)+%2B+bx+solve+x
-			float sqrt_part = sqrtf(a_sq * a_sq + 4.0f * b_adj * a_sq * required_v2);
-
-			if (a_adj < 0){
-				sqrt_part = - sqrt_part;
+			// Getting the required throttle by interpolating and finding the required delta v.
+			if (required_delta_v > delta_v_trim_as_level_adj) {
+				throttle_predicted = (required_delta_v - delta_v_trim_as_level_adj) / (delta_v_trim_as_max_climb_adj - delta_v_trim_as_level_adj) *
+						     (_throttle_setpoint_max - throttle_cruise) + throttle_cruise;
+			} else {
+				throttle_predicted = (required_delta_v / delta_v_trim_as_level_adj) * (throttle_cruise - _throttle_setpoint_min) + _throttle_setpoint_min;
 			}
 
-			throttle_predicted = (a_sq - sqrt_part + two_b * required_v2) /
-					(two_b * b_adj) * (_throttle_setpoint_max - _throttle_setpoint_min) + _throttle_setpoint_min;
+			throttle_predicted = throttle_predicted * _throttle_setpoint_max;
 		}
 		else{
 			if (STE_rate_setpoint >= 0) {
@@ -655,28 +651,13 @@ void TECS::_update_STE_rate_lim(float throttle_cruise)
 			// v2 is the speed of airflow after the propeller. Source: https://www.grc.nasa.gov/www/k-12/airplane/propth.html
 			// Source states that F = 0.5*PI*(d/2)^2*rho*(v2^2 - airspeed^2) where d is the propeller diameter and rho is the air density.
 			_thrust_coefficient = 0.125f * M_PI_F * (_propeller_diameter) * (_propeller_diameter) * CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C;
-			const float v2_trim_as_level = sqrtf(_indicated_airspeed_trim * _indicated_airspeed_trim + thrust_trim_as_level
+			_delta_v_trim_as_level = sqrtf(_indicated_airspeed_trim * _indicated_airspeed_trim + thrust_trim_as_level
 							     / _thrust_coefficient);
-			_v2_trim_as_max_climb = sqrtf(_indicated_airspeed_trim * _indicated_airspeed_trim + _thrust_trim_as_max_climb
+			_delta_v_trim_as_max_climb = sqrtf(_indicated_airspeed_trim * _indicated_airspeed_trim + _thrust_trim_as_max_climb
 							     / _thrust_coefficient);
-
-			// Constants a and b for the (throttle, v2) curve. v2 = a*sqrt(cruise_throttle/max_throttle) + b*(cruise_throttle/max_throttle).
-			// This gives a nice fit for the (throttle, v2) curve, assuming that at throttle = 0 -> v2 = 0.
-			const float throttle_ratio = throttle_cruise / _throttle_setpoint_max;
-			_throttle_calc_constant_a = (v2_trim_as_level - _v2_trim_as_max_climb * throttle_ratio) / (sqrtf(throttle_ratio) - throttle_ratio);
-			_throttle_calc_constant_b = _v2_trim_as_max_climb - _throttle_calc_constant_a;
-
-			// Make sure this is not 0...
-			if (_throttle_calc_constant_b < 0.01f && _throttle_calc_constant_b > -0.01f) {
-				if(_throttle_calc_constant_b > 0) {
-					_throttle_calc_constant_b = 0.01f;
-				} else {
-					_throttle_calc_constant_b = -0.01f;
-				}
-			}
 
 			// Some more error checks
-			if (_thrust_coefficient > 0.001f && _v2_trim_as_max_climb > 0.1f){
+			if (_thrust_coefficient > 0.001f && _delta_v_trim_as_max_climb > 0.1f){
 				_advanced_thr_calc_initialized = true;
 			} else {
 				goto throttle_calculation_default;
