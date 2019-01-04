@@ -346,7 +346,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 			const float required_thrust = (_cd_i_specific / EAS_squared + _cd_o_specific * EAS_squared + STE_rate_setpoint) * _auw;
 
 			// The calculated delta v to produce the required thrust at the current airspeed
-			const float required_delta_v = sqrtf(required_thrust / _thrust_coefficient + EAS_squared);
+			const float required_delta_v = sqrtf(required_thrust / _thrust_coefficient + EAS_squared) - _EAS;
 
 			// Adjusting the delta v to match the new maximum delta v at the current airspeed
 			const float delta_v_trim_as_level_adj = _delta_v_trim_as_level * max_delta_v_airspeed_coefficient;
@@ -652,9 +652,9 @@ void TECS::_update_STE_rate_lim(float throttle_cruise)
 			// Source states that F = 0.5*PI*(d/2)^2*rho*(v2^2 - airspeed^2) where d is the propeller diameter and rho is the air density.
 			_thrust_coefficient = 0.125f * M_PI_F * (_propeller_diameter) * (_propeller_diameter) * CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C;
 			_delta_v_trim_as_level = sqrtf(_indicated_airspeed_trim * _indicated_airspeed_trim + thrust_trim_as_level
-							     / _thrust_coefficient);
+							     / _thrust_coefficient) - _indicated_airspeed_trim;
 			_delta_v_trim_as_max_climb = sqrtf(_indicated_airspeed_trim * _indicated_airspeed_trim + _thrust_trim_as_max_climb
-							     / _thrust_coefficient);
+							     / _thrust_coefficient) - _indicated_airspeed_trim;
 
 			// Some more error checks
 			if (_thrust_coefficient > 0.001f && _delta_v_trim_as_max_climb > 0.1f){
