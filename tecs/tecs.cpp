@@ -343,10 +343,10 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 									/ _thrust_coefficient) - _EAS) / _delta_v_trim_as_max_climb;
 
 			// required thrust to overcome air drag, climb rate and acceleration. Also de-normalizimg this from _auw.
-			const float required_thrust = (_cd_i_specific / EAS_squared + _cd_o_specific * EAS_squared + STE_rate_setpoint) * _auw;
+			const float required_thrust = (_cd_i_specific / EAS_squared + _cd_o_specific * EAS_squared + STE_rate_setpoint / _EAS) * _auw;
 
 			// The calculated delta v to produce the required thrust at the current airspeed
-			const float required_delta_v = sqrtf(required_thrust / _thrust_coefficient + EAS_squared) - _EAS;
+			const float required_delta_v = sqrtf(max(0.001f, required_thrust / _thrust_coefficient + EAS_squared)) - _EAS;
 
 			// Adjusting the delta v to match the new maximum delta v at the current airspeed
 			const float delta_v_trim_as_level_adj = _delta_v_trim_as_level * max_delta_v_airspeed_coefficient;
@@ -360,7 +360,6 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 				throttle_predicted = (required_delta_v / delta_v_trim_as_level_adj) * (throttle_cruise - _throttle_setpoint_min) + _throttle_setpoint_min;
 			}
 
-			throttle_predicted = throttle_predicted * _throttle_setpoint_max;
 		}
 		else{
 			if (STE_rate_setpoint >= 0) {
@@ -670,7 +669,7 @@ void TECS::_update_STE_rate_lim(float throttle_cruise)
 			// Drag power = Drag force * _EAS
 			_STE_rate_min = - (_cd_i_specific / _EAS + _cd_o_specific * _EAS * _EAS * _EAS),
 
-			_STE_rate_max = (rate_max - rate_min) + (_EAS - _indicated_airspeed_trim) * _max_thrust_as_coefficient * _EAS / _auw + _STE_rate_min;
+			_STE_rate_max = ((_EAS - _indicated_airspeed_trim) * _max_thrust_as_coefficient + _thrust_trim_as_max_climb) * _EAS / _auw + _STE_rate_min;
 		} else {
 			goto throttle_calculation_default;
 		}
