@@ -194,6 +194,9 @@ public:
 	// get the estimated terrain vertical position relative to the NED origin
 	void get_terrain_vert_pos(float *ret);
 
+	// get the terrain variance
+	void get_terrain_var(float *ret);
+
 	// get the accerometer bias in m/s/s
 	void get_accel_bias(float bias[3]);
 
