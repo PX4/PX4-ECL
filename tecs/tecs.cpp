@@ -489,7 +489,7 @@ void TECS::_update_pitch_setpoint()
 	// Calculate a specific energy correction that doesn't include the integrator contribution
 	float SEB_correction = _SEB_rate_error * _pitch_damping_gain + SEB_rate_setpoint;
 
-	// Divide it into kinetic and potential proportions for throttle calculations. Also normalise it in relation to _pitch_time_constant
+	// Divide it into kinetic and potential proportions for throttle calculations.
 	float SEB_rate_setpoint_pitch = constrain(SEB_rate_setpoint / climb_angle_to_SEB_rate, _pitch_setpoint_min, _pitch_setpoint_max) * (_tas_state * CONSTANTS_ONE_G);
 	_SPE_rate_setpoint_pitch = SEB_rate_setpoint_pitch * SPE_weighting / (SKE_weighting + SPE_weighting);
 
