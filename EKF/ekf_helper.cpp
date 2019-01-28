@@ -982,36 +982,6 @@ void Ekf::get_gyro_bias(float bias[3])
 	memcpy(bias, temp, 3 * sizeof(float));
 }
 
-// covariance propagation from quaternions to euler angles using the covariance law
-// source: "Development of a Real-Time Attitude System Using a Quaternion
-// Parameterization and Non-Dedicated GPS Receivers", John B. Schleppe 1996
-const matrix::SquareMatrix<float, 3> Ekf::propagate_covariances_from_quat_to_euler() const
-{
-	// Jacobian matrix (3x4) containing the partial derivatives of the
-	// Euler angle equations with respect to the quaternions
-	matrix::Matrix<float, 3, 4> G;
-
-	float q1 = _output_new.quat_nominal(0);
-	float q2 = _output_new.quat_nominal(1);
-	float q3 = _output_new.quat_nominal(2);
-	float q4 = _output_new.quat_nominal(3);
-
-	G(0,0) = -(q3+q2) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) + (q3-q2)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
-	G(0,1) =  (q4+q1) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) - (q4-q1)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
-	G(0,2) =  (q4+q1) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) + (q4-q1)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
-	G(0,3) = -(q3+q2) / ((q3+q2)*(q3+q2) + (q4+q2)*(q4+q1)) - (q3-q2)/((q3-q2)*(q3-q2) + (q4-q1)*(q4-q1));
-	G(1,0) = 2 * q4 / sqrtf(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
-	G(1,1) = 2 * q3 / sqrtf(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
-	G(1,2) = 2 * q2 / sqrtf(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
-	G(1,3) = 2 * q1 / sqrtf(1 - 4 * (q2*q3 + q1*q4)*(q2*q3 + q1*q4));
-	G(2,0) = G(0,3);
-	G(2,1) = G(0,2);
-	G(2,2) = G(0,1);
-	G(2,3) = G(0,0);
-
-	return G * quaternion_covariances() * G.transpose();
-}
-
 // get the full covariance matrix
 const matrix::SquareMatrix<float, 24> Ekf::covariances() const
 {
@@ -1055,23 +1025,6 @@ const matrix::SquareMatrix<float, 4> Ekf::quaternion_covariances() const
 			cov(n, m) = P[n][m];
 		}
 	}
-	return cov;
-}
-
-// get the euler angles covariances
-const matrix::SquareMatrix<float, 3> Ekf::euler_covariances() const
-{
-	return propagate_covariances_from_quat_to_euler();
-}
-
-// get the pose covariances (position + orientation in euler angles)
-const matrix::SquareMatrix<float, 6> Ekf::pose_covariances() const
-{
-	// Fill the pose covariance matrix
-	// It's not a cross-covariance matrix but simplifies propagating the data
-	matrix::SquareMatrix<float, 6> cov = matrix::eye<float, 6>();
-	cov.set(position_covariances(), 0, 0);
-	cov.set(euler_covariances(), 3, 3);
 	return cov;
 }
 

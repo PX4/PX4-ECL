@@ -122,9 +122,6 @@ public:
 	// get the true airspeed in m/s
 	void get_true_airspeed(float *tas);
 
-	// covariance propagation from quaternions to euler angles using the covariance law
-	const matrix::SquareMatrix<float, 3> propagate_covariances_from_quat_to_euler() const;
-
 	// get the full covariance matrix
 	const matrix::SquareMatrix<float, 24> covariances() const;
 
@@ -136,12 +133,6 @@ public:
 
 	// get the quaternion covariances
 	const matrix::SquareMatrix<float, 4> quaternion_covariances() const;
-
-	// get the euler angles covariances
-	const matrix::SquareMatrix<float, 3> euler_covariances() const;
-
-	// get the pose covariances (position + orientation in euler angles)
-	const matrix::SquareMatrix<float, 6> pose_covariances() const;
 
 	// get the linear velocity covariances
 	const matrix::SquareMatrix<float, 3> velocity_covariances() const;

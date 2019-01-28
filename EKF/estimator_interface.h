@@ -104,8 +104,6 @@ public:
 
 	virtual void get_true_airspeed(float *tas) = 0;
 
-	virtual const matrix::SquareMatrix<float, 3> propagate_covariances_from_quat_to_euler() const = 0;
-
 	virtual const matrix::SquareMatrix<float, 24> covariances() const = 0;
 
 	virtual const matrix::Vector<float, 24> covariances_diagonal() const = 0;
@@ -113,10 +111,6 @@ public:
 	virtual const matrix::SquareMatrix<float, 3> position_covariances() const = 0;
 
 	virtual const matrix::SquareMatrix<float, 4> quaternion_covariances() const = 0;
-
-	virtual const matrix::SquareMatrix<float, 3> euler_covariances() const = 0;
-
-	virtual const matrix::SquareMatrix<float, 6> pose_covariances() const = 0;
 
 	virtual const matrix::SquareMatrix<float, 3> velocity_covariances() const = 0;
 
