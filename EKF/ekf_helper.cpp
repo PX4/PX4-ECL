@@ -1016,8 +1016,8 @@ const matrix::SquareMatrix<float, 3> Ekf::position_covariances() const
 	return cov;
 }
 
-// get the quaternion covariances
-const matrix::SquareMatrix<float, 4> Ekf::quaternion_covariances() const
+// get the orientation (quaterion) covariances
+const matrix::SquareMatrix<float, 4> Ekf::orientation_covariances() const
 {
 	matrix::SquareMatrix<float, 4> cov;
 	for (unsigned n = 0; n < 4; n++) {

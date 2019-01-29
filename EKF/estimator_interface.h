@@ -110,7 +110,7 @@ public:
 
 	virtual const matrix::SquareMatrix<float, 3> position_covariances() const = 0;
 
-	virtual const matrix::SquareMatrix<float, 4> quaternion_covariances() const = 0;
+	virtual const matrix::SquareMatrix<float, 4> orientation_covariances() const = 0;
 
 	virtual const matrix::SquareMatrix<float, 3> velocity_covariances() const = 0;
 

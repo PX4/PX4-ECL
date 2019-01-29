@@ -131,8 +131,8 @@ public:
 	// get the position covariances
 	const matrix::SquareMatrix<float, 3> position_covariances() const;
 
-	// get the quaternion covariances
-	const matrix::SquareMatrix<float, 4> quaternion_covariances() const;
+	// get the orientation (quaternion) covariances
+	const matrix::SquareMatrix<float, 4> orientation_covariances() const;
 
 	// get the linear velocity covariances
 	const matrix::SquareMatrix<float, 3> velocity_covariances() const;
