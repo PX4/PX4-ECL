@@ -217,8 +217,3 @@ void Ekf::checkRangeDataContinuity()
 		_range_data_continuous = false;
 	}
 }
-
-void Ekf::get_terrain_var(float *ret)
-{
-	memcpy(ret, &_terrain_var, sizeof(float));
-}

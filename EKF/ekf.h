@@ -195,7 +195,7 @@ public:
 	void get_terrain_vert_pos(float *ret);
 
 	// get the terrain variance
-	void get_terrain_var(float *ret);
+	float get_terrain_var() const { return _terrain_var; }
 
 	// get the accerometer bias in m/s/s
 	void get_accel_bias(float bias[3]);
