@@ -104,16 +104,6 @@ public:
 
 	virtual void get_true_airspeed(float *tas) = 0;
 
-	virtual const matrix::SquareMatrix<float, 24> covariances() const = 0;
-
-	virtual const matrix::Vector<float, 24> covariances_diagonal() const = 0;
-
-	virtual const matrix::SquareMatrix<float, 3> position_covariances() const = 0;
-
-	virtual const matrix::SquareMatrix<float, 4> orientation_covariances() const = 0;
-
-	virtual const matrix::SquareMatrix<float, 3> velocity_covariances() const = 0;
-
 	// gets the variances for the NED velocity states
 	virtual void get_vel_var(Vector3f &vel_var) = 0;
 
