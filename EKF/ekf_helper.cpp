@@ -983,7 +983,7 @@ void Ekf::get_gyro_bias(float bias[3])
 }
 
 // get the full covariance matrix
-const matrix::SquareMatrix<float, 24> Ekf::covariances() const
+matrix::SquareMatrix<float, 24> Ekf::covariances() const
 {
 	matrix::SquareMatrix<float, 24> cov;
 	for (unsigned n = 0; n < _k_num_states; n++) {
@@ -995,7 +995,7 @@ const matrix::SquareMatrix<float, 24> Ekf::covariances() const
 }
 
 // get the diagonal elements of the covariance matrix
-const matrix::Vector<float, 24> Ekf::covariances_diagonal() const
+matrix::Vector<float, 24> Ekf::covariances_diagonal() const
 {
 	matrix::Vector<float, 24> diag;
 	for (unsigned i = 0; i < _k_num_states; i++) {
@@ -1005,7 +1005,7 @@ const matrix::Vector<float, 24> Ekf::covariances_diagonal() const
 }
 
 // get the position covariances
-const matrix::SquareMatrix<float, 3> Ekf::position_covariances() const
+matrix::SquareMatrix<float, 3> Ekf::position_covariances() const
 {
 	matrix::SquareMatrix<float, 3> cov;
 	for (unsigned n = 0; n < 3; n++) {
@@ -1017,7 +1017,7 @@ const matrix::SquareMatrix<float, 3> Ekf::position_covariances() const
 }
 
 // get the orientation (quaterion) covariances
-const matrix::SquareMatrix<float, 4> Ekf::orientation_covariances() const
+matrix::SquareMatrix<float, 4> Ekf::orientation_covariances() const
 {
 	matrix::SquareMatrix<float, 4> cov;
 	for (unsigned n = 0; n < 4; n++) {
@@ -1029,7 +1029,7 @@ const matrix::SquareMatrix<float, 4> Ekf::orientation_covariances() const
 }
 
 // get the linear velocity covariances
-const matrix::SquareMatrix<float, 3> Ekf::velocity_covariances() const
+matrix::SquareMatrix<float, 3> Ekf::velocity_covariances() const
 {
 	matrix::SquareMatrix<float, 3> cov;
 	for (unsigned n = 0; n < 3; n++) {

@@ -123,19 +123,19 @@ public:
 	void get_true_airspeed(float *tas);
 
 	// get the full covariance matrix
-	const matrix::SquareMatrix<float, 24> covariances() const;
+	matrix::SquareMatrix<float, 24> covariances() const;
 
 	// get the diagonal elements of the covariance matrix
-	const matrix::Vector<float, 24> covariances_diagonal() const;
+	matrix::Vector<float, 24> covariances_diagonal() const;
 
 	// get the position covariances
-	const matrix::SquareMatrix<float, 3> position_covariances() const;
+	matrix::SquareMatrix<float, 3> position_covariances() const;
 
 	// get the orientation (quaternion) covariances
-	const matrix::SquareMatrix<float, 4> orientation_covariances() const;
+	matrix::SquareMatrix<float, 4> orientation_covariances() const;
 
 	// get the linear velocity covariances
-	const matrix::SquareMatrix<float, 3> velocity_covariances() const;
+	matrix::SquareMatrix<float, 3> velocity_covariances() const;
 
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	bool collect_gps(const gps_message &gps);
