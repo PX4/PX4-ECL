@@ -1537,16 +1537,9 @@ void Ekf::controlMagFusion()
 				_control_status.flags.mag_3D = false;
 			}
 
-		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_3D) {
+		} else if ((_params.mag_fusion_type == MAG_FUSE_TYPE_3D) && !_control_status.flags.mag_3D) {
 			// if transitioning into 3-axis fusion mode, we need to initialise the yaw angle and field states
-			if (!_control_status.flags.mag_3D || !_control_status.flags.mag_align_complete) {
-				_control_status.flags.mag_align_complete = resetMagHeading(_mag_sample_delayed.mag);
-				_control_status.flags.yaw_align = _control_status.flags.yaw_align || _control_status.flags.mag_align_complete;
-			}
-
-			// use 3-axis mag fusion if reset was successful
-			_control_status.flags.mag_3D = _control_status.flags.mag_align_complete;
-			_control_status.flags.mag_hdg = false;
+			_control_status.flags.mag_3D = resetMagHeading(_mag_sample_delayed.mag);
 
 		} else {
 			// do no magnetometer fusion at all
