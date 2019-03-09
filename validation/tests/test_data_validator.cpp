@@ -39,20 +39,20 @@
 
 #include <stdint.h>
 #include <cassert>
-#include <stdio.h>
+//#include <stdio.h>
 #include "../data_validator.h"
 
-void dump_validator_state(DataValidator* validator)
-{
-  uint32_t state = validator->state();
-  printf("state: 0x%x no_data: %d stale: %d timeout:%d\n",
-         validator->state(),
-         DataValidator::ERROR_FLAG_NO_DATA & state,
-         DataValidator::ERROR_FLAG_STALE_DATA & state,
-         DataValidator::ERROR_FLAG_TIMEOUT & state
-  );
-  validator->print();
-}
+//void dump_validator_state(DataValidator* validator)
+//{
+//  uint32_t state = validator->state();
+//  printf("state: 0x%x no_data: %d stale: %d timeout:%d\n",
+//         validator->state(),
+//         DataValidator::ERROR_FLAG_NO_DATA & state,
+//         DataValidator::ERROR_FLAG_STALE_DATA & state,
+//         DataValidator::ERROR_FLAG_TIMEOUT & state
+//  );
+//  validator->print();
+//}
 
 void test_init()
 {
@@ -138,7 +138,7 @@ void test_stale_detector()
   validator->set_equal_value_threshold(equal_value_count);
 
   //put a bunch of values that are all different
-  for (int i = 0; i < equal_value_count; i++ , val +=  insufficient_incr_value) {
+  for (int i = 0; i < equal_value_count; i++ , val += insufficient_incr_value) {
     timestamp += timestamp_incr;
     validator->put(timestamp, val, error_count, priority);
   }
@@ -148,13 +148,12 @@ void test_stale_detector()
 
   // should be a stale error
   uint32_t state = validator->state();
-  if (DataValidator::ERROR_FLAG_STALE_DATA != state) {
-    dump_validator_state(validator);
-  }
+//  if (DataValidator::ERROR_FLAG_STALE_DATA != state) {
+//    dump_validator_state(validator);
+//  }
   assert(DataValidator::ERROR_FLAG_STALE_DATA == (DataValidator::ERROR_FLAG_STALE_DATA & state));
 
 }
-
 
 
 int main(int argc, char *argv[])
