@@ -983,62 +983,19 @@ void Ekf::get_gyro_bias(float bias[3])
 }
 
 // get the full covariance matrix
-matrix::SquareMatrix<float, 24> Ekf::covariances() const
-{
-	matrix::SquareMatrix<float, 24> cov;
-	for (unsigned n = 0; n < _k_num_states; n++) {
-		for (unsigned m = 0; m < _k_num_states; m++) {
-			cov(n, m) = P[n][m];
-		}
-	}
-	return cov;
-}
+matrix::SquareMatrix<float, 24> Ekf::covariances() const { return matrix::SquareMatrix<float, _k_num_states>(P); }
 
 // get the diagonal elements of the covariance matrix
-matrix::Vector<float, 24> Ekf::covariances_diagonal() const
-{
-	matrix::Vector<float, 24> diag;
-	for (unsigned i = 0; i < _k_num_states; i++) {
-		diag(i) = P[i][i];
-	}
-	return diag;
-}
+matrix::Vector<float, 24> Ekf::covariances_diagonal() const { return covariances().diag(); }
 
 // get the position covariances
-matrix::SquareMatrix<float, 3> Ekf::position_covariances() const
-{
-	matrix::SquareMatrix<float, 3> cov;
-	for (unsigned n = 0; n < 3; n++) {
-		for (unsigned m = 0; m < 3; m++) {
-			cov(n, m) = P[n + 7][m + 7];
-		}
-	}
-	return cov;
-}
+matrix::SquareMatrix<float, 3> Ekf::position_covariances() const { return covariances().slice<3, 3>(7, 7); }
 
 // get the orientation (quaterion) covariances
-matrix::SquareMatrix<float, 4> Ekf::orientation_covariances() const
-{
-	matrix::SquareMatrix<float, 4> cov;
-	for (unsigned n = 0; n < 4; n++) {
-		for (unsigned m = 0; m < 4; m++) {
-			cov(n, m) = P[n][m];
-		}
-	}
-	return cov;
-}
+matrix::SquareMatrix<float, 4> Ekf::orientation_covariances() const { return covariances().slice<4, 4>(0, 0); }
 
 // get the linear velocity covariances
-matrix::SquareMatrix<float, 3> Ekf::velocity_covariances() const
-{
-	matrix::SquareMatrix<float, 3> cov;
-	for (unsigned n = 0; n < 3; n++) {
-		for (unsigned m = 0; m < 3; m++) {
-			cov(n, m) = P[n + 4][m + 4];
-		}
-	}
-	return cov;
-}
+matrix::SquareMatrix<float, 3> Ekf::velocity_covariances() const { return covariances().slice<3, 3>(4, 4); }
 
 // get the position and height of the ekf origin in WGS-84 coordinates and time the origin was set
 // return true if the origin is valid
