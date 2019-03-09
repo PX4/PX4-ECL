@@ -69,11 +69,11 @@ void insert_values_around_mean(DataValidator* validator, const float mean, uint3
   uint64_t timestamp_incr = 5;
   const uint64_t error_count = 0;
   const int priority = 50;
-  const float swing = 1E-3f;
+  const float swing = 1E-2f;
   double sum_dev_squares = 0.0f;
 
   //insert a series of values that swing around the mean
-  for (int i = 0; i < count;  i++) {
+  for (uint32_t i = 0; i < count;  i++) {
     float iter_swing = (0 == (i % 2) ) ? swing : -swing;
     float iter_val = mean + iter_swing;
     float iter_dev = iter_val - mean;
@@ -83,7 +83,7 @@ void insert_values_around_mean(DataValidator* validator, const float mean, uint3
   }
 
   double rms = sqrt(sum_dev_squares / (double)count);
-
+  //note: this should be approximately equal to "swing"
   *rms_err = (float)rms;
 }
 
@@ -199,7 +199,7 @@ void test_rms_calculation()
 {
   const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
   const float mean_value = 3.14159f;
-  const uint32_t sample_count = 100;
+  const uint32_t sample_count = 1000;
   float expected_rms_err = 0.0f;
 
   DataValidator *validator = new DataValidator;
@@ -210,8 +210,10 @@ void test_rms_calculation()
   assert(nullptr != rms);
   float calc_rms_err = rms[0];
   float diff = fabsf(calc_rms_err - expected_rms_err);
-  //printf("rms: %f expect: %f diff: %f \n", (double)calc_rms_err, (double)expected_rms_err, (double)diff);
-  assert(diff < 1E-4);
+  float diff_frac = (diff / expected_rms_err);
+//  printf("rms: %f expect: %f diff: %f frac: %f\n", (double)calc_rms_err, (double)expected_rms_err,
+//      (double)diff, (double)diff_frac);
+  assert(diff_frac < 0.03f);
 }
 
 int main(int argc, char *argv[])
