@@ -40,6 +40,7 @@
 #include <stdint.h>
 #include <cassert>
 //#include <stdio.h>
+#include <math.h>
 #include "../data_validator.h"
 
 //void dump_validator_state(DataValidator* validator)
@@ -53,6 +54,38 @@
 //  );
 //  validator->print();
 //}
+
+
+/**
+ * Insert a series of samples around a mean value
+ * @param validator The validator under test
+ * @param mean The mean value
+ * @param count The number of samples to insert in the validator
+ * @param rms_err (out) calculated rms error of the inserted samples
+ */
+void insert_values_around_mean(DataValidator* validator, const float mean, uint32_t count, float* rms_err)
+{
+  uint64_t timestamp = 500;
+  uint64_t timestamp_incr = 5;
+  const uint64_t error_count = 0;
+  const int priority = 50;
+  const float swing = 1E-3f;
+  double sum_dev_squares = 0.0f;
+
+  //insert a series of values that swing around the mean
+  for (int i = 0; i < count;  i++) {
+    float iter_swing = (0 == (i % 2) ) ? swing : -swing;
+    float iter_val = mean + iter_swing;
+    float iter_dev = iter_val - mean;
+    sum_dev_squares += (iter_dev*iter_dev);
+    timestamp += timestamp_incr;
+    validator->put(timestamp, iter_val, error_count, priority);
+  }
+
+  double rms = sqrt(sum_dev_squares / (double)count);
+
+  *rms_err = (float)rms;
+}
 
 void test_init()
 {
@@ -89,7 +122,8 @@ void test_put()
   float val = 3.14159f;
   uint64_t error_count = 0;
   int priority = 50;
-  const float sufficient_incr_value = (1.1f*0.000001f);//from private value: this is min change to avoid stale detection
+  //from private value: this is min change needed to avoid stale detection
+  const float sufficient_incr_value = (1.1f*1E-6f);
   const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
 
   DataValidator *validator = new DataValidator;
@@ -124,6 +158,9 @@ void test_put()
 
 }
 
+/**
+ * Verify that the DataValidator detects sensor data that does not vary sufficiently
+ */
 void test_stale_detector()
 {
   uint64_t timestamp = 500;
@@ -131,7 +168,7 @@ void test_stale_detector()
   float val = 3.14159f;
   uint64_t error_count = 0;
   int priority = 50;
-  const float insufficient_incr_value = (0.99 * 0.000001f);//insufficient to avoid stale detection
+  const float insufficient_incr_value = (0.99 * 1E-6f);//insufficient to avoid stale detection
   const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
 
   DataValidator *validator = new DataValidator;
@@ -155,6 +192,27 @@ void test_stale_detector()
 
 }
 
+/**
+ * Verify the RMS error calculated by the DataValidator for a series of samples
+ */
+void test_rms_calculation()
+{
+  const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
+  const float mean_value = 3.14159f;
+  const uint32_t sample_count = 100;
+  float expected_rms_err = 0.0f;
+
+  DataValidator *validator = new DataValidator;
+  validator->set_equal_value_threshold(equal_value_count);
+
+  insert_values_around_mean(validator,mean_value,sample_count, &expected_rms_err);
+  float* rms = validator->rms();
+  assert(nullptr != rms);
+  float calc_rms_err = rms[0];
+  float diff = fabsf(calc_rms_err - expected_rms_err);
+  //printf("rms: %f expect: %f diff: %f \n", (double)calc_rms_err, (double)expected_rms_err, (double)diff);
+  assert(diff < 1E-4);
+}
 
 int main(int argc, char *argv[])
 {
@@ -164,6 +222,7 @@ int main(int argc, char *argv[])
   test_init();
   test_put();
   test_stale_detector();
+  test_rms_calculation();
 
   return 0; //passed
 }
