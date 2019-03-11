@@ -31,9 +31,16 @@
 #
 ############################################################################
 
-add_executable(ecl_tests_data_validator test_data_validator.cpp)
+add_executable(ecl_tests_data_validator test_data_validator.cpp tests_common.h tests_common.cpp)
 target_link_libraries(ecl_tests_data_validator ecl_validation)
 
 add_test(NAME ecl_tests_data_validator
         COMMAND ecl_tests_data_validator
+        )
+
+add_executable(ecl_tests_data_validator_group  test_data_validator_group.cpp)
+target_link_libraries(ecl_tests_data_validator_group ecl_validation)
+
+add_test(NAME ecl_tests_data_validator_group
+        COMMAND ecl_tests_data_validator_group
         )
