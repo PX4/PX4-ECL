@@ -98,7 +98,7 @@ doxygen:
 .PHONY: test_build test test_EKF
 
 test_build:
-	@$(call cmake-build,$@,$(SRC_DIR), "-DEKF_PYTHON_TESTS=ON")
+	@$(call cmake-build,$@,$(SRC_DIR), "-DEKF_PYTHON_TESTS=OFF")
 
 test: test_build
 	@cmake --build $(SRC_DIR)/build/test_build --target check
