@@ -2,7 +2,7 @@
 // Created by Todd Stellanova on 2019-03-11.
 //
 
-#include <stdio.h>
+//#include <stdio.h>
 #include "tests_common.h"
 
 /**
@@ -11,10 +11,12 @@
  * @param mean The mean value
  * @param count The number of samples to insert in the validator
  * @param rms_err (out) calculated rms error of the inserted samples
+ * @param timestamp_io (in/out) in: start timestamp, out: last timestamp
  */
-void insert_values_around_mean(DataValidator *validator, const float mean, uint32_t count, float *rms_err)
+void insert_values_around_mean(DataValidator *validator, const float mean, uint32_t count, float *rms_err,
+                               uint64_t *timestamp_io)
 {
-    uint64_t timestamp = 500;
+    uint64_t timestamp = *timestamp_io;
     uint64_t timestamp_incr = 5;
     const uint64_t error_count = 0;
     const int priority = 50;
@@ -34,16 +36,17 @@ void insert_values_around_mean(DataValidator *validator, const float mean, uint3
     double rms = sqrt(sum_dev_squares / (double)count);
     //note: this should be approximately equal to "swing"
     *rms_err = (float)rms;
+    *timestamp_io = timestamp;
 }
 
-void dump_validator_state(DataValidator* validator)
-{
-    uint32_t state = validator->state();
-    printf("state: 0x%x no_data: %d stale: %d timeout:%d\n",
-           validator->state(),
-           DataValidator::ERROR_FLAG_NO_DATA & state,
-           DataValidator::ERROR_FLAG_STALE_DATA & state,
-           DataValidator::ERROR_FLAG_TIMEOUT & state
-    );
-    validator->print();
-}
+//void dump_validator_state(DataValidator* validator)
+//{
+//    uint32_t state = validator->state();
+//    printf("state: 0x%x no_data: %d stale: %d timeout:%d\n",
+//           validator->state(),
+//           DataValidator::ERROR_FLAG_NO_DATA & state,
+//           DataValidator::ERROR_FLAG_STALE_DATA & state,
+//           DataValidator::ERROR_FLAG_TIMEOUT & state
+//    );
+//    validator->print();
+//}
