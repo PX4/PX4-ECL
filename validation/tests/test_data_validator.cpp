@@ -39,7 +39,7 @@
 
 #include <stdint.h>
 #include <cassert>
-#include <stdio.h>
+//#include <stdio.h>
 #include <math.h>
 #include "../data_validator.h"
 #include "tests_common.h"
@@ -179,11 +179,12 @@ void test_rms_calculation()
 	const float mean_value = 3.14159f;
 	const uint32_t sample_count = 1000;
 	float expected_rms_err = 0.0f;
+	uint64_t timestamp = 500;
 
 	DataValidator *validator = new DataValidator;
 	validator->set_equal_value_threshold(equal_value_count);
 
-	insert_values_around_mean(validator, mean_value, sample_count, &expected_rms_err);
+	insert_values_around_mean(validator, mean_value, sample_count, &expected_rms_err, &timestamp);
 	float *rms = validator->rms();
 	assert(nullptr != rms);
 	float calc_rms_err = rms[0];
@@ -195,7 +196,7 @@ void test_rms_calculation()
 
 	float *vibe_offset = validator->vibration_offset();
 	float vibe_diff = fabsf( 0.01005f - vibe_offset[0]); //TODO calculate this vibration value
-	printf("vibe: %f", (double)vibe_offset[0]);
+	//printf("vibe: %f", (double)vibe_offset[0]);
 	assert(vibe_diff < 1E-3f);
 
 	delete validator; //force delete
@@ -229,7 +230,7 @@ void test_error_tracking()
 	for (int i = 0; i < total_iterations;  i++, val += sufficient_incr_value) {
 		timestamp += timestamp_incr;
 		//up to a 50% random error rate appears to pass the error density filter
-		if ((((float)rand()/(float)INT32_MAX)) < 0.5f) {
+		if ((((float)rand()/(float)RAND_MAX)) < 0.5f) {
 			error_count += 1;
 			expected_error_density += 1;
 		}
