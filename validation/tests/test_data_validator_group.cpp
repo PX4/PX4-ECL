@@ -82,7 +82,8 @@ DataValidatorGroup  *setup_base_group( unsigned *sibling_count)
 
     //this sets the timeout on all current members of the group, as well as members added later
     group->set_timeout(base_timeout_usec);
-    //the following sets the threshold on all CURRENT members of the group, but not any added later //TODO BUG?
+    //the following sets the threshold on all CURRENT members of the group, but not any added later
+    //TODO This is likely a bug in DataValidatorGroup
     group->set_equal_value_threshold(equal_value_count);
 
     //return values
@@ -92,6 +93,13 @@ DataValidatorGroup  *setup_base_group( unsigned *sibling_count)
 
 }
 
+/**
+ * Fill one DataValidator with samples, by index.
+ *
+ * @param group
+ * @param val1_idx Index of the validator to fill with samples
+ * @param num_samples
+ */
 void fill_one_with_valid_data(DataValidatorGroup *group, int val1_idx,  uint32_t num_samples)
 {
     uint64_t timestamp = base_timestamp;
@@ -111,6 +119,18 @@ void fill_one_with_valid_data(DataValidatorGroup *group, int val1_idx,  uint32_t
     assert(best_idx == val1_idx);
 }
 
+
+
+/**
+ * Fill two validators in the group with samples, by index.
+ * Both validators will be filled with the same data, but
+ * the priority of the first validator will be higher than the second.
+ *
+ * @param group
+ * @param val1_idx index of the first validator to fill
+ * @param val2_idx index of the second validator to fill
+ * @param num_samples
+ */
 void fill_two_with_valid_data(DataValidatorGroup *group, int val1_idx, int val2_idx, uint32_t num_samples)
 {
     uint64_t timestamp = base_timestamp;
@@ -133,18 +153,31 @@ void fill_two_with_valid_data(DataValidatorGroup *group, int val1_idx, int val2_
 
 }
 
+/**
+ * Dynamically add a validator to the group after construction
+ * @param group
+ * @return
+ */
 DataValidator* add_validator_to_group(DataValidatorGroup* group)
 {
-    //dynamically add a validator to the group after constructor
     DataValidator *validator = group->add_new_validator();
     //verify the previously set timeout applies to the new group member
     assert(validator->get_timeout() == base_timeout_usec);
     //for testing purposes, ensure this newly added member is consistent with the rest of the group
+    //TODO this is likely a bug in DataValidatorGroup
     validator->set_equal_value_threshold(equal_value_count);
 
     return validator;
 }
 
+/**
+ * Create a DataValidatorGroup and tack on two additional DataValidators
+ *
+ * @param validator1_handle (out) first DataValidator added to the group
+ * @param validator2_handle (out) second DataValidator added to the group
+ * @param sibling_count (in/out) in: number of initial siblings to create, out: total
+ * @return
+ */
 DataValidatorGroup *setup_group_with_two_validator_handles(
                                            DataValidator **validator1_handle,
                                            DataValidator **validator2_handle,
@@ -176,7 +209,6 @@ void test_init()
 
 void test_put()
 {
-
     unsigned num_siblings = 0;
     DataValidator *validator1 = nullptr;
     DataValidator *validator2 = nullptr;
@@ -266,6 +298,7 @@ void test_failover() {
         //should have detected a real failover
         printf("failover_count B: %d \n", group->failover_count());
         assert (1 == group->failover_count());
+        //TODO figure out what these values are supposed to be-- they don't match naive expectations
         int fail_idx = group->failover_index();
         printf("fail_idx: %d expected: %d \n", fail_idx, val1_idx);
         //assert (val1_idx == fail_idx);
