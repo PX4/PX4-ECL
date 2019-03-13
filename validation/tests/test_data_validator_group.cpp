@@ -41,9 +41,9 @@
 #include <cassert>
 #include <stdio.h>
 #include <math.h>
-#include "../data_validator.h"
-#include "../data_validator_group.h"
-#include "tests_common.h"
+#include <validation/data_validator.h>
+#include <validation/data_validator_group.h>
+#include <validation/tests/tests_common.h>
 
 
 const uint32_t base_timeout_usec = 2000;//from original private value
@@ -303,18 +303,19 @@ void test_vibration()
     insert_values_around_mean(validator, 3.14159f, 1000, &rms_err, &timestamp);
     vibes = validator->vibration_offset();
     assert(nullptr != vibes);
-    printf("val1 vibes: %f \n", vibes[0]);
+    printf("val1 vibes: %f rms_err: %f \n", vibes[0], (double)rms_err);
 
     vibe_o = group->get_vibration_offset(timestamp,0);
     printf("group vibe_o %f \n", vibe_o);
     //the one validator's vibration offset should match the group's vibration offset
     assert(vibes[0] == vibe_o);
 
-    float group_vibe_fact = group->get_vibration_factor(timestamp);
-    printf("group_vibe_fact: %f \n", (double)group_vibe_fact);
-    printf("val1 rms err: %f \n", (double)rms_err);
 
-    //TODO calculate expected vibration somehow
+    //this should be "The best RMS value of a non-timed out sensor"
+    float group_vibe_fact = group->get_vibration_factor(timestamp);
+    float val1_rms = (validator->rms())[0];
+    printf("group_vibe_fact: %f val1_rms: %f\n", (double)group_vibe_fact, (double)val1_rms);
+    assert(group_vibe_fact == val1_rms);
 
 }
 

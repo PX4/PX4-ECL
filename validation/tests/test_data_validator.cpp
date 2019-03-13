@@ -39,10 +39,10 @@
 
 #include <stdint.h>
 #include <cassert>
-//#include <stdio.h>
+#include <stdio.h>
 #include <math.h>
-#include "../data_validator.h"
-#include "tests_common.h"
+#include <validation/data_validator.h>
+#include <validation/tests/tests_common.h>
 
 
 void test_init()
@@ -113,20 +113,20 @@ void test_put()
 
 	// we've just provided a bunch of valid data: should be fully confident
 	float conf = validator->confidence(timestamp);
-//  if (1.0f != conf) {
-//    printf("conf: %f\n",(double)conf);
-//    dump_validator_state(validator);
-//  }
+    if (1.0f != conf) {
+        printf("conf: %f\n",(double)conf);
+        dump_validator_state(validator);
+    }
 	assert(1.0f == conf);
 	// should be no errors
 	assert(0 == validator->state());
 
 	//now check confidence much beyond the timeout window-- should timeout
 	conf = validator->confidence(timestamp + (1.1 * timeout_usec));
-//  if (0.0f != conf) {
-//    printf("conf: %f\n",(double)conf);
-//    dump_validator_state(validator);
-//  }
+    if (0.0f != conf) {
+        printf("conf: %f\n",(double)conf);
+        dump_validator_state(validator);
+    }
 	assert(0.0f == conf);
 	assert(DataValidator::ERROR_FLAG_TIMEOUT == (DataValidator::ERROR_FLAG_TIMEOUT & validator->state()));
 
@@ -161,9 +161,9 @@ void test_stale_detector()
 
 	// should be a stale error
 	uint32_t state = validator->state();
-//  if (DataValidator::ERROR_FLAG_STALE_DATA != state) {
-//    dump_validator_state(validator);
-//  }
+    if (DataValidator::ERROR_FLAG_STALE_DATA != state) {
+        dump_validator_state(validator);
+    }
 	assert(DataValidator::ERROR_FLAG_STALE_DATA == (DataValidator::ERROR_FLAG_STALE_DATA & state));
 
 	delete validator; //force delete
@@ -190,13 +190,13 @@ void test_rms_calculation()
 	float calc_rms_err = rms[0];
 	float diff = fabsf(calc_rms_err - expected_rms_err);
 	float diff_frac = (diff / expected_rms_err);
-//  printf("rms: %f expect: %f diff: %f frac: %f\n", (double)calc_rms_err, (double)expected_rms_err,
-//      (double)diff, (double)diff_frac);
+	printf("rms: %f expect: %f diff: %f frac: %f\n", (double)calc_rms_err, (double)expected_rms_err,
+	  (double)diff, (double)diff_frac);
 	assert(diff_frac < 0.03f);
 
 	float *vibe_offset = validator->vibration_offset();
 	float vibe_diff = fabsf( 0.01005f - vibe_offset[0]); //TODO calculate this vibration value
-	//printf("vibe: %f", (double)vibe_offset[0]);
+	printf("vibe: %f", (double)vibe_offset[0]);
 	assert(vibe_diff < 1E-3f);
 
 	delete validator; //force delete
@@ -245,10 +245,6 @@ void test_error_tracking()
 	//at this point, error_count should be less than NORETURN_ERRCOUNT
     assert( validator->error_count() == error_count);
 
-//	int actual_err_density = validator->get_error_density();
-//	printf("expected: %d error_density: %d\n",
-//		   expected_error_density, actual_err_density);
-
 	// we've just provided a bunch of valid data with some errors:
 	// confidence should be reduced by the number of errors
 	float conf = validator->confidence(timestamp);
@@ -260,12 +256,12 @@ void test_error_tracking()
 	// the error density will reduce the confidence by 1 - (error_density / ERROR_DENSITY_WINDOW)
 	// ERROR_DENSITY_WINDOW is currently private, but == 100.0f
 	float reduced_conf = 1.0f - ((float)expected_error_density / 100.0f);
-//    if (reduced_conf != conf) {
-//        printf("conf: %f reduced_conf: %f\n", (double)conf, (double)reduced_conf);
-//        dump_validator_state(validator);
-//    }
-    double diff = fabsf(reduced_conf - conf);
-//    printf("diff: %f \n", (double)diff);
+    if (reduced_conf != conf) {
+        printf("conf: %f reduced_conf: %f\n", (double)conf, (double)reduced_conf);
+        dump_validator_state(validator);
+    }
+    double diff = fabs(reduced_conf - conf);
+    printf("confidence diff: %f \n", diff);
     assert(diff < 1E-6f);
 
     //Now, insert a series of errors and ensure we trip the error detector
@@ -312,6 +308,7 @@ int main(int argc, char *argv[])
 	test_stale_detector();
 	test_rms_calculation();
 	test_error_tracking();
+	//TODO verify vibration calculation
 
 	return 0; //passed
 }

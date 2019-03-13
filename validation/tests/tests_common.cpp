@@ -1,18 +1,40 @@
-//
-// Created by Todd Stellanova on 2019-03-11.
-//
+/****************************************************************************
+ *
+ *   Copyright (c) 2019 Todd Stellanova. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be  used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ****************************************************************************/
 
-//#include <stdio.h>
+#include <stdio.h>
 #include "tests_common.h"
 
-/**
- * Insert a series of samples around a mean value
- * @param validator The validator under test
- * @param mean The mean value
- * @param count The number of samples to insert in the validator
- * @param rms_err (out) calculated rms error of the inserted samples
- * @param timestamp_io (in/out) in: start timestamp, out: last timestamp
- */
+
 void insert_values_around_mean(DataValidator *validator, const float mean, uint32_t count, float *rms_err,
                                uint64_t *timestamp_io)
 {
@@ -39,14 +61,15 @@ void insert_values_around_mean(DataValidator *validator, const float mean, uint3
     *timestamp_io = timestamp;
 }
 
-//void dump_validator_state(DataValidator* validator)
-//{
-//    uint32_t state = validator->state();
-//    printf("state: 0x%x no_data: %d stale: %d timeout:%d\n",
-//           validator->state(),
-//           DataValidator::ERROR_FLAG_NO_DATA & state,
-//           DataValidator::ERROR_FLAG_STALE_DATA & state,
-//           DataValidator::ERROR_FLAG_TIMEOUT & state
-//    );
-//    validator->print();
-//}
+void dump_validator_state(DataValidator* validator)
+{
+    uint32_t state = validator->state();
+    printf("state: 0x%x no_data: %d stale: %d timeout:%d\n",
+           validator->state(),
+           DataValidator::ERROR_FLAG_NO_DATA & state,
+           DataValidator::ERROR_FLAG_STALE_DATA & state,
+           DataValidator::ERROR_FLAG_TIMEOUT & state
+    );
+    validator->print();
+    printf("\n");
+}
