@@ -45,12 +45,12 @@
  * @param timestamp_io (in/out) in: start timestamp, out: last timestamp
  */
 void insert_values_around_mean(DataValidator *validator, const float mean, uint32_t count, float *rms_err,
-                               uint64_t *last_timestamp);
+			       uint64_t *last_timestamp);
 
 /**
  * Print out the state of a DataValidator
  * @param validator
  */
-void dump_validator_state(DataValidator* validator);
+void dump_validator_state(DataValidator *validator);
 
 #endif //ECL_TESTS_COMMON_H

@@ -109,24 +109,28 @@ void test_put()
 	assert(validator->used());
 	//verify that the last value we inserted is the current validator value
 	float last_val = val - sufficient_incr_value;
-	assert( validator->value()[0] == last_val);
+	assert(validator->value()[0] == last_val);
 
 	// we've just provided a bunch of valid data: should be fully confident
 	float conf = validator->confidence(timestamp);
-    if (1.0f != conf) {
-        printf("conf: %f\n",(double)conf);
-        dump_validator_state(validator);
-    }
+
+	if (1.0f != conf) {
+		printf("conf: %f\n", (double)conf);
+		dump_validator_state(validator);
+	}
+
 	assert(1.0f == conf);
 	// should be no errors
 	assert(0 == validator->state());
 
 	//now check confidence much beyond the timeout window-- should timeout
 	conf = validator->confidence(timestamp + (1.1 * timeout_usec));
-    if (0.0f != conf) {
-        printf("conf: %f\n",(double)conf);
-        dump_validator_state(validator);
-    }
+
+	if (0.0f != conf) {
+		printf("conf: %f\n", (double)conf);
+		dump_validator_state(validator);
+	}
+
 	assert(0.0f == conf);
 	assert(DataValidator::ERROR_FLAG_TIMEOUT == (DataValidator::ERROR_FLAG_TIMEOUT & validator->state()));
 
@@ -161,9 +165,11 @@ void test_stale_detector()
 
 	// should be a stale error
 	uint32_t state = validator->state();
-    if (DataValidator::ERROR_FLAG_STALE_DATA != state) {
-        dump_validator_state(validator);
-    }
+
+	if (DataValidator::ERROR_FLAG_STALE_DATA != state) {
+		dump_validator_state(validator);
+	}
+
 	assert(DataValidator::ERROR_FLAG_STALE_DATA == (DataValidator::ERROR_FLAG_STALE_DATA & state));
 
 	delete validator; //force delete
@@ -191,11 +197,11 @@ void test_rms_calculation()
 	float diff = fabsf(calc_rms_err - expected_rms_err);
 	float diff_frac = (diff / expected_rms_err);
 	printf("rms: %f expect: %f diff: %f frac: %f\n", (double)calc_rms_err, (double)expected_rms_err,
-	  (double)diff, (double)diff_frac);
+	       (double)diff, (double)diff_frac);
 	assert(diff_frac < 0.03f);
 
 	float *vibe_offset = validator->vibration_offset();
-	float vibe_diff = fabsf( 0.01005f - vibe_offset[0]); //TODO calculate this vibration value
+	float vibe_diff = fabsf(0.01005f - vibe_offset[0]);  //TODO calculate this vibration value
 	printf("vibe: %f", (double)vibe_offset[0]);
 	assert(vibe_diff < 1E-3f);
 
@@ -229,42 +235,45 @@ void test_error_tracking()
 	//put a bunch of values that are all different
 	for (int i = 0; i < total_iterations;  i++, val += sufficient_incr_value) {
 		timestamp += timestamp_incr;
+
 		//up to a 50% random error rate appears to pass the error density filter
-		if ((((float)rand()/(float)RAND_MAX)) < 0.5f) {
+		if ((((float)rand() / (float)RAND_MAX)) < 0.5f) {
 			error_count += 1;
 			expected_error_density += 1;
-		}
-        else if (expected_error_density > 0) {
-			expected_error_density -= 1;
-        }
 
-        validator->put(timestamp, val, error_count, priority);
+		} else if (expected_error_density > 0) {
+			expected_error_density -= 1;
+		}
+
+		validator->put(timestamp, val, error_count, priority);
 	}
 
 	assert(validator->used());
 	//at this point, error_count should be less than NORETURN_ERRCOUNT
-    assert( validator->error_count() == error_count);
+	assert(validator->error_count() == error_count);
 
 	// we've just provided a bunch of valid data with some errors:
 	// confidence should be reduced by the number of errors
 	float conf = validator->confidence(timestamp);
-	assert( 1.0f != conf); //we should not be fully confident
-	assert( 0.0f != conf); //neither should we be completely unconfident
-    // should be no errors, even if confidence is reduced, since we didn't exceed NORETURN_ERRCOUNT
-    assert(0 == validator->state());
+	assert(1.0f != conf);  //we should not be fully confident
+	assert(0.0f != conf);  //neither should we be completely unconfident
+	// should be no errors, even if confidence is reduced, since we didn't exceed NORETURN_ERRCOUNT
+	assert(0 == validator->state());
 
 	// the error density will reduce the confidence by 1 - (error_density / ERROR_DENSITY_WINDOW)
 	// ERROR_DENSITY_WINDOW is currently private, but == 100.0f
 	float reduced_conf = 1.0f - ((float)expected_error_density / 100.0f);
-    if (reduced_conf != conf) {
-        printf("conf: %f reduced_conf: %f\n", (double)conf, (double)reduced_conf);
-        dump_validator_state(validator);
-    }
-    double diff = fabs(reduced_conf - conf);
-    printf("confidence diff: %f \n", diff);
-    assert(diff < 1E-6f);
 
-    //Now, insert a series of errors and ensure we trip the error detector
+	if (reduced_conf != conf) {
+		printf("conf: %f reduced_conf: %f\n", (double)conf, (double)reduced_conf);
+		dump_validator_state(validator);
+	}
+
+	double diff = fabs(reduced_conf - conf);
+	printf("confidence diff: %f \n", diff);
+	assert(diff < 1E-6f);
+
+	//Now, insert a series of errors and ensure we trip the error detector
 	for (int i = 0; i < 250;  i++, val += sufficient_incr_value) {
 		timestamp += timestamp_incr;
 		//100% error rate
@@ -274,12 +283,13 @@ void test_error_tracking()
 	}
 
 	conf = validator->confidence(timestamp);
-	assert( 0.0f == conf); // should we be completely unconfident
+	assert(0.0f == conf);  // should we be completely unconfident
 	// we should have triggered the high error density detector
 	assert(DataValidator::ERROR_FLAG_HIGH_ERRDENSITY == (DataValidator::ERROR_FLAG_HIGH_ERRDENSITY & validator->state()));
 
 
 	validator->reset_state();
+
 	//Now insert so many errors that we exceed private NORETURN_ERRCOUNT
 	for (int i = 0; i < 10000;  i++, val += sufficient_incr_value) {
 		timestamp += timestamp_incr;
@@ -290,7 +300,7 @@ void test_error_tracking()
 	}
 
 	conf = validator->confidence(timestamp);
-	assert( 0.0f == conf); // should we be completely unconfident
+	assert(0.0f == conf);  // should we be completely unconfident
 	// we should have triggered the high error count detector
 	assert(DataValidator::ERROR_FLAG_HIGH_ERRCOUNT == (DataValidator::ERROR_FLAG_HIGH_ERRCOUNT & validator->state()));
 
