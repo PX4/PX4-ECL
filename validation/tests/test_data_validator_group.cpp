@@ -64,6 +64,7 @@ DataValidatorGroup  *setup_base_group( unsigned *sibling_count)
     assert(nullptr != group);
     //verify that calling print doesn't crash the tests
     group->print();
+    printf("\n");
 
     //should be no failovers yet
     assert(0 == group->failover_count());
@@ -277,8 +278,6 @@ void test_failover() {
 
 void test_vibration()
 {
-    //get_vibration_factor
-
     unsigned num_siblings = 0;
     uint64_t timestamp = base_timestamp;
 
@@ -304,14 +303,16 @@ void test_vibration()
     insert_values_around_mean(validator, 3.14159f, 1000, &rms_err, &timestamp);
     vibes = validator->vibration_offset();
     assert(nullptr != vibes);
-    //printf("val vibes: %f \n", vibes[0]);
-    //printf("rms err: %f \n", (double)rms_err);
+    printf("val1 vibes: %f \n", vibes[0]);
 
     vibe_o = group->get_vibration_offset(timestamp,0);
-    //printf("\ngroup vibe_o %f \n", vibe_o);
-
+    printf("group vibe_o %f \n", vibe_o);
     //the one validator's vibration offset should match the group's vibration offset
     assert(vibes[0] == vibe_o);
+
+    float group_vibe_fact = group->get_vibration_factor(timestamp);
+    printf("group_vibe_fact: %f \n", (double)group_vibe_fact);
+    printf("val1 rms err: %f \n", (double)rms_err);
 
     //TODO calculate expected vibration somehow
 
