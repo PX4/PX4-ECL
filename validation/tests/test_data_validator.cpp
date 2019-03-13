@@ -312,7 +312,6 @@ int main(int argc, char *argv[])
 	test_stale_detector();
 	test_rms_calculation();
 	test_error_tracking();
-	//TODO test vibration calcs
 
 	return 0; //passed
 }

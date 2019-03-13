@@ -159,9 +159,6 @@ public:
 	 */
 	uint32_t		get_timeout() const { return _timeout_interval; }
 
-	int get_error_density() const  { return _error_density; }
-
-
 	/**
 	 * Data validator error states
 	 */
