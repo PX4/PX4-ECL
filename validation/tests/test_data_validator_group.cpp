@@ -312,6 +312,9 @@ void test_failover()
 	delete  group; //cleanup
 }
 
+/**
+ * Verify that we get expected vibration values after injecting samples.
+ */
 void test_vibration()
 {
 	unsigned num_siblings = 0;
