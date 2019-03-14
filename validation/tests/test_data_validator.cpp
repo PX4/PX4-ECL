@@ -47,7 +47,9 @@
 
 void test_init()
 {
-	uint64_t fake_timestamp = 666;
+    printf("\n--- test_init ---\n");
+
+    uint64_t fake_timestamp = 666;
 	const uint32_t timeout_usec = 2000;//from original private value
 
 	DataValidator *validator = new DataValidator;
@@ -86,7 +88,9 @@ void test_init()
 
 void test_put()
 {
-	uint64_t timestamp = 500;
+    printf("\n--- test_put ---\n");
+
+    uint64_t timestamp = 500;
 	uint64_t timestamp_incr = 5;
 	const uint32_t timeout_usec = 2000;//from original private value
 	float val = 3.14159f;
@@ -143,7 +147,9 @@ void test_put()
  */
 void test_stale_detector()
 {
-	uint64_t timestamp = 500;
+    printf("\n--- test_stale_detector ---\n");
+
+    uint64_t timestamp = 500;
 	uint64_t timestamp_incr = 5;
 	float val = 3.14159f;
 	uint64_t error_count = 0;
@@ -181,6 +187,7 @@ void test_stale_detector()
  */
 void test_rms_calculation()
 {
+    printf("\n--- test_rms_calculation ---\n");
 	const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
 	const float mean_value = 3.14159f;
 	const uint32_t sample_count = 1000;
@@ -214,6 +221,7 @@ void test_rms_calculation()
  */
 void test_error_tracking()
 {
+    printf("\n--- test_error_tracking ---\n");
 	uint64_t timestamp = 500;
 	uint64_t timestamp_incr = 5;
 	const uint32_t timeout_usec = 2000;//from original private value
@@ -226,7 +234,7 @@ void test_error_tracking()
 	//default is private VALUE_EQUAL_COUNT_DEFAULT
 	const int equal_value_count = 50000;
 	//should be less than equal_value_count: ensure this is less than NORETURN_ERRCOUNT
-	const int total_iterations = 10000;
+	const int total_iterations = 1000;
 
 	DataValidator *validator = new DataValidator;
 	validator->set_timeout(timeout_usec);
@@ -237,7 +245,7 @@ void test_error_tracking()
 		timestamp += timestamp_incr;
 
 		//up to a 50% random error rate appears to pass the error density filter
-		if ((((float)rand() / (float)RAND_MAX)) < 0.5f) {
+		if ((((float)rand() / (float)RAND_MAX)) < 0.500f) {
 			error_count += 1;
 			expected_error_density += 1;
 
@@ -255,7 +263,7 @@ void test_error_tracking()
 	// we've just provided a bunch of valid data with some errors:
 	// confidence should be reduced by the number of errors
 	float conf = validator->confidence(timestamp);
-	printf("error_count: %lu validator confidence: %f\n",error_count, (double)conf);
+	printf("error_count: %u validator confidence: %f\n",(uint32_t)error_count, (double)conf);
 	assert(1.0f != conf);  //we should not be fully confident
 	//TODO fails in CI...why?
 	assert(0.0f != conf);  //neither should we be completely unconfident
@@ -265,14 +273,14 @@ void test_error_tracking()
 	// the error density will reduce the confidence by 1 - (error_density / ERROR_DENSITY_WINDOW)
 	// ERROR_DENSITY_WINDOW is currently private, but == 100.0f
 	float reduced_conf = 1.0f - ((float)expected_error_density / 100.0f);
+    double diff = fabs(reduced_conf - conf);
 
 	if (reduced_conf != conf) {
-		printf("conf: %f reduced_conf: %f\n", (double)conf, (double)reduced_conf);
+		printf("conf: %f reduced_conf: %f diff: %f\n",
+		        (double)conf, (double)reduced_conf, diff);
 		dump_validator_state(validator);
 	}
 
-	double diff = fabs(reduced_conf - conf);
-	printf("confidence diff: %f \n", diff);
 	assert(diff < 1E-6f);
 
 	//Now, insert a series of errors and ensure we trip the error detector
@@ -315,11 +323,12 @@ int main(int argc, char *argv[])
 	(void)argc; // unused
 	(void)argv; // unused
 
+	srand(666);
 	test_init();
 	test_put();
 	test_stale_detector();
 	test_rms_calculation();
-	// TODO: test_error_tracking();
+	test_error_tracking();
 	//TODO verify vibration calculation
 
 	return 0; //passed
