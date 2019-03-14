@@ -240,9 +240,11 @@ void test_put()
 }
 
 
-void test_failover()
+/**
+ * Verify that the DataValidatorGroup will select the sensor with the latest higher priority as "best".
+ */
+void test_priority_switch()
 {
-
 	unsigned num_siblings = 0;
 	DataValidator *validator1 = nullptr;
 	DataValidator *validator2 = nullptr;
@@ -255,60 +257,76 @@ void test_failover()
 	int val2_idx = (int)num_siblings - 1;
 	uint64_t error_count = 0;
 
-
 	fill_two_with_valid_data(group, val1_idx, val2_idx, 100);
-
 
 	int best_idx = -1;
 	float *best_data = nullptr;
-	//now, switch the priorities, which switches "best" but doesn't detect a failover
-	{
-		float new_best_val = 3.14159f;
-		float data[DataValidator::dimensions] = {new_best_val};
-		group->put(val1_idx, timestamp, data, error_count, 1);
-		group->put(val2_idx, timestamp, data, error_count, 100);
-		best_data = group->get_best(timestamp, &best_idx);
-		assert(new_best_val == best_data[0]);
-		//the new best sensor should now be the sensor with the higher priority
-		assert(best_idx == val2_idx);
-		//should not have detected a real failover
-		//printf("failover_count A: %d \n", group->failover_count());
-		assert(0 == group->failover_count());
-	}
-
-	//flush any garbage
-	fill_two_with_valid_data(group, val1_idx, val2_idx, 10);
-
-
-	// now trigger a real failover
-	{
-		float new_best_val = 3.14159f;
-		float data[DataValidator::dimensions] = {new_best_val};
-		//trigger a bunch of errors on the previous best sensor
-		unsigned fake_err_count = 0;
-
-		for (int i = 0; i < 25; i++) {
-			group->put(val1_idx, timestamp, data, ++fake_err_count, 100);
-			group->put(val2_idx, timestamp, data, error_count, 10);
-		}
-
-		assert(validator1->error_count() == fake_err_count);
-		best_data = group->get_best(timestamp + 1, &best_idx);
-		assert(nullptr != best_data);
-		assert(new_best_val == best_data[0]);
-		assert(best_idx == val2_idx);
-		//should have detected a real failover
-		printf("failover_count B: %d \n", group->failover_count());
-		assert(1 == group->failover_count());
-		//TODO figure out what these values are supposed to be-- they don't match naive expectations
-		int fail_idx = group->failover_index();
-		printf("fail_idx: %d expected: %d \n", fail_idx, val1_idx);
-		//assert (val1_idx == fail_idx);
-		printf("error state: %x expected: %x \n", group->failover_state(), DataValidator::ERROR_FLAG_HIGH_ERRCOUNT);
-		//assert (DataValidator::ERROR_FLAG_HIGH_ERRCOUNT == group->failover_state());
-	}
+	//now, switch the priorities, which switches "best" but doesn't trigger a failover
+    float new_best_val = 3.14159f;
+    float data[DataValidator::dimensions] = {new_best_val};
+    //a single sample insertion should be sufficient to trigger a priority switch
+    group->put(val1_idx, timestamp, data, error_count, 1);
+    group->put(val2_idx, timestamp, data, error_count, 100);
+    best_data = group->get_best(timestamp, &best_idx);
+    assert(new_best_val == best_data[0]);
+    //the new best sensor should now be the sensor with the higher priority
+    assert(best_idx == val2_idx);
+    //should not have detected a real failover
+    assert(0 == group->failover_count());
 
 	delete  group; //cleanup
+}
+
+/**
+ * Verify that the DataGroupValidator will select
+ */
+void test_simple_failover()
+{
+    unsigned num_siblings = 0;
+    DataValidator *validator1 = nullptr;
+    DataValidator *validator2 = nullptr;
+
+    uint64_t timestamp = base_timestamp;
+
+    DataValidatorGroup *group = setup_group_with_two_validator_handles(&validator1, &validator2, &num_siblings);
+    //printf("num_siblings: %d \n",num_siblings);
+    int val1_idx = (int)num_siblings - 2;
+    int val2_idx = (int)num_siblings - 1;
+
+
+    fill_two_with_valid_data(group, val1_idx, val2_idx, 100);
+
+    int best_idx = -1;
+    float *best_data = nullptr;
+
+    //trigger a real failover
+    float new_best_val = 3.14159f;
+    float data[DataValidator::dimensions] = {new_best_val};
+    //trigger a bunch of errors on the previous best sensor
+    unsigned val1_err_count = 0;
+
+    for (int i = 0; i < 25; i++) {
+        group->put(val1_idx, timestamp, data, ++val1_err_count, 100);
+        group->put(val2_idx, timestamp, data, 0, 10);
+    }
+
+    assert(validator1->error_count() == val1_err_count);
+    best_data = group->get_best(timestamp + 1, &best_idx);
+    assert(nullptr != best_data);
+    assert(new_best_val == best_data[0]);
+    assert(best_idx == val2_idx);
+    //should have detected a real failover
+    printf("failover_count: %d \n", group->failover_count());
+    assert(1 == group->failover_count());
+
+    //TODO figure out what these values are supposed to be-- they don't match naive expectations
+    int fail_idx = group->failover_index();
+    printf("fail_idx: %d expected: %d \n", fail_idx, val1_idx);
+    //assert (val1_idx == fail_idx);
+    printf("error state: %x expected: %x \n", group->failover_state(), DataValidator::ERROR_FLAG_HIGH_ERRCOUNT);
+    //assert (DataValidator::ERROR_FLAG_HIGH_ERRCOUNT == group->failover_state());
+
+    delete  group; //cleanup
 }
 
 /**
@@ -364,7 +382,8 @@ int main(int argc, char *argv[])
 
 	test_init();
 	test_put();
-	test_failover();
+    test_simple_failover();
+    test_priority_switch();
 	test_vibration();
 
 	return 0; //passed
