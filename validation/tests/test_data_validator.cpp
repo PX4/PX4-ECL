@@ -255,6 +255,7 @@ void test_error_tracking()
 	// we've just provided a bunch of valid data with some errors:
 	// confidence should be reduced by the number of errors
 	float conf = validator->confidence(timestamp);
+	printf("error_count: %d validator confidence: %f\n",error_count, (double)conf);
 	assert(1.0f != conf);  //we should not be fully confident
 	assert(0.0f != conf);  //neither should we be completely unconfident
 	// should be no errors, even if confidence is reduced, since we didn't exceed NORETURN_ERRCOUNT
