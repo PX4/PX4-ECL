@@ -73,11 +73,11 @@ DataValidatorGroup  *setup_base_group(unsigned *sibling_count)
 
 	//no vibration yet
 	float vibe_off =  group->get_vibration_offset(base_timestamp, 0);
-	//printf("vibe_off: %f \n", (double)vibe_off);
+	printf("vibe_off: %f \n", (double)vibe_off);
 	assert(-1.0f == group->get_vibration_offset(base_timestamp, 0));
 
 	float vibe_fact = group->get_vibration_factor(base_timestamp);
-	//printf("vibe_fact: %f \n", (double)vibe_fact);
+	printf("vibe_fact: %f \n", (double)vibe_fact);
 	assert(0.0f == vibe_fact);
 
 	//this sets the timeout on all current members of the group, as well as members added later
@@ -106,7 +106,7 @@ void fill_one_with_valid_data(DataValidatorGroup *group, int val1_idx,  uint32_t
 	uint64_t error_count = 0;
 	float last_best_val = 0.0f;
 
-	for (int i = 0; i < num_samples; i++) {
+	for (uint32_t i = 0; i < num_samples; i++) {
 		float val = ((float) rand() / (float) RAND_MAX);
 		float data[DataValidator::dimensions] = {val};
 		group->put(val1_idx, timestamp, data, error_count, 100);
@@ -137,7 +137,7 @@ void fill_two_with_valid_data(DataValidatorGroup *group, int val1_idx, int val2_
 	uint64_t error_count = 0;
 	float last_best_val = 0.0f;
 
-	for (int i = 0; i < num_samples; i++) {
+	for (uint32_t i = 0; i < num_samples; i++) {
 		float val = ((float) rand() / (float) RAND_MAX);
 		float data[DataValidator::dimensions] = {val};
 		//two sensors with identical values, but different priorities
@@ -216,10 +216,9 @@ void test_put()
 	uint64_t timestamp = base_timestamp;
 
 	DataValidatorGroup *group = setup_group_with_two_validator_handles(&validator1, &validator2, &num_siblings);
-	//printf("num_siblings: %d \n",num_siblings);
+	printf("num_siblings: %d \n",num_siblings);
 	unsigned val1_idx = num_siblings - 2;
-	unsigned val2_idx = num_siblings - 1 ;
-	uint64_t error_count = 0;
+	unsigned val2_idx = num_siblings - 1;
 
 	fill_two_with_valid_data(group, val1_idx, val2_idx, 500);
 	int best_idx = -1;
@@ -252,8 +251,8 @@ void test_failover()
 
 	DataValidatorGroup *group = setup_group_with_two_validator_handles(&validator1, &validator2, &num_siblings);
 	//printf("num_siblings: %d \n",num_siblings);
-	unsigned val1_idx = num_siblings - 2;
-	unsigned val2_idx = num_siblings - 1;
+	int val1_idx = (int)num_siblings - 2;
+	int val2_idx = (int)num_siblings - 1;
 	uint64_t error_count = 0;
 
 
