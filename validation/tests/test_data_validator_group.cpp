@@ -207,6 +207,10 @@ void test_init()
 	delete group; //force cleanup
 }
 
+
+/**
+ * Happy path test of put method -- ensure the "best" sensor selected is the one with highest priority
+ */
 void test_put()
 {
 	unsigned num_siblings = 0;
@@ -278,7 +282,7 @@ void test_priority_switch()
 }
 
 /**
- * Verify that the DataGroupValidator will select
+ * Verify that the DataGroupValidator will prefer a sensor with no errors over a sensor with high errors
  */
 void test_simple_failover()
 {
@@ -311,7 +315,9 @@ void test_simple_failover()
     }
 
     assert(validator1->error_count() == val1_err_count);
-    best_data = group->get_best(timestamp + 1, &best_idx);
+
+	//since validator1 is experiencing errors, we should see a failover to validator2
+	best_data = group->get_best(timestamp + 1, &best_idx);
     assert(nullptr != best_data);
     assert(new_best_val == best_data[0]);
     assert(best_idx == val2_idx);
@@ -319,12 +325,16 @@ void test_simple_failover()
     printf("failover_count: %d \n", group->failover_count());
     assert(1 == group->failover_count());
 
-    //TODO figure out what these values are supposed to be-- they don't match naive expectations
+	//even though validator1 has encountered a bunch of errors, it hasn't failed
+	assert( DataValidator::ERROR_FLAG_NO_ERROR == validator1->state());
+
+    // although we failed over from one sensor to another, this is not the same thing tracked by failover_index
     int fail_idx = group->failover_index();
-    printf("fail_idx: %d expected: %d \n", fail_idx, val1_idx);
-    //assert (val1_idx == fail_idx);
-    printf("error state: %x expected: %x \n", group->failover_state(), DataValidator::ERROR_FLAG_HIGH_ERRCOUNT);
-    //assert (DataValidator::ERROR_FLAG_HIGH_ERRCOUNT == group->failover_state());
+    assert(-1 == fail_idx);//no failed sensor
+
+    //since no sensor has actually hard-failed, the group failover state is NO_ERROR
+    assert (DataValidator::ERROR_FLAG_NO_ERROR == group->failover_state());
+
 
     delete  group; //cleanup
 }
@@ -366,13 +376,52 @@ void test_vibration()
 	//the one validator's vibration offset should match the group's vibration offset
 	assert(vibes[0] == vibe_o);
 
-
 	//this should be "The best RMS value of a non-timed out sensor"
 	float group_vibe_fact = group->get_vibration_factor(timestamp);
 	float val1_rms = (validator->rms())[0];
 	printf("group_vibe_fact: %f val1_rms: %f\n", (double)group_vibe_fact, (double)val1_rms);
 	assert(group_vibe_fact == val1_rms);
 
+}
+
+/**
+ * Force once sensor to fail and ensure that we detect it
+ */
+void test_sensor_failure()
+{
+    unsigned num_siblings = 0;
+    uint64_t timestamp = base_timestamp;
+    const float sufficient_incr_value = (1.1f * 1E-6f);
+    const uint32_t timeout_usec = 2000;//derived from class-private value
+
+    float val = 3.14159f;
+
+    DataValidatorGroup *group =  setup_base_group(&num_siblings);
+
+    //now we add validators
+    DataValidator *validator  = add_validator_to_group(group);
+    assert(nullptr != validator);
+    num_siblings++;
+    int val_idx = num_siblings - 1;
+
+    fill_validator_with_samples(validator,  sufficient_incr_value, &val, &timestamp);
+    //the best should now be the one validator we've filled with samples
+
+    int best_idx = -1;
+    float *best_data = group->get_best(timestamp, &best_idx);
+    assert(nullptr != best_data);
+    //printf("best_idx: %d val_idx: %d\n", best_idx, val_idx);
+    assert(best_idx == val_idx);
+
+    //now force a timeout failure in the one validator, by checking confidence long past timeout
+    validator->confidence(timestamp + (1.1 * timeout_usec));
+    assert(DataValidator::ERROR_FLAG_TIMEOUT == (DataValidator::ERROR_FLAG_TIMEOUT & validator->state()));
+
+    //now that the one sensor has failed, the group should detect this as well
+    int fail_idx = group->failover_index();
+    assert( val_idx == fail_idx);
+
+    delete  group;
 }
 
 int main(int argc, char *argv[])
@@ -385,6 +434,7 @@ int main(int argc, char *argv[])
     test_simple_failover();
     test_priority_switch();
 	test_vibration();
+    test_sensor_failure();
 
 	return 0; //passed
 }

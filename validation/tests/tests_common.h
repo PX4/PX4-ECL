@@ -45,12 +45,24 @@
  * @param timestamp_io (in/out) in: start timestamp, out: last timestamp
  */
 void insert_values_around_mean(DataValidator *validator, const float mean, uint32_t count, float *rms_err,
-			       uint64_t *last_timestamp);
+			       uint64_t *timestamp_io);
 
 /**
  * Print out the state of a DataValidator
  * @param validator
  */
 void dump_validator_state(DataValidator *validator);
+
+/**
+ * Insert a time series of samples into the validator
+ * @param validator
+ * @param incr_value The amount to increment the value by on each iteration
+ * @param value_io (in/out) in: initial value, out: final value
+ * @param timestamp_io (in/out) in: initial timestamp, out: final timestamp
+ */
+void fill_validator_with_samples(DataValidator *validator,
+        const float incr_value,
+        float *value_io,
+        uint64_t *timestamp_io);
 
 #endif //ECL_TESTS_COMMON_H

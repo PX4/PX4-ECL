@@ -90,25 +90,14 @@ void test_put()
 {
     printf("\n--- test_put ---\n");
 
-    uint64_t timestamp = 500;
-	uint64_t timestamp_incr = 5;
-	const uint32_t timeout_usec = 2000;//from original private value
+	uint64_t timestamp = 500;
+	const uint32_t timeout_usec = 2000;//derived from class-private value
 	float val = 3.14159f;
-	uint64_t error_count = 0;
-	int priority = 50;
-	//from private value: this is min change needed to avoid stale detection
+	//derived from class-private value: this is min change needed to avoid stale detection
 	const float sufficient_incr_value = (1.1f * 1E-6f);
-	const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
 
 	DataValidator *validator = new DataValidator;
-	validator->set_timeout(timeout_usec);
-	validator->set_equal_value_threshold(equal_value_count);
-
-	//put a bunch of values that are all different
-	for (int i = 0; i < equal_value_count;  i++, val +=  sufficient_incr_value) {
-		timestamp += timestamp_incr;
-		validator->put(timestamp, val, error_count, priority);
-	}
+	fill_validator_with_samples(validator,sufficient_incr_value, &val, &timestamp);
 
 	assert(validator->used());
 	//verify that the last value we inserted is the current validator value
@@ -150,32 +139,21 @@ void test_stale_detector()
     printf("\n--- test_stale_detector ---\n");
 
     uint64_t timestamp = 500;
-	uint64_t timestamp_incr = 5;
 	float val = 3.14159f;
-	uint64_t error_count = 0;
-	int priority = 50;
-	const float insufficient_incr_value = (0.99 * 1E-6f);//insufficient to avoid stale detection
-	const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
+	//derived from class-private value, this is insufficient to avoid stale detection:
+	const float insufficient_incr_value = (0.99 * 1E-6f);
 
 	DataValidator *validator = new DataValidator;
-	validator->set_equal_value_threshold(equal_value_count);
-
-	//put a bunch of values that are all different
-	for (int i = 0; i < equal_value_count; i++, val += insufficient_incr_value) {
-		timestamp += timestamp_incr;
-		validator->put(timestamp, val, error_count, priority);
-	}
+	fill_validator_with_samples(validator, insufficient_incr_value, &val, &timestamp);
 
 	// data is stale: should have no confidence
 	assert(0.0f == validator->confidence(timestamp));
 
 	// should be a stale error
 	uint32_t state = validator->state();
-
 	if (DataValidator::ERROR_FLAG_STALE_DATA != state) {
 		dump_validator_state(validator);
 	}
-
 	assert(DataValidator::ERROR_FLAG_STALE_DATA == (DataValidator::ERROR_FLAG_STALE_DATA & state));
 
 	delete validator; //force delete
@@ -265,7 +243,6 @@ void test_error_tracking()
 	float conf = validator->confidence(timestamp);
 	printf("error_count: %u validator confidence: %f\n",(uint32_t)error_count, (double)conf);
 	assert(1.0f != conf);  //we should not be fully confident
-	//TODO fails in CI...why?
 	assert(0.0f != conf);  //neither should we be completely unconfident
 	// should be no errors, even if confidence is reduced, since we didn't exceed NORETURN_ERRCOUNT
 	assert(0 == validator->state());
