@@ -75,29 +75,29 @@ void dump_validator_state(DataValidator *validator)
 }
 
 void fill_validator_with_samples(DataValidator *validator,
-        const float incr_value,
-        float *value_io,
-        uint64_t *timestamp_io)
+				 const float incr_value,
+				 float *value_io,
+				 uint64_t *timestamp_io)
 {
-    uint64_t timestamp = *timestamp_io;
-    const uint64_t timestamp_incr = 5; //usec
-    const uint32_t timeout_usec = 2000;//derived from class-private value
+	uint64_t timestamp = *timestamp_io;
+	const uint64_t timestamp_incr = 5; //usec
+	const uint32_t timeout_usec = 2000;//derived from class-private value
 
-    float val = *value_io;
-    const uint64_t error_count = 0;
-    const int priority = 50; //"medium" priority
-    const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
+	float val = *value_io;
+	const uint64_t error_count = 0;
+	const int priority = 50; //"medium" priority
+	const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
 
-    validator->set_equal_value_threshold(equal_value_count);
-    validator->set_timeout(timeout_usec);
+	validator->set_equal_value_threshold(equal_value_count);
+	validator->set_timeout(timeout_usec);
 
-    //put a bunch of values that are all different
-    for (int i = 0; i < equal_value_count; i++, val += incr_value) {
-        timestamp += timestamp_incr;
-        validator->put(timestamp, val, error_count, priority);
-    }
+	//put a bunch of values that are all different
+	for (int i = 0; i < equal_value_count; i++, val += incr_value) {
+		timestamp += timestamp_incr;
+		validator->put(timestamp, val, error_count, priority);
+	}
 
-    *timestamp_io = timestamp;
-    *value_io = val;
+	*timestamp_io = timestamp;
+	*value_io = val;
 
 }

@@ -220,7 +220,7 @@ void test_put()
 	uint64_t timestamp = base_timestamp;
 
 	DataValidatorGroup *group = setup_group_with_two_validator_handles(&validator1, &validator2, &num_siblings);
-	printf("num_siblings: %d \n",num_siblings);
+	printf("num_siblings: %d \n", num_siblings);
 	unsigned val1_idx = num_siblings - 2;
 	unsigned val2_idx = num_siblings - 1;
 
@@ -266,17 +266,17 @@ void test_priority_switch()
 	int best_idx = -1;
 	float *best_data = nullptr;
 	//now, switch the priorities, which switches "best" but doesn't trigger a failover
-    float new_best_val = 3.14159f;
-    float data[DataValidator::dimensions] = {new_best_val};
-    //a single sample insertion should be sufficient to trigger a priority switch
-    group->put(val1_idx, timestamp, data, error_count, 1);
-    group->put(val2_idx, timestamp, data, error_count, 100);
-    best_data = group->get_best(timestamp, &best_idx);
-    assert(new_best_val == best_data[0]);
-    //the new best sensor should now be the sensor with the higher priority
-    assert(best_idx == val2_idx);
-    //should not have detected a real failover
-    assert(0 == group->failover_count());
+	float new_best_val = 3.14159f;
+	float data[DataValidator::dimensions] = {new_best_val};
+	//a single sample insertion should be sufficient to trigger a priority switch
+	group->put(val1_idx, timestamp, data, error_count, 1);
+	group->put(val2_idx, timestamp, data, error_count, 100);
+	best_data = group->get_best(timestamp, &best_idx);
+	assert(new_best_val == best_data[0]);
+	//the new best sensor should now be the sensor with the higher priority
+	assert(best_idx == val2_idx);
+	//should not have detected a real failover
+	assert(0 == group->failover_count());
 
 	delete  group; //cleanup
 }
@@ -286,57 +286,57 @@ void test_priority_switch()
  */
 void test_simple_failover()
 {
-    unsigned num_siblings = 0;
-    DataValidator *validator1 = nullptr;
-    DataValidator *validator2 = nullptr;
+	unsigned num_siblings = 0;
+	DataValidator *validator1 = nullptr;
+	DataValidator *validator2 = nullptr;
 
-    uint64_t timestamp = base_timestamp;
+	uint64_t timestamp = base_timestamp;
 
-    DataValidatorGroup *group = setup_group_with_two_validator_handles(&validator1, &validator2, &num_siblings);
-    //printf("num_siblings: %d \n",num_siblings);
-    int val1_idx = (int)num_siblings - 2;
-    int val2_idx = (int)num_siblings - 1;
+	DataValidatorGroup *group = setup_group_with_two_validator_handles(&validator1, &validator2, &num_siblings);
+	//printf("num_siblings: %d \n",num_siblings);
+	int val1_idx = (int)num_siblings - 2;
+	int val2_idx = (int)num_siblings - 1;
 
 
-    fill_two_with_valid_data(group, val1_idx, val2_idx, 100);
+	fill_two_with_valid_data(group, val1_idx, val2_idx, 100);
 
-    int best_idx = -1;
-    float *best_data = nullptr;
+	int best_idx = -1;
+	float *best_data = nullptr;
 
-    //trigger a real failover
-    float new_best_val = 3.14159f;
-    float data[DataValidator::dimensions] = {new_best_val};
-    //trigger a bunch of errors on the previous best sensor
-    unsigned val1_err_count = 0;
+	//trigger a real failover
+	float new_best_val = 3.14159f;
+	float data[DataValidator::dimensions] = {new_best_val};
+	//trigger a bunch of errors on the previous best sensor
+	unsigned val1_err_count = 0;
 
-    for (int i = 0; i < 25; i++) {
-        group->put(val1_idx, timestamp, data, ++val1_err_count, 100);
-        group->put(val2_idx, timestamp, data, 0, 10);
-    }
+	for (int i = 0; i < 25; i++) {
+		group->put(val1_idx, timestamp, data, ++val1_err_count, 100);
+		group->put(val2_idx, timestamp, data, 0, 10);
+	}
 
-    assert(validator1->error_count() == val1_err_count);
+	assert(validator1->error_count() == val1_err_count);
 
 	//since validator1 is experiencing errors, we should see a failover to validator2
 	best_data = group->get_best(timestamp + 1, &best_idx);
-    assert(nullptr != best_data);
-    assert(new_best_val == best_data[0]);
-    assert(best_idx == val2_idx);
-    //should have detected a real failover
-    printf("failover_count: %d \n", group->failover_count());
-    assert(1 == group->failover_count());
+	assert(nullptr != best_data);
+	assert(new_best_val == best_data[0]);
+	assert(best_idx == val2_idx);
+	//should have detected a real failover
+	printf("failover_count: %d \n", group->failover_count());
+	assert(1 == group->failover_count());
 
 	//even though validator1 has encountered a bunch of errors, it hasn't failed
-	assert( DataValidator::ERROR_FLAG_NO_ERROR == validator1->state());
+	assert(DataValidator::ERROR_FLAG_NO_ERROR == validator1->state());
 
-    // although we failed over from one sensor to another, this is not the same thing tracked by failover_index
-    int fail_idx = group->failover_index();
-    assert(-1 == fail_idx);//no failed sensor
+	// although we failed over from one sensor to another, this is not the same thing tracked by failover_index
+	int fail_idx = group->failover_index();
+	assert(-1 == fail_idx);//no failed sensor
 
-    //since no sensor has actually hard-failed, the group failover state is NO_ERROR
-    assert (DataValidator::ERROR_FLAG_NO_ERROR == group->failover_state());
+	//since no sensor has actually hard-failed, the group failover state is NO_ERROR
+	assert(DataValidator::ERROR_FLAG_NO_ERROR == group->failover_state());
 
 
-    delete  group; //cleanup
+	delete  group; //cleanup
 }
 
 /**
@@ -389,39 +389,39 @@ void test_vibration()
  */
 void test_sensor_failure()
 {
-    unsigned num_siblings = 0;
-    uint64_t timestamp = base_timestamp;
-    const float sufficient_incr_value = (1.1f * 1E-6f);
-    const uint32_t timeout_usec = 2000;//derived from class-private value
+	unsigned num_siblings = 0;
+	uint64_t timestamp = base_timestamp;
+	const float sufficient_incr_value = (1.1f * 1E-6f);
+	const uint32_t timeout_usec = 2000;//derived from class-private value
 
-    float val = 3.14159f;
+	float val = 3.14159f;
 
-    DataValidatorGroup *group =  setup_base_group(&num_siblings);
+	DataValidatorGroup *group =  setup_base_group(&num_siblings);
 
-    //now we add validators
-    DataValidator *validator  = add_validator_to_group(group);
-    assert(nullptr != validator);
-    num_siblings++;
-    int val_idx = num_siblings - 1;
+	//now we add validators
+	DataValidator *validator  = add_validator_to_group(group);
+	assert(nullptr != validator);
+	num_siblings++;
+	int val_idx = num_siblings - 1;
 
-    fill_validator_with_samples(validator,  sufficient_incr_value, &val, &timestamp);
-    //the best should now be the one validator we've filled with samples
+	fill_validator_with_samples(validator,  sufficient_incr_value, &val, &timestamp);
+	//the best should now be the one validator we've filled with samples
 
-    int best_idx = -1;
-    float *best_data = group->get_best(timestamp, &best_idx);
-    assert(nullptr != best_data);
-    //printf("best_idx: %d val_idx: %d\n", best_idx, val_idx);
-    assert(best_idx == val_idx);
+	int best_idx = -1;
+	float *best_data = group->get_best(timestamp, &best_idx);
+	assert(nullptr != best_data);
+	//printf("best_idx: %d val_idx: %d\n", best_idx, val_idx);
+	assert(best_idx == val_idx);
 
-    //now force a timeout failure in the one validator, by checking confidence long past timeout
-    validator->confidence(timestamp + (1.1 * timeout_usec));
-    assert(DataValidator::ERROR_FLAG_TIMEOUT == (DataValidator::ERROR_FLAG_TIMEOUT & validator->state()));
+	//now force a timeout failure in the one validator, by checking confidence long past timeout
+	validator->confidence(timestamp + (1.1 * timeout_usec));
+	assert(DataValidator::ERROR_FLAG_TIMEOUT == (DataValidator::ERROR_FLAG_TIMEOUT & validator->state()));
 
-    //now that the one sensor has failed, the group should detect this as well
-    int fail_idx = group->failover_index();
-    assert( val_idx == fail_idx);
+	//now that the one sensor has failed, the group should detect this as well
+	int fail_idx = group->failover_index();
+	assert(val_idx == fail_idx);
 
-    delete  group;
+	delete  group;
 }
 
 int main(int argc, char *argv[])
@@ -431,10 +431,10 @@ int main(int argc, char *argv[])
 
 	test_init();
 	test_put();
-    test_simple_failover();
-    test_priority_switch();
+	test_simple_failover();
+	test_priority_switch();
 	test_vibration();
-    test_sensor_failure();
+	test_sensor_failure();
 
 	return 0; //passed
 }

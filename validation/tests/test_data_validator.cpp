@@ -47,9 +47,9 @@
 
 void test_init()
 {
-    printf("\n--- test_init ---\n");
+	printf("\n--- test_init ---\n");
 
-    uint64_t fake_timestamp = 666;
+	uint64_t fake_timestamp = 666;
 	const uint32_t timeout_usec = 2000;//from original private value
 
 	DataValidator *validator = new DataValidator;
@@ -88,7 +88,7 @@ void test_init()
 
 void test_put()
 {
-    printf("\n--- test_put ---\n");
+	printf("\n--- test_put ---\n");
 
 	uint64_t timestamp = 500;
 	const uint32_t timeout_usec = 2000;//derived from class-private value
@@ -97,7 +97,7 @@ void test_put()
 	const float sufficient_incr_value = (1.1f * 1E-6f);
 
 	DataValidator *validator = new DataValidator;
-	fill_validator_with_samples(validator,sufficient_incr_value, &val, &timestamp);
+	fill_validator_with_samples(validator, sufficient_incr_value, &val, &timestamp);
 
 	assert(validator->used());
 	//verify that the last value we inserted is the current validator value
@@ -136,9 +136,9 @@ void test_put()
  */
 void test_stale_detector()
 {
-    printf("\n--- test_stale_detector ---\n");
+	printf("\n--- test_stale_detector ---\n");
 
-    uint64_t timestamp = 500;
+	uint64_t timestamp = 500;
 	float val = 3.14159f;
 	//derived from class-private value, this is insufficient to avoid stale detection:
 	const float insufficient_incr_value = (0.99 * 1E-6f);
@@ -151,9 +151,11 @@ void test_stale_detector()
 
 	// should be a stale error
 	uint32_t state = validator->state();
+
 	if (DataValidator::ERROR_FLAG_STALE_DATA != state) {
 		dump_validator_state(validator);
 	}
+
 	assert(DataValidator::ERROR_FLAG_STALE_DATA == (DataValidator::ERROR_FLAG_STALE_DATA & state));
 
 	delete validator; //force delete
@@ -165,7 +167,7 @@ void test_stale_detector()
  */
 void test_rms_calculation()
 {
-    printf("\n--- test_rms_calculation ---\n");
+	printf("\n--- test_rms_calculation ---\n");
 	const int equal_value_count = 100; //default is private VALUE_EQUAL_COUNT_DEFAULT
 	const float mean_value = 3.14159f;
 	const uint32_t sample_count = 1000;
@@ -199,7 +201,7 @@ void test_rms_calculation()
  */
 void test_error_tracking()
 {
-    printf("\n--- test_error_tracking ---\n");
+	printf("\n--- test_error_tracking ---\n");
 	uint64_t timestamp = 500;
 	uint64_t timestamp_incr = 5;
 	const uint32_t timeout_usec = 2000;//from original private value
@@ -241,7 +243,7 @@ void test_error_tracking()
 	// we've just provided a bunch of valid data with some errors:
 	// confidence should be reduced by the number of errors
 	float conf = validator->confidence(timestamp);
-	printf("error_count: %u validator confidence: %f\n",(uint32_t)error_count, (double)conf);
+	printf("error_count: %u validator confidence: %f\n", (uint32_t)error_count, (double)conf);
 	assert(1.0f != conf);  //we should not be fully confident
 	assert(0.0f != conf);  //neither should we be completely unconfident
 	// should be no errors, even if confidence is reduced, since we didn't exceed NORETURN_ERRCOUNT
@@ -250,11 +252,11 @@ void test_error_tracking()
 	// the error density will reduce the confidence by 1 - (error_density / ERROR_DENSITY_WINDOW)
 	// ERROR_DENSITY_WINDOW is currently private, but == 100.0f
 	float reduced_conf = 1.0f - ((float)expected_error_density / 100.0f);
-    double diff = fabs(reduced_conf - conf);
+	double diff = fabs(reduced_conf - conf);
 
 	if (reduced_conf != conf) {
 		printf("conf: %f reduced_conf: %f diff: %f\n",
-		        (double)conf, (double)reduced_conf, diff);
+		       (double)conf, (double)reduced_conf, diff);
 		dump_validator_state(validator);
 	}
 
