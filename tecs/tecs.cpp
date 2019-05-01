@@ -55,7 +55,7 @@ static constexpr float DT_MAX = 1.0f;	///< max value of _dt allowed before a fil
  * which is used by the airspeed complimentary filter.
  */
 void TECS::update_vehicle_state_estimates(const float equivalent_airspeed, const matrix::Dcmf &rotMat,
-		const matrix::Vector3f &accel_body, const bool altitude_lock, const bool in_air,
+		const float accel_body_x, const bool altitude_lock, const bool in_air,
 		const float altitude, const bool vz_valid, const float vz, const float az)
 {
 	// calculate the time lapsed since the last update
@@ -131,7 +131,7 @@ void TECS::update_vehicle_state_estimates(const float equivalent_airspeed, const
 	if (ISFINITE(equivalent_airspeed) && airspeed_sensor_enabled()) {
 		// Assuming the vehicle is flying X axis forward, use the X axis measured acceleration
 		// compensated for gravity to estimate the rate of change of speed
-		const float speed_deriv_raw = rotMat(2, 0) * CONSTANTS_ONE_G + accel_body(0);
+		const float speed_deriv_raw = rotMat(2, 0) * CONSTANTS_ONE_G + accel_body_x;
 
 		// Apply some noise filtering
 		_speed_derivative = 0.95f * _speed_derivative + 0.05f * speed_deriv_raw;

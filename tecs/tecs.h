@@ -74,7 +74,7 @@ public:
 	 * Must be called at 50Hz or greater
 	 */
 	void update_vehicle_state_estimates(const float equivalent_airspeed, const matrix::Dcmf &rotMat,
-					    const matrix::Vector3f &accel_body, const bool altitude_lock, const bool in_air,
+					    const float accel_body_x, const bool altitude_lock, const bool in_air,
 					    const float altitude, const bool vz_valid, const float vz, const float az);
 
 	/**
