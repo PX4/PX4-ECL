@@ -112,8 +112,8 @@ public:
 	void set_heightrate_ff(const float heightrate_ff) { _height_setpoint_gain_ff = heightrate_ff; }
 	void set_heightrate_p(const float heightrate_p) { _height_error_gain = heightrate_p; }
 
-	void set_indicated_airspeed_max(const float airspeed) { _equivalent_airspeed_max = airspeed; }
-	void set_indicated_airspeed_min(const float airspeed) { _equivalent_airspeed_min = airspeed; }
+	void set_equivalent_airspeed_max(const float airspeed) { _equivalent_airspeed_max = airspeed; }
+	void set_equivalent_airspeed_min(const float airspeed) { _equivalent_airspeed_min = airspeed; }
 
 	void set_pitch_damping(const float damping) { _pitch_damping_gain = damping; }
 	void set_vertical_accel_limit(const float limit) { _vert_accel_limit = limit; }
