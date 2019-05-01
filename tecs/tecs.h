@@ -59,12 +59,12 @@ public:
 	 *
 	 * @return true if airspeed is enabled for control
 	 */
-	bool airspeed_sensor_enabled() { return _airspeed_enabled; }
+	bool airspeed_sensor_enabled() const { return _airspeed_enabled; }
 
 	/**
 	 * Set the airspeed enable state
 	 */
-	void enable_airspeed(bool enabled) { _airspeed_enabled = enabled; }
+	void enable_airspeed(const bool enabled) { _airspeed_enabled = enabled; }
 
 	/**
 	 * Updates the following vehicle kineamtic state estimates:
@@ -73,21 +73,21 @@ public:
 	 * Must be called prior to udating tecs control loops
 	 * Must be called at 50Hz or greater
 	 */
-	void update_vehicle_state_estimates(float airspeed, const matrix::Dcmf &rotMat,
-					    const matrix::Vector3f &accel_body, bool altitude_lock, bool in_air,
-					    float altitude, bool vz_valid, float vz, float az);
+	void update_vehicle_state_estimates(const float airspeed, const matrix::Dcmf &rotMat,
+					    const matrix::Vector3f &accel_body, const bool altitude_lock, const bool in_air,
+					    const float altitude, const bool vz_valid, const float vz, const float az);
 
 	/**
 	 * Update the control loop calculations
 	 */
-	void update_pitch_throttle(const matrix::Dcmf &rotMat, float pitch, float baro_altitude, float hgt_setpoint,
-				   float EAS_setpoint, float indicated_airspeed, float eas_to_tas, bool climb_out_setpoint, float pitch_min_climbout,
-				   float throttle_min, float throttle_setpoint_max, float throttle_cruise,
-				   float pitch_limit_min, float pitch_limit_max);
+	void update_pitch_throttle(const matrix::Dcmf &rotMat, const float pitch, const float baro_altitude, const float hgt_setpoint,
+				   const float EAS_setpoint, const float indicated_airspeed, const float eas_to_tas, const bool climb_out_setpoint, const float pitch_min_climbout,
+				   const float throttle_min, const float throttle_setpoint_max, const float throttle_cruise,
+				   const float pitch_limit_min, const float pitch_limit_max);
 
-	float get_throttle_setpoint(void) { return _throttle_setpoint; }
-	float get_pitch_setpoint() { return _pitch_setpoint; }
-	float get_speed_weight() { return _pitch_speed_weight; }
+	float get_throttle_setpoint() const { return _throttle_setpoint; }
+	float get_pitch_setpoint() const { return _pitch_setpoint; }
+	float get_speed_weight() const { return _pitch_speed_weight; }
 
 	void reset_state() { _states_initalized = false; }
 
@@ -98,60 +98,60 @@ public:
 		ECL_TECS_MODE_CLIMBOUT
 	};
 
-	void set_detect_underspeed_enabled(bool enabled) { _detect_underspeed_enabled = enabled; }
+	void set_detect_underspeed_enabled(const bool enabled) { _detect_underspeed_enabled = enabled; }
 
 	// setters for controller parameters
-	void set_time_const(float time_const) { _pitch_time_constant = time_const; }
-	void set_integrator_gain(float gain) { _integrator_gain = gain; }
+	void set_time_const(const float time_const) { _pitch_time_constant = time_const; }
+	void set_integrator_gain(const float gain) { _integrator_gain = gain; }
 
-	void set_min_sink_rate(float rate) { _min_sink_rate = rate; }
-	void set_max_sink_rate(float sink_rate) { _max_sink_rate = sink_rate; }
-	void set_max_climb_rate(float climb_rate) { _max_climb_rate = climb_rate; }
+	void set_min_sink_rate(const float rate) { _min_sink_rate = rate; }
+	void set_max_sink_rate(const float sink_rate) { _max_sink_rate = sink_rate; }
+	void set_max_climb_rate(const float climb_rate) { _max_climb_rate = climb_rate; }
 
-	void set_height_comp_filter_omega(float omega) { _hgt_estimate_freq = omega; }
-	void set_heightrate_ff(float heightrate_ff) { _height_setpoint_gain_ff = heightrate_ff; }
-	void set_heightrate_p(float heightrate_p) { _height_error_gain = heightrate_p; }
+	void set_height_comp_filter_omega(const float omega) { _hgt_estimate_freq = omega; }
+	void set_heightrate_ff(const float heightrate_ff) { _height_setpoint_gain_ff = heightrate_ff; }
+	void set_heightrate_p(const float heightrate_p) { _height_error_gain = heightrate_p; }
 
-	void set_indicated_airspeed_max(float airspeed) { _indicated_airspeed_max = airspeed; }
-	void set_indicated_airspeed_min(float airspeed) { _indicated_airspeed_min = airspeed; }
+	void set_indicated_airspeed_max(const float airspeed) { _indicated_airspeed_max = airspeed; }
+	void set_indicated_airspeed_min(const float airspeed) { _indicated_airspeed_min = airspeed; }
 
-	void set_pitch_damping(float damping) { _pitch_damping_gain = damping; }
-	void set_vertical_accel_limit(float limit) { _vert_accel_limit = limit; }
+	void set_pitch_damping(const float damping) { _pitch_damping_gain = damping; }
+	void set_vertical_accel_limit(const float limit) { _vert_accel_limit = limit; }
 
-	void set_speed_comp_filter_omega(float omega) { _tas_estimate_freq = omega; }
-	void set_speed_weight(float weight) { _pitch_speed_weight = weight; }
-	void set_speedrate_p(float speedrate_p) { _speed_error_gain = speedrate_p; }
+	void set_speed_comp_filter_omega(const float omega) { _tas_estimate_freq = omega; }
+	void set_speed_weight(const float weight) { _pitch_speed_weight = weight; }
+	void set_speedrate_p(const float speedrate_p) { _speed_error_gain = speedrate_p; }
 
-	void set_time_const_throt(float time_const_throt) { _throttle_time_constant = time_const_throt; }
-	void set_throttle_damp(float throttle_damp) { _throttle_damping_gain = throttle_damp; }
-	void set_throttle_slewrate(float slewrate) { _throttle_slewrate = slewrate; }
+	void set_time_const_throt(const float time_const_throt) { _throttle_time_constant = time_const_throt; }
+	void set_throttle_damp(const float throttle_damp) { _throttle_damping_gain = throttle_damp; }
+	void set_throttle_slewrate(const float slewrate) { _throttle_slewrate = slewrate; }
 
-	void set_roll_throttle_compensation(float compensation) { _load_factor_correction = compensation; }
+	void set_roll_throttle_compensation(const float compensation) { _load_factor_correction = compensation; }
 
 	// TECS status
-	uint64_t timestamp() { return _pitch_update_timestamp; }
-	ECL_TECS_MODE tecs_mode() { return _tecs_mode; }
+	uint64_t timestamp() const { return _pitch_update_timestamp; }
+	ECL_TECS_MODE tecs_mode() const { return _tecs_mode; }
 
-	float hgt_setpoint_adj() { return _hgt_setpoint_adj; }
-	float vert_pos_state() { return _vert_pos_state; }
+	float hgt_setpoint_adj() const { return _hgt_setpoint_adj; }
+	float vert_pos_state() const { return _vert_pos_state; }
 
-	float TAS_setpoint_adj() { return _TAS_setpoint_adj; }
-	float tas_state() { return _tas_state; }
+	float TAS_setpoint_adj() const { return _TAS_setpoint_adj; }
+	float tas_state() const { return _tas_state; }
 
-	float hgt_rate_setpoint() { return _hgt_rate_setpoint; }
-	float vert_vel_state() { return _vert_vel_state; }
+	float hgt_rate_setpoint() const { return _hgt_rate_setpoint; }
+	float vert_vel_state() const { return _vert_vel_state; }
 
-	float TAS_rate_setpoint() { return _TAS_rate_setpoint; }
-	float speed_derivative() { return _speed_derivative; }
+	float TAS_rate_setpoint() const { return _TAS_rate_setpoint; }
+	float speed_derivative() const { return _speed_derivative; }
 
-	float STE_error() { return _STE_error; }
-	float STE_rate_error() { return _STE_rate_error; }
+	float STE_error() const { return _STE_error; }
+	float STE_rate_error() const { return _STE_rate_error; }
 
-	float SEB_error() { return _SEB_error; }
-	float SEB_rate_error() { return _SEB_rate_error; }
+	float SEB_error() const { return _SEB_error; }
+	float SEB_rate_error() const { return _SEB_rate_error; }
 
-	float throttle_integ_state() { return _throttle_integ_state; }
-	float pitch_integ_state() { return _pitch_integ_state; }
+	float throttle_integ_state() const { return _throttle_integ_state; }
+	float pitch_integ_state() const { return _pitch_integ_state; }
 
 	/**
 	 * Handle the altitude reset
@@ -159,7 +159,7 @@ public:
 	 * If the estimation system resets the height in one discrete step this
 	 * will gracefully even out the reset over time.
 	 */
-	void handle_alt_step(float delta_alt, float altitude)
+	void handle_alt_step(const float delta_alt, const float altitude)
 	{
 		// add height reset delta to all variables involved
 		// in filtering the demanded height
@@ -280,7 +280,7 @@ private:
 	/**
 	 * Update the airspeed internal state using a second order complementary filter
 	 */
-	void _update_speed_states(float airspeed_setpoint, float indicated_airspeed, float eas_to_tas);
+	void _update_speed_states(const float airspeed_setpoint, const float indicated_airspeed, const float eas_to_tas);
 
 	/**
 	 * Update the desired airspeed
@@ -290,7 +290,7 @@ private:
 	/**
 	 * Update the desired height
 	 */
-	void _update_height_setpoint(float desired, float state);
+	void _update_height_setpoint(const float desired, const float state);
 
 	/**
 	 * Detect if the system is not capable of maintaining airspeed
@@ -305,7 +305,7 @@ private:
 	/**
 	 * Update throttle setpoint
 	 */
-	void _update_throttle_setpoint(float throttle_cruise, const matrix::Dcmf &rotMat);
+	void _update_throttle_setpoint(const float throttle_cruise, const matrix::Dcmf &rotMat);
 
 	/**
 	 * Detect an uncommanded descent
@@ -320,8 +320,8 @@ private:
 	/**
 	 * Initialize the controller
 	 */
-	void _initialize_states(float pitch, float throttle_cruise, float baro_altitude, float pitch_min_climbout,
-				float eas_to_tas);
+	void _initialize_states(const float pitch, const float throttle_cruise, const float baro_altitude, const float pitch_min_climbout,
+				const float eas_to_tas);
 
 	/**
 	 * Calculate specific total energy rate limits

@@ -54,12 +54,12 @@ static constexpr float DT_MAX = 1.0f;	///< max value of _dt allowed before a fil
  * inertial nav data is not available. It also calculates a true airspeed derivative
  * which is used by the airspeed complimentary filter.
  */
-void TECS::update_vehicle_state_estimates(float airspeed, const matrix::Dcmf &rotMat,
-		const matrix::Vector3f &accel_body, bool altitude_lock, bool in_air,
-		float altitude, bool vz_valid, float vz, float az)
+void TECS::update_vehicle_state_estimates(const float airspeed, const matrix::Dcmf &rotMat,
+		const matrix::Vector3f &accel_body, const bool altitude_lock, const bool in_air,
+		const float altitude, const bool vz_valid, const float vz, const float az)
 {
 	// calculate the time lapsed since the last update
-	uint64_t now = ecl_absolute_time();
+	const uint64_t now = ecl_absolute_time();
 	float dt = constrain((now - _state_update_timestamp) * 1.0e-6f, DT_MIN, DT_MAX);
 
 	bool reset_altitude = false;
@@ -100,20 +100,20 @@ void TECS::update_vehicle_state_estimates(float airspeed, const matrix::Dcmf &ro
 
 	} else {
 		// Get height acceleration
-		float hgt_ddot_mea = -az;
+		const float hgt_ddot_mea = -az;
 
 		// If we have no vertical INS data, estimate the vertical velocity using a complementary filter
 		// Perform filter calculation using backwards Euler integration
 		// Coefficients selected to place all three filter poles at omega
 		// Reference Paper: Optimising the Gains of the Baro-Inertial Vertical Channel
 		// Widnall W.S, Sinha P.K, AIAA Journal of Guidance and Control, 78-1307R
-		float omega2 = _hgt_estimate_freq * _hgt_estimate_freq;
-		float hgt_err = altitude - _vert_pos_state;
-		float vert_accel_input = hgt_err * omega2 * _hgt_estimate_freq;
+		const float omega2 = _hgt_estimate_freq * _hgt_estimate_freq;
+		const float hgt_err = altitude - _vert_pos_state;
+		const float vert_accel_input = hgt_err * omega2 * _hgt_estimate_freq;
 		_vert_accel_state = _vert_accel_state + vert_accel_input * dt;
-		float vert_vel_input = _vert_accel_state + hgt_ddot_mea + hgt_err * omega2 * 3.0f;
+		const float vert_vel_input = _vert_accel_state + hgt_ddot_mea + hgt_err * omega2 * 3.0f;
 		_vert_vel_state = _vert_vel_state + vert_vel_input * dt;
-		float vert_pos_input = _vert_vel_state + hgt_err * _hgt_estimate_freq * 3.0f;
+		const float vert_pos_input = _vert_vel_state + hgt_err * _hgt_estimate_freq * 3.0f;
 
 		// If more than 1 second has elapsed since last update then reset the position state
 		// to the measured height
@@ -146,10 +146,10 @@ void TECS::update_vehicle_state_estimates(float airspeed, const matrix::Dcmf &ro
 
 }
 
-void TECS::_update_speed_states(float airspeed_setpoint, float indicated_airspeed, float EAS2TAS)
+void TECS::_update_speed_states(const float airspeed_setpoint, const float indicated_airspeed, const float EAS2TAS)
 {
 	// Calculate the time in seconds since the last update and use the default time step value if out of bounds
-	uint64_t now = ecl_absolute_time();
+	const uint64_t now = ecl_absolute_time();
 	const float dt = constrain((now - _speed_update_timestamp) * 1.0e-6f, DT_MIN, DT_MAX);
 
 	// Convert equivalent airspeed quantities to true airspeed
@@ -176,7 +176,7 @@ void TECS::_update_speed_states(float airspeed_setpoint, float indicated_airspee
 	// Obtain a smoothed airspeed estimate using a second order complementary filter
 
 	// Update TAS rate state
-	float tas_error = (_EAS * EAS2TAS) - _tas_state;
+	const float tas_error = (_EAS * EAS2TAS) - _tas_state;
 	float tas_rate_state_input = tas_error * _tas_estimate_freq * _tas_estimate_freq;
 
 	// limit integrator input to prevent windup
@@ -187,7 +187,7 @@ void TECS::_update_speed_states(float airspeed_setpoint, float indicated_airspee
 
 	// Update TAS state
 	_tas_rate_state = _tas_rate_state + tas_rate_state_input * dt;
-	float tas_state_input = _tas_rate_state + _speed_derivative + tas_error * _tas_estimate_freq * 1.4142f;
+	const float tas_state_input = _tas_rate_state + _speed_derivative + tas_error * _tas_estimate_freq * 1.4142f;
 	_tas_state = _tas_state + tas_state_input * dt;
 
 	// Limit the airspeed state to a minimum of 3 m/s
@@ -208,8 +208,8 @@ void TECS::_update_speed_setpoint()
 
 	// Calculate limits for the demanded rate of change of speed based on physical performance limits
 	// with a 50% margin to allow the total energy controller to correct for errors.
-	float velRateMax = 0.5f * _STE_rate_max / _tas_state;
-	float velRateMin = 0.5f * _STE_rate_min / _tas_state;
+	const float velRateMax = 0.5f * _STE_rate_max / _tas_state;
+	const float velRateMin = 0.5f * _STE_rate_min / _tas_state;
 
 	_TAS_setpoint_adj = constrain(_TAS_setpoint, _TAS_min, _TAS_max);
 
@@ -219,7 +219,7 @@ void TECS::_update_speed_setpoint()
 
 }
 
-void TECS::_update_height_setpoint(float desired, float state)
+void TECS::_update_height_setpoint(const float desired, const float state)
 {
 	// Detect first time through and initialize previous value to demand
 	if (ISFINITE(desired) && fabsf(_hgt_setpoint_in_prev) < 0.1f) {
@@ -322,7 +322,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		// Adjust the demanded total energy rate to compensate for induced drag rise in turns.
 		// Assume induced drag scales linearly with normal load factor.
 		// The additional normal load factor is given by (1/cos(bank angle) - 1)
-		float cosPhi = sqrtf((rotMat(0, 1) * rotMat(0, 1)) + (rotMat(1, 1) * rotMat(1, 1)));
+		const float cosPhi = sqrtf((rotMat(0, 1) * rotMat(0, 1)) + (rotMat(1, 1) * rotMat(1, 1)));
 		STE_rate_setpoint = STE_rate_setpoint + _load_factor_correction * (1.0f / constrain(cosPhi, 0.1f, 1.0f) - 1.0f);
 
 		// Calculate a predicted throttle from the demanded rate of change of energy, using the cruise throttle
@@ -343,7 +343,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		}
 
 		// Calculate gain scaler from specific energy error to throttle
-		float STE_to_throttle = 1.0f / (_throttle_time_constant * (_STE_rate_max - _STE_rate_min));
+		const float STE_to_throttle = 1.0f / (_throttle_time_constant * (_STE_rate_max - _STE_rate_min));
 
 		// Add proportional and derivative control feedback to the predicted throttle and constrain to throttle limits
 		_throttle_setpoint = (_STE_error + _STE_rate_error * _throttle_damping_gain) * STE_to_throttle + throttle_predicted;
@@ -351,7 +351,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 
 		// Rate limit the throttle demand
 		if (fabsf(_throttle_slewrate) > 0.01f) {
-			float throttle_increment_limit = _dt * (_throttle_setpoint_max - _throttle_setpoint_min) * _throttle_slewrate;
+			const float throttle_increment_limit = _dt * (_throttle_setpoint_max - _throttle_setpoint_min) * _throttle_slewrate;
 			_throttle_setpoint = constrain(_throttle_setpoint, _last_throttle_setpoint - throttle_increment_limit,
 						       _last_throttle_setpoint + throttle_increment_limit);
 		}
@@ -361,8 +361,8 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		if (_integrator_gain > 0.0f) {
 			// Calculate throttle integrator state upper and lower limits with allowance for
 			// 10% throttle saturation to accommodate noise on the demand.
-			float integ_state_max = _throttle_setpoint_max - _throttle_setpoint + 0.1f;
-			float integ_state_min = _throttle_setpoint_min - _throttle_setpoint - 0.1f;
+			const float integ_state_max = _throttle_setpoint_max - _throttle_setpoint + 0.1f;
+			const float integ_state_min = _throttle_setpoint_min - _throttle_setpoint - 0.1f;
 
 			// Calculate a throttle demand from the integrated total energy error
 			// This will be added to the total throttle demand to compensate for steady state errors
@@ -405,14 +405,14 @@ void TECS::_detect_uncommanded_descent()
 	*/
 
 	// Calculate rate of change of total specific energy
-	float STE_rate = _SPE_rate + _SKE_rate;
+	const float STE_rate = _SPE_rate + _SKE_rate;
 
 	// If total energy is very low and reducing, throttle is high, and we are not in an underspeed condition, then enter uncommanded descent recovery mode
-	bool enter_mode = !_uncommanded_descent_recovery && !_underspeed_detected && (_STE_error > 200.0f) && (STE_rate < 0.0f)
+	const bool enter_mode = !_uncommanded_descent_recovery && !_underspeed_detected && (_STE_error > 200.0f) && (STE_rate < 0.0f)
 			  && (_throttle_setpoint >= _throttle_setpoint_max * 0.9f);
 
 	// If we enter an underspeed condition or recover the required total energy, then exit uncommanded descent recovery mode
-	bool exit_mode = _uncommanded_descent_recovery && (_underspeed_detected || (_STE_error < 0.0f));
+	const bool exit_mode = _uncommanded_descent_recovery && (_underspeed_detected || (_STE_error < 0.0f));
 
 	if (enter_mode) {
 		_uncommanded_descent_recovery = true;
@@ -447,21 +447,21 @@ void TECS::_update_pitch_setpoint()
 	}
 
 	// Calculate the weighting applied to control of specific potential energy error
-	float SPE_weighting = 2.0f - SKE_weighting;
+	const float SPE_weighting = 2.0f - SKE_weighting;
 
 	// Calculate the specific energy balance demand which specifies how the available total
 	// energy should be allocated to speed (kinetic energy) and height (potential energy)
-	float SEB_setpoint = _SPE_setpoint * SPE_weighting - _SKE_setpoint * SKE_weighting;
+	const float SEB_setpoint = _SPE_setpoint * SPE_weighting - _SKE_setpoint * SKE_weighting;
 
 	// Calculate the specific energy balance rate demand
-	float SEB_rate_setpoint = _SPE_rate_setpoint * SPE_weighting - _SKE_rate_setpoint * SKE_weighting;
+	const float SEB_rate_setpoint = _SPE_rate_setpoint * SPE_weighting - _SKE_rate_setpoint * SKE_weighting;
 
 	// Calculate the specific energy balance and balance rate error
 	_SEB_error = SEB_setpoint - (_SPE_estimate * SPE_weighting - _SKE_estimate * SKE_weighting);
 	_SEB_rate_error = SEB_rate_setpoint - (_SPE_rate * SPE_weighting - _SKE_rate * SKE_weighting);
 
 	// Calculate derivative from change in climb angle to rate of change of specific energy balance
-	float climb_angle_to_SEB_rate = _tas_state * _pitch_time_constant * CONSTANTS_ONE_G;
+	const float climb_angle_to_SEB_rate = _tas_state * _pitch_time_constant * CONSTANTS_ONE_G;
 
 	if (_integrator_gain > 0.0f) {
 		// Calculate pitch integrator input term
@@ -503,7 +503,7 @@ void TECS::_update_pitch_setpoint()
 	_pitch_setpoint = constrain(_pitch_setpoint_unc, _pitch_setpoint_min, _pitch_setpoint_max);
 
 	// Comply with the specified vertical acceleration limit by applying a pitch rate limit
-	float ptchRateIncr = _dt * _vert_accel_limit / _tas_state;
+	const float ptchRateIncr = _dt * _vert_accel_limit / _tas_state;
 
 	if ((_pitch_setpoint - _last_pitch_setpoint) > ptchRateIncr) {
 		_pitch_setpoint = _last_pitch_setpoint + ptchRateIncr;
@@ -515,8 +515,8 @@ void TECS::_update_pitch_setpoint()
 	_last_pitch_setpoint = _pitch_setpoint;
 }
 
-void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_altitude, float pitch_min_climbout,
-			      float EAS2TAS)
+void TECS::_initialize_states(const float pitch, const float throttle_cruise, const float baro_altitude, const float pitch_min_climbout,
+			      const float EAS2TAS)
 {
 	if (_pitch_update_timestamp == 0 || _dt > DT_MAX || !_in_air || !_states_initalized) {
 		// On first time through or when not using TECS of if there has been a large time slip,
@@ -579,12 +579,12 @@ void TECS::_update_STE_rate_lim()
 	_STE_rate_min = - _min_sink_rate * CONSTANTS_ONE_G;
 }
 
-void TECS::update_pitch_throttle(const matrix::Dcmf &rotMat, float pitch, float baro_altitude, float hgt_setpoint,
-				 float EAS_setpoint, float indicated_airspeed, float eas_to_tas, bool climb_out_setpoint, float pitch_min_climbout,
-				 float throttle_min, float throttle_max, float throttle_cruise, float pitch_limit_min, float pitch_limit_max)
+void TECS::update_pitch_throttle(const matrix::Dcmf &rotMat, const float pitch, const float baro_altitude, const float hgt_setpoint,
+				 const float EAS_setpoint, const float indicated_airspeed, const float eas_to_tas, const bool climb_out_setpoint, const float pitch_min_climbout,
+				 const float throttle_min, const float throttle_max, const float throttle_cruise, const float pitch_limit_min, float pitch_limit_max)
 {
 	// Calculate the time since last update (seconds)
-	uint64_t now = ecl_absolute_time();
+	const uint64_t now = ecl_absolute_time();
 	_dt = constrain((now - _pitch_update_timestamp) * 1e-6f, DT_MIN, DT_MAX);
 
 	// Set class variables from inputs
