@@ -80,7 +80,7 @@ public:
 	/**
 	 * Update the control loop calculations
 	 */
-	void update_pitch_throttle(const matrix::Dcmf &rotMat, const float pitch, const float altitude, const float hgt_setpoint,
+	void update_pitch_throttle(const matrix::Dcmf &rotMat, const float pitch, const float altitude, const float altitude_setpoint,
 				   const float EAS_setpoint, const float equivalent_airspeed, const float EAS2TAS, const bool climb_out_setpoint, const float pitch_min_climbout,
 				   const float throttle_min, const float throttle_setpoint_max, const float throttle_cruise,
 				   const float pitch_limit_min, const float pitch_limit_max);
@@ -108,9 +108,9 @@ public:
 	void set_max_sink_rate(const float sink_rate) { _max_sink_rate = sink_rate; }
 	void set_max_climb_rate(const float climb_rate) { _max_climb_rate = climb_rate; }
 
-	void set_height_comp_filter_omega(const float omega) { _hgt_estimate_freq = omega; }
-	void set_heightrate_ff(const float heightrate_ff) { _height_setpoint_gain_ff = heightrate_ff; }
-	void set_heightrate_p(const float heightrate_p) { _height_error_gain = heightrate_p; }
+	void set_altitude_comp_filter_omega(const float omega) { _altitude_estimate_freq = omega; }
+	void set_altitude_rate_ff(const float altitude_rate_ff) { _altitude_setpoint_gain_ff = altitude_rate_ff; }
+	void set_altitude_rate_p(const float altitude_rate_p) { _altitude_error_gain = altitude_rate_p; }
 
 	void set_equivalent_airspeed_max(const float airspeed) { _equivalent_airspeed_max = airspeed; }
 	void set_equivalent_airspeed_min(const float airspeed) { _equivalent_airspeed_min = airspeed; }
@@ -132,23 +132,23 @@ public:
 	uint64_t timestamp() const { return _pitch_update_timestamp; }
 	ECL_TECS_MODE tecs_mode() const { return _tecs_mode; }
 
-	float hgt_setpoint_adj() const { return _hgt_setpoint_adj; }
-	float vert_pos_state() const { return _vert_pos_state; }
+	float altitude_setpoint_adj() const { return _altitude_setpoint_adj; }
+	float altitude_state() const { return _altitude_state; }
 
 	float TAS_setpoint_adj() const { return _TAS_setpoint_adj; }
-	float tas_state() const { return _TAS_state; }
+	float TAS_state() const { return _TAS_state; }
 
-	float hgt_rate_setpoint() const { return _hgt_rate_setpoint; }
+	float altitude_rate_setpoint() const { return _altitude_rate_setpoint; }
 	float vert_vel_state() const { return _vert_vel_state; }
 
 	float TAS_rate_setpoint() const { return _TAS_rate_setpoint; }
-	float speed_derivative() const { return _speed_derivative; }
+	float TAS_rate() const { return _TAS_rate; }
 
-	float STE_error() const { return _STE_error; }
-	float STE_rate_error() const { return _STE_rate_error; }
+	float total_energy_error() const { return _total_energy_error; }
+	float total_energy_rate_error() const { return _total_energy_rate_error; }
 
-	float SEB_error() const { return _SEB_error; }
-	float SEB_rate_error() const { return _SEB_rate_error; }
+	float energy_distribution_error() const { return _energy_distribution_error; }
+	float energy_distribution_rate_error() const { return _energy_distribution_rate_error; }
 
 	float throttle_integ_state() const { return _throttle_integ_state; }
 	float pitch_integ_state() const { return _pitch_integ_state; }
@@ -156,19 +156,19 @@ public:
 	/**
 	 * Handle the altitude reset
 	 *
-	 * If the estimation system resets the height in one discrete step this
+	 * If the estimation system resets the altitude in one discrete step this
 	 * will gracefully even out the reset over time.
 	 */
 	void handle_alt_step(const float delta_alt, const float altitude)
 	{
-		// add height reset delta to all variables involved
-		// in filtering the demanded height
-		_hgt_setpoint_in_prev += delta_alt;
-		_hgt_setpoint_prev += delta_alt;
-		_hgt_setpoint_adj_prev += delta_alt;
+		// add altitude reset delta to all variables involved
+		// in filtering the demanded altitude
+		_altitude_setpoint_in_prev += delta_alt;
+		_altitude_setpoint_prev += delta_alt;
+		_altitude_setpoint_adj_prev += delta_alt;
 
-		// reset height states
-		_vert_pos_state = altitude;
+		// reset altitude states
+		_altitude_state = altitude;
 		_vert_accel_state = 0.0f;
 		_vert_vel_state = 0.0f;
 	}
@@ -183,7 +183,7 @@ private:
 	uint64_t _pitch_update_timestamp{0};				///< last timestamp of the pitch function call
 
 	// controller parameters
-	float _hgt_estimate_freq{0.0f};					///< cross-over frequency of the height rate complementary filter (rad/sec)
+	float _altitude_estimate_freq{0.0f};					///< cross-over frequency of the altitude rate complementary filter (rad/sec)
 	float _TAS_estimate_freq{0.0f};					///< cross-over frequency of the true airspeed complementary filter (rad/sec)
 	float _max_climb_rate{2.0f};					///< climb rate produced by max allowed throttle (m/sec)
 	float _min_sink_rate{1.0f};					///< sink rate produced by min allowed throttle (m/sec)
@@ -196,8 +196,8 @@ private:
 	float _vert_accel_limit{0.0f};					///< magnitude of the maximum vertical acceleration allowed (m/sec**2)
 	float _load_factor_correction{0.0f};				///< gain from normal load factor increase to total energy rate demand (m**2/sec**3)
 	float _pitch_speed_weight{1.0f};				///< speed control weighting used by pitch demand calculation
-	float _height_error_gain{0.0f};					///< gain from height error to demanded climb rate (1/sec)
-	float _height_setpoint_gain_ff{0.0f};				///< gain from height demand derivative to demanded climb rate
+	float _altitude_error_gain{0.0f};					///< gain from altitude error to demanded climb rate (1/sec)
+	float _altitude_setpoint_gain_ff{0.0f};				///< gain from altitude demand derivative to demanded climb rate
 	float _speed_error_gain{0.0f};					///< gain from speed error to demanded speed rate (1/sec)
 	float _equivalent_airspeed_min{3.0f};				///< equivalent airspeed demand lower limit (m/sec)
 	float _equivalent_airspeed_max{30.0f};				///< equivalent airspeed demand upper limit (m/sec)
@@ -208,9 +208,9 @@ private:
 	float _pitch_setpoint{0.0f};					///< pitch angle demand (radians)
 
 	// complimentary filter states
-	float _vert_accel_state{0.0f};					///< complimentary filter state - height second derivative (m/sec**2)
-	float _vert_vel_state{0.0f};					///< complimentary filter state - height rate (m/sec)
-	float _vert_pos_state{0.0f};					///< complimentary filter state - height (m)
+	float _vert_accel_state{0.0f};					///< complimentary filter state - altitude second derivative (m/sec**2)
+	float _vert_vel_state{0.0f};					///< complimentary filter state - altitude rate (m/sec)
+	float _altitude_state{0.0f};					///< complimentary filter state - altitude (m)
 	float _TAS_rate_state{0.0f};					///< complimentary filter state - true airspeed first derivative (m/sec**2)
 	float _TAS_state{0.0f};						///< complimentary filter state - true airspeed (m/sec)
 
@@ -219,7 +219,7 @@ private:
 	float _pitch_integ_state{0.0f};					///< pitch integrator state (rad)
 	float _last_throttle_setpoint{0.0f};				///< throttle demand rate limiter state (1/sec)
 	float _last_pitch_setpoint{0.0f};				///< pitch demand rate limiter state (rad/sec)
-	float _speed_derivative{0.0f};					///< rate of change of speed along X axis (m/sec**2)
+	float _TAS_rate{0.0f};					///< rate of change of speed along X axis (m/sec**2)
 
 	// speed demand calculations
 	float _EAS{0.0f};						///< equivalent airspeed (m/sec)
@@ -231,13 +231,13 @@ private:
 	float _TAS_setpoint_adj{0.0f};					///< true airspeed demand tracked by the TECS algorithm (m/sec)
 	float _TAS_rate_setpoint{0.0f};					///< true airspeed rate demand tracked by the TECS algorithm (m/sec**2)
 
-	// height demand calculations
-	float _hgt_setpoint{0.0f};					///< demanded height tracked by the TECS algorithm (m)
-	float _hgt_setpoint_in_prev{0.0f};				///< previous value of _hgt_setpoint after noise filtering (m)
-	float _hgt_setpoint_prev{0.0f};					///< previous value of _hgt_setpoint after noise filtering and rate limiting (m)
-	float _hgt_setpoint_adj{0.0f};					///< demanded height used by the control loops after all filtering has been applied (m)
-	float _hgt_setpoint_adj_prev{0.0f};				///< value of _hgt_setpoint_adj from previous frame (m)
-	float _hgt_rate_setpoint{0.0f};					///< demanded climb rate tracked by the TECS algorithm
+	// altitude demand calculations
+	float _altitude_setpoint{0.0f};					///< demanded altitude tracked by the TECS algorithm (m)
+	float _altitude_setpoint_in_prev{0.0f};				///< previous value of _altitude_setpoint after noise filtering (m)
+	float _altitude_setpoint_prev{0.0f};					///< previous value of _altitude_setpoint after noise filtering and rate limiting (m)
+	float _altitude_setpoint_adj{0.0f};					///< demanded altitude used by the control loops after all filtering has been applied (m)
+	float _altitude_setpoint_adj_prev{0.0f};				///< value of _altitude_setpoint_adj from previous frame (m)
+	float _altitude_rate_setpoint{0.0f};					///< demanded climb rate tracked by the TECS algorithm
 
 	// vehicle physical limits
 	float _pitch_setpoint_unc{0.0f};				///< pitch demand before limiting (rad)
@@ -259,10 +259,10 @@ private:
 	float _SKE_rate{0.0f};						///< specific kinetic energy rate estimate (m**2/sec**3)
 
 	// specific energy error quantities
-	float _STE_error{0.0f};						///< specific total energy error (m**2/sec**2)
-	float _STE_rate_error{0.0f};					///< specific total energy rate error (m**2/sec**3)
-	float _SEB_error{0.0f};						///< specific energy balance error (m**2/sec**2)
-	float _SEB_rate_error{0.0f};					///< specific energy balance rate error (m**2/sec**3)
+	float _total_energy_error{0.0f};						///< specific total energy error (m**2/sec**2)
+	float _total_energy_rate_error{0.0f};					///< specific total energy rate error (m**2/sec**3)
+	float _energy_distribution_error{0.0f};						///< specific energy balance error (m**2/sec**2)
+	float _energy_distribution_rate_error{0.0f};					///< specific energy balance rate error (m**2/sec**3)
 
 	// time steps (non-fixed)
 	float _dt{DT_DEFAULT};						///< Time since last update of main TECS loop (sec)
@@ -288,9 +288,9 @@ private:
 	void _update_speed_setpoint();
 
 	/**
-	 * Update the desired height
+	 * Update the desired altitude
 	 */
-	void _update_height_setpoint(const float desired, const float state);
+	void _update_altitude_setpoint(const float desired, const float state);
 
 	/**
 	 * Detect if the system is not capable of maintaining airspeed
