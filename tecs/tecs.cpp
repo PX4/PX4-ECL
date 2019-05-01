@@ -64,7 +64,7 @@ void TECS::update_vehicle_state_estimates(const float equivalent_airspeed, const
 
 	bool reset_altitude = false;
 
-	if (_state_update_timestamp == 0 || dt > DT_MAX) {
+	if (_state_update_timestamp == 0) {
 		dt = DT_DEFAULT;
 		reset_altitude = true;
 	}
