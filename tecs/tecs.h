@@ -73,15 +73,15 @@ public:
 	 * Must be called prior to udating tecs control loops
 	 * Must be called at 50Hz or greater
 	 */
-	void update_vehicle_state_estimates(const float airspeed, const matrix::Dcmf &rotMat,
+	void update_vehicle_state_estimates(const float equivalent_airspeed, const matrix::Dcmf &rotMat,
 					    const matrix::Vector3f &accel_body, const bool altitude_lock, const bool in_air,
 					    const float altitude, const bool vz_valid, const float vz, const float az);
 
 	/**
 	 * Update the control loop calculations
 	 */
-	void update_pitch_throttle(const matrix::Dcmf &rotMat, const float pitch, const float baro_altitude, const float hgt_setpoint,
-				   const float EAS_setpoint, const float indicated_airspeed, const float eas_to_tas, const bool climb_out_setpoint, const float pitch_min_climbout,
+	void update_pitch_throttle(const matrix::Dcmf &rotMat, const float pitch, const float altitude, const float hgt_setpoint,
+				   const float EAS_setpoint, const float equivalent_airspeed, const float EAS2TAS, const bool climb_out_setpoint, const float pitch_min_climbout,
 				   const float throttle_min, const float throttle_setpoint_max, const float throttle_cruise,
 				   const float pitch_limit_min, const float pitch_limit_max);
 
@@ -112,13 +112,13 @@ public:
 	void set_heightrate_ff(const float heightrate_ff) { _height_setpoint_gain_ff = heightrate_ff; }
 	void set_heightrate_p(const float heightrate_p) { _height_error_gain = heightrate_p; }
 
-	void set_indicated_airspeed_max(const float airspeed) { _indicated_airspeed_max = airspeed; }
-	void set_indicated_airspeed_min(const float airspeed) { _indicated_airspeed_min = airspeed; }
+	void set_indicated_airspeed_max(const float airspeed) { _equivalent_airspeed_max = airspeed; }
+	void set_indicated_airspeed_min(const float airspeed) { _equivalent_airspeed_min = airspeed; }
 
 	void set_pitch_damping(const float damping) { _pitch_damping_gain = damping; }
 	void set_vertical_accel_limit(const float limit) { _vert_accel_limit = limit; }
 
-	void set_speed_comp_filter_omega(const float omega) { _tas_estimate_freq = omega; }
+	void set_speed_comp_filter_omega(const float omega) { _TAS_estimate_freq = omega; }
 	void set_speed_weight(const float weight) { _pitch_speed_weight = weight; }
 	void set_speedrate_p(const float speedrate_p) { _speed_error_gain = speedrate_p; }
 
@@ -136,7 +136,7 @@ public:
 	float vert_pos_state() const { return _vert_pos_state; }
 
 	float TAS_setpoint_adj() const { return _TAS_setpoint_adj; }
-	float tas_state() const { return _tas_state; }
+	float tas_state() const { return _TAS_state; }
 
 	float hgt_rate_setpoint() const { return _hgt_rate_setpoint; }
 	float vert_vel_state() const { return _vert_vel_state; }
@@ -184,7 +184,7 @@ private:
 
 	// controller parameters
 	float _hgt_estimate_freq{0.0f};					///< cross-over frequency of the height rate complementary filter (rad/sec)
-	float _tas_estimate_freq{0.0f};					///< cross-over frequency of the true airspeed complementary filter (rad/sec)
+	float _TAS_estimate_freq{0.0f};					///< cross-over frequency of the true airspeed complementary filter (rad/sec)
 	float _max_climb_rate{2.0f};					///< climb rate produced by max allowed throttle (m/sec)
 	float _min_sink_rate{1.0f};					///< sink rate produced by min allowed throttle (m/sec)
 	float _max_sink_rate{2.0f};					///< maximum safe sink rate (m/sec)
@@ -199,8 +199,8 @@ private:
 	float _height_error_gain{0.0f};					///< gain from height error to demanded climb rate (1/sec)
 	float _height_setpoint_gain_ff{0.0f};				///< gain from height demand derivative to demanded climb rate
 	float _speed_error_gain{0.0f};					///< gain from speed error to demanded speed rate (1/sec)
-	float _indicated_airspeed_min{3.0f};				///< equivalent airspeed demand lower limit (m/sec)
-	float _indicated_airspeed_max{30.0f};				///< equivalent airspeed demand upper limit (m/sec)
+	float _equivalent_airspeed_min{3.0f};				///< equivalent airspeed demand lower limit (m/sec)
+	float _equivalent_airspeed_max{30.0f};				///< equivalent airspeed demand upper limit (m/sec)
 	float _throttle_slewrate{0.0f};					///< throttle demand slew rate limit (1/sec)
 
 	// controller outputs
@@ -211,8 +211,8 @@ private:
 	float _vert_accel_state{0.0f};					///< complimentary filter state - height second derivative (m/sec**2)
 	float _vert_vel_state{0.0f};					///< complimentary filter state - height rate (m/sec)
 	float _vert_pos_state{0.0f};					///< complimentary filter state - height (m)
-	float _tas_rate_state{0.0f};					///< complimentary filter state - true airspeed first derivative (m/sec**2)
-	float _tas_state{0.0f};						///< complimentary filter state - true airspeed (m/sec)
+	float _TAS_rate_state{0.0f};					///< complimentary filter state - true airspeed first derivative (m/sec**2)
+	float _TAS_state{0.0f};						///< complimentary filter state - true airspeed (m/sec)
 
 	// controller states
 	float _throttle_integ_state{0.0f};				///< throttle integrator state
@@ -280,7 +280,7 @@ private:
 	/**
 	 * Update the airspeed internal state using a second order complementary filter
 	 */
-	void _update_speed_states(const float airspeed_setpoint, const float indicated_airspeed, const float eas_to_tas);
+	void _update_speed_states(const float equivalent_airspeed_setpoint, const float equivalent_airspeed, const float EAS2TAS);
 
 	/**
 	 * Update the desired airspeed
@@ -320,8 +320,8 @@ private:
 	/**
 	 * Initialize the controller
 	 */
-	void _initialize_states(const float pitch, const float throttle_cruise, const float baro_altitude, const float pitch_min_climbout,
-				const float eas_to_tas);
+	void _initialize_states(const float pitch, const float throttle_cruise, const float altitude, const float pitch_min_climbout,
+				const float EAS2TAS);
 
 	/**
 	 * Calculate specific total energy rate limits
