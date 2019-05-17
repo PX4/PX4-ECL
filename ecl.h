@@ -82,3 +82,6 @@ using ecl_abstime = uint64_t;
 
 #include <cmath>
 #define ISFINITE(x) __builtin_isfinite(x)
+
+
+using ecl_float_t = double;

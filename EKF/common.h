@@ -51,7 +51,7 @@ using matrix::Eulerf;
 using matrix::Matrix3f;
 using matrix::Quatf;
 using matrix::Vector2f;
-using matrix::Vector3f;
+using Vector3f = matrix::Vector3<float>;
 using matrix::wrap_pi;
 
 struct gps_message {
