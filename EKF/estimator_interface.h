@@ -49,7 +49,8 @@
 #include <matrix/math.hpp>
 #include <mathlib/mathlib.h>
 
-using namespace estimator;
+namespace estimator
+{
 
 class EstimatorInterface
 {
@@ -329,6 +330,7 @@ public:
 	bool get_mag_decl_deg(float *val)
 	{
 		*val = 0.0f;
+
 		if (_NED_origin_initialised && (_params.mag_declination_source & MASK_SAVE_GEO_DECL)) {
 			*val = math::degrees(_mag_declination_gps);
 			return true;
@@ -469,8 +471,8 @@ protected:
 	bool _gps_speed_valid{false};
 	float _gps_origin_eph{0.0f}; // horizontal position uncertainty of the GPS origin
 	float _gps_origin_epv{0.0f}; // vertical position uncertainty of the GPS origin
-	struct map_projection_reference_s _pos_ref {};   // Contains WGS-84 position latitude and longitude (radians) of the EKF origin
-	struct map_projection_reference_s _gps_pos_prev {};   // Contains WGS-84 position latitude and longitude (radians) of the previous GPS message
+	map_projection_reference_s _pos_ref{};   // Contains WGS-84 position latitude and longitude (radians) of the EKF origin
+	map_projection_reference_s _gps_pos_prev{};   // Contains WGS-84 position latitude and longitude (radians) of the previous GPS message
 	float _gps_alt_prev{0.0f};	// height from the previous GPS message (m)
 	float _gps_yaw_offset{0.0f};	// Yaw offset angle for dual GPS antennas used for yaw estimation (radians).
 
@@ -564,3 +566,6 @@ protected:
 	Matrix3f quat_to_invrotmat(const Quatf &quat);
 
 };
+
+} // namespace estimator
+

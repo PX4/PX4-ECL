@@ -42,6 +42,8 @@
 #include <cstdio>
 #include <random>
 
+using namespace estimator;
+
 int main(int argc, char *argv[])
 {
 	(void)argc; // unused

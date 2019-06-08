@@ -45,6 +45,9 @@
 #include <geo_lookup/geo_mag_declination.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 // GPS pre-flight check bit locations
 #define MASK_GPS_NSATS  (1<<0)
 #define MASK_GPS_GDOP   (1<<1)
@@ -60,6 +63,7 @@ bool Ekf::collect_gps(const gps_message &gps)
 {
 	// Run GPS checks always
 	_gps_checks_passed = gps_is_good(gps);
+
 	if (!_NED_origin_initialised && _gps_checks_passed) {
 		// If we have good GPS data set the origin's WGS-84 position to the last gps fix
 		double lat = gps.lat / 1.0e7;
@@ -97,6 +101,7 @@ bool Ekf::collect_gps(const gps_message &gps)
 			_control_status.flags.rng_hgt = false;
 			// zero the sensor offset
 			_hgt_sensor_offset = 0.0f;
+
 		} else {
 			ECL_INFO_TIMESTAMPED("EKF GPS checks passed (WGS-84 origin set)");
 		}
@@ -132,8 +137,8 @@ bool Ekf::gps_is_good(const gps_message &gps)
 	_gps_check_fail_status.flags.sacc = (gps.sacc > _params.req_sacc);
 
 	// check if GPS quality is degraded
-	_gps_error_norm = fmaxf((gps.eph / _params.req_hacc) , (gps.epv / _params.req_vacc));
-	_gps_error_norm = fmaxf(_gps_error_norm , (gps.sacc / _params.req_sacc));
+	_gps_error_norm = fmaxf((gps.eph / _params.req_hacc), (gps.epv / _params.req_vacc));
+	_gps_error_norm = fmaxf(_gps_error_norm, (gps.sacc / _params.req_sacc));
 
 	// Calculate time lapsed since last update, limit to prevent numerical errors and calculate a lowpass filter coefficient
 	const float filt_time_const = 10.0f;
@@ -143,6 +148,7 @@ bool Ekf::gps_is_good(const gps_message &gps)
 	// The following checks are only valid when the vehicle is at rest
 	double lat = gps.lat * 1.0e-7;
 	double lon = gps.lon * 1.0e-7;
+
 	if (!_control_status.flags.in_air && _vehicle_at_rest) {
 		// Calculate position movement since last measurement
 		float delta_posN = 0.0f;
@@ -238,6 +244,7 @@ bool Ekf::gps_is_good(const gps_message &gps)
 		(_gps_check_fail_status.flags.vspeed  && (_params.gps_check_mask & MASK_GPS_VSPD))
 	) {
 		_last_gps_fail_us = _time_last_imu;
+
 	} else {
 		_last_gps_pass_us = _time_last_imu;
 	}
@@ -245,3 +252,6 @@ bool Ekf::gps_is_good(const gps_message &gps)
 	// continuous period without fail of x seconds required to return a healthy status
 	return _time_last_imu - _last_gps_fail_us > (uint64_t)_min_gps_health_time_us;
 }
+
+} // namespace estimator
+

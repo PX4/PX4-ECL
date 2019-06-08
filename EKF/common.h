@@ -31,6 +31,8 @@
  *
  ****************************************************************************/
 
+#pragma once
+
 /**
  * @file common.h
  * Definition of base class for attitude estimators

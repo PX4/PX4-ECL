@@ -40,9 +40,14 @@
  * @author Paul Riseborough <p_riseborough@live.com.au>
  *
  */
-#include "../ecl.h"
+
+#include <ecl.h>
+
 #include "ekf.h"
 #include <mathlib/mathlib.h>
+
+namespace estimator
+{
 
 void Ekf::fuseAirspeed()
 {
@@ -274,3 +279,5 @@ void Ekf::resetWindStates()
 		_state.wind_vel(1) = 0.0f;
 	}
 }
+
+} // namespace estimator

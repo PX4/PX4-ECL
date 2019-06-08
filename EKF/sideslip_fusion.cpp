@@ -44,6 +44,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 void Ekf::fuseSideslip()
 {
 	float SH_BETA[13] = {}; // Variable used to optimise calculations of measurement jacobian
@@ -283,3 +286,6 @@ void Ekf::fuseSideslip()
 		}
 	}
 }
+
+} // namespace estimator
+

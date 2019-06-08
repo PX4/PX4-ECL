@@ -44,6 +44,9 @@
 
 #include "estimator_interface.h"
 
+namespace estimator
+{
+
 class Ekf : public EstimatorInterface
 {
 public:
@@ -560,7 +563,7 @@ private:
 
 	// reset the heading and magnetic field states using the declination and magnetometer/external vision measurements
 	// return true if successful
-	bool resetMagHeading(Vector3f &mag_init, bool increase_yaw_var = true, bool update_buffer=true);
+	bool resetMagHeading(Vector3f &mag_init, bool increase_yaw_var = true, bool update_buffer = true);
 
 	// Do a forced re-alignment of the yaw angle to align with the horizontal velocity vector from the GPS.
 	// It is used to align the yaw angle after launch or takeoff for fixed wing vehicle.
@@ -655,7 +658,8 @@ private:
 	void checkRangeDataValidity();
 
 	// return the square of two floating point numbers - used in auto coded sections
-	static constexpr float sq(float var) { return var * var; }
+	template<typename T>
+	static constexpr T sq(T var) { return var * var; }
 
 	// set control flags to use baro height
 	void setControlBaroHeight();
@@ -720,3 +724,5 @@ private:
 	float kahanSummation(float sum_previous, float input, float &accumulator) const;
 
 };
+
+} // namespace estimator

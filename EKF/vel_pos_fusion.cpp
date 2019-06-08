@@ -45,6 +45,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 void Ekf::fuseVelPosHeight()
 {
 	bool fuse_map[6] = {}; // map of booleans true when [VN,VE,VD,PN,PE,PD] observations are available
@@ -140,7 +143,9 @@ void Ekf::fuseVelPosHeight()
 			innovation[5] = _state.pos(2) - (-math::max(_range_sample_delayed.rng * _R_rng_to_earth_2_2,
 							 _params.rng_gnd_clearance)) - _hgt_sensor_offset;
 			// observation variance - user parameter defined
-			R[5] = fmaxf((sq(_params.range_noise) + sq(_params.range_noise_scaler * _range_sample_delayed.rng)) * sq(_R_rng_to_earth_2_2), 0.01f);
+			R[5] = fmaxf((sq(_params.range_noise) + sq(_params.range_noise_scaler * _range_sample_delayed.rng))
+					     * sq(_R_rng_to_earth_2_2), 0.01f);
+
 			// innovation gate size
 			gate_size[5] = fmaxf(_params.range_innov_gate, 1.0f);
 
@@ -179,8 +184,12 @@ void Ekf::fuseVelPosHeight()
 	// always pass height checks if yet to complete tilt alignment
 	bool vel_check_pass = (_vel_pos_test_ratio[0] <= 1.0f) && (_vel_pos_test_ratio[1] <= 1.0f)
 			      && (_vel_pos_test_ratio[2] <= 1.0f);
+
 	innov_check_pass_map[2] = innov_check_pass_map[1] = innov_check_pass_map[0] = vel_check_pass;
-	bool pos_check_pass = ((_vel_pos_test_ratio[3] <= 1.0f) && (_vel_pos_test_ratio[4] <= 1.0f)) || !_control_status.flags.tilt_align;
+
+	bool pos_check_pass = ((_vel_pos_test_ratio[3] <= 1.0f) && (_vel_pos_test_ratio[4] <= 1.0f))
+			      || !_control_status.flags.tilt_align;
+
 	innov_check_pass_map[4] = innov_check_pass_map[3] = pos_check_pass;
 	innov_check_pass_map[5] = (_vel_pos_test_ratio[5] <= 1.0f) || !_control_status.flags.tilt_align;
 
@@ -318,3 +327,6 @@ void Ekf::fuseVelPosHeight()
 		}
 	}
 }
+
+} // namespace estimator
+

@@ -45,6 +45,9 @@
 #include <mathlib/mathlib.h>
 #include <cstdlib>
 
+namespace estimator
+{
+
 void Ekf::fuseGpsAntYaw()
 {
 	// assign intermediate state variables
@@ -73,7 +76,7 @@ void Ekf::fuseGpsAntYaw()
 		}
 
 		// calculate predicted antenna yaw angle
-		predicted_hdg =  atan2f(ant_vec_ef(1),ant_vec_ef(0));
+		predicted_hdg =  atan2f(ant_vec_ef(1), ant_vec_ef(0));
 
 		// calculate observation jacobian
 		float t2 = sinf(_gps_yaw_offset);
@@ -304,7 +307,7 @@ bool Ekf::resetGpsAntYaw()
 			return false;
 		}
 
-		float predicted_yaw =  atan2f(ant_vec_ef(1),ant_vec_ef(0));
+		float predicted_yaw = atan2f(ant_vec_ef(1), ant_vec_ef(0));
 
 		// get measurement and correct for antenna array yaw offset
 		float measured_yaw = _gps_sample_delayed.yaw + _gps_yaw_offset;
@@ -424,3 +427,6 @@ bool Ekf::resetGpsAntYaw()
 
 	return false;
 }
+
+} // namespace estimator
+

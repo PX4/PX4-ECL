@@ -45,6 +45,9 @@
 #include <mathlib/mathlib.h>
 #include <float.h>
 
+namespace estimator
+{
+
 void Ekf::fuseOptFlow()
 {
 	float gndclearance = fmaxf(_params.rng_gnd_clearance, 0.1f);
@@ -549,7 +552,7 @@ bool Ekf::calcOptFlowBodyRateComp()
 		return false;
 	}
 
-	bool use_flow_sensor_gyro =  ISFINITE(_flow_sample_delayed.gyroXYZ(0)) && ISFINITE(_flow_sample_delayed.gyroXYZ(1)) && ISFINITE(_flow_sample_delayed.gyroXYZ(2));
+	bool use_flow_sensor_gyro = ISFINITE(_flow_sample_delayed.gyroXYZ(0)) && ISFINITE(_flow_sample_delayed.gyroXYZ(1)) && ISFINITE(_flow_sample_delayed.gyroXYZ(2));
 
 	if (use_flow_sensor_gyro) {
 
@@ -565,12 +568,9 @@ bool Ekf::calcOptFlowBodyRateComp()
 			of_body_rate = _flow_sample_delayed.gyroXYZ * (1.0f / _flow_sample_delayed.dt);
 
 			// calculate the bias estimate using  a combined LPF and spike filter
-			_flow_gyro_bias(0) = 0.99f * _flow_gyro_bias(0) + 0.01f * math::constrain((of_body_rate(0) - reference_body_rate(0)),
-					     -0.1f, 0.1f);
-			_flow_gyro_bias(1) = 0.99f * _flow_gyro_bias(1) + 0.01f * math::constrain((of_body_rate(1) - reference_body_rate(1)),
-					     -0.1f, 0.1f);
-			_flow_gyro_bias(2) = 0.99f * _flow_gyro_bias(2) + 0.01f * math::constrain((of_body_rate(2) - reference_body_rate(2)),
-					     -0.1f, 0.1f);
+			_flow_gyro_bias(0) = 0.99f * _flow_gyro_bias(0) + 0.01f * math::constrain((of_body_rate(0) - reference_body_rate(0)), -0.1f, 0.1f);
+			_flow_gyro_bias(1) = 0.99f * _flow_gyro_bias(1) + 0.01f * math::constrain((of_body_rate(1) - reference_body_rate(1)), -0.1f, 0.1f);
+			_flow_gyro_bias(2) = 0.99f * _flow_gyro_bias(2) + 0.01f * math::constrain((of_body_rate(2) - reference_body_rate(2)), -0.1f, 0.1f);
 		}
 
 	} else {
@@ -597,8 +597,7 @@ float Ekf::calcOptFlowMeasVar()
 	float weighting = (255.0f - (float)_params.flow_qual_min);
 
 	if (weighting >= 1.0f) {
-		weighting = math::constrain(((float)_flow_sample_delayed.quality - (float)_params.flow_qual_min) / weighting, 0.0f,
-					    1.0f);
+		weighting = math::constrain(((float)_flow_sample_delayed.quality - (float)_params.flow_qual_min) / weighting, 0.0f, 1.0f);
 
 	} else {
 		weighting = 0.0f;
@@ -609,3 +608,6 @@ float Ekf::calcOptFlowMeasVar()
 
 	return R_LOS;
 }
+
+} // namespace estimator
+

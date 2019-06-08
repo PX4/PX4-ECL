@@ -90,19 +90,29 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
 	elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
 		add_compile_options(
 			-pedantic
-		
+
 			-Wall
 			-Wextra
 			-Werror
 
 			-Wno-missing-field-initializers # ignore for GCC 4.8 support
 		)
+
+		# enable color output
+		if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+			# force color for gcc > 4.9
+			add_compile_options(-fdiagnostics-color=always)
+		endif()
+
+	elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+		# force color for clang (needed for clang + ccache)
+		add_compile_options(-fcolor-diagnostics)
 	endif()
 
 	# testing
 	include(CTest)
 	enable_testing()
-	
+
 	if(BUILD_TESTING)
 		option(ECL_TESTS "Build ECL tests" ON)
 
@@ -196,17 +206,17 @@ endif()
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
 
 	option(BUILD_DOXYGEN "Build doxygen documentation" OFF)
-	
+
 	if (BUILD_DOXYGEN)
 		find_package(Doxygen)
 		if (DOXYGEN_FOUND)
 			# set input and output files
 			set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
 			set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
-	
+
 			# request to configure the file
 			configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-	
+
 			# note the option ALL which allows to build the docs together with the application
 			add_custom_target(doxygen ALL
 				COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
@@ -216,7 +226,7 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
 				VERBATIM
 				USES_TERMINAL
 			)
-	
+
 		else()
 			message(FATAL_ERROR "Doxygen needs to be installed to generate documentation")
 		endif()

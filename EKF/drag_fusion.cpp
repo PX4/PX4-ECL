@@ -43,6 +43,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 void Ekf::fuseDrag()
 {
 	float SH_ACC[4] = {}; // Variable used to optimise calculations of measurement jacobian
@@ -312,3 +315,6 @@ void Ekf::fuseDrag()
 		}
 	}
 }
+
+} // namespace estimator
+

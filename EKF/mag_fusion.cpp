@@ -44,6 +44,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 void Ekf::fuseMag()
 {
 	// assign intermediate variables
@@ -460,6 +463,7 @@ void Ekf::fuseHeading()
 		float t12 = t8*t11*4.0f;
 		float t13 = t12+1.0f;
 		float t14;
+
 		if (fabsf(t13) > 1e-6f) {
 			t14 = 1.0f/t13;
 		} else {
@@ -579,6 +583,7 @@ void Ekf::fuseHeading()
 			if (_control_status.flags.mag_3D) {
 				// don't apply bias corrections if we are learning them
 				mag_earth_pred = R_to_earth * _mag_sample_delayed.mag;
+
 			} else {
 				mag_earth_pred = R_to_earth * (_mag_sample_delayed.mag - _state.mag_B);
 			}
@@ -619,6 +624,7 @@ void Ekf::fuseHeading()
 
 	// calculate the innovation and define the innovation gate
 	float innov_gate = math::max(_params.heading_innov_gate, 1.0f);
+
 	if (_mag_use_inhibit) {
 		// The magnetometer cannot be trusted but we need to fuse a heading to prevent a badly
 		// conditioned covariance matrix developing over time.
@@ -627,6 +633,7 @@ void Ekf::fuseHeading()
 			// predicted heading to use as an observation when movement ceases.
 			_heading_innov = 0.0f;
 			_vehicle_at_rest_prev = false;
+
 		} else {
 			// Vehicle is at rest so use the last moving prediction as an observation
 			// to prevent the heading from drifting and to enable yaw gyro bias learning
@@ -635,14 +642,17 @@ void Ekf::fuseHeading()
 				_last_static_yaw = predicted_hdg;
 				_vehicle_at_rest_prev = true;
 			}
+
 			_heading_innov = predicted_hdg - _last_static_yaw;
 			R_YAW = 0.01f;
 			innov_gate = 5.0f;
 		}
+
 	} else {
 		_heading_innov = predicted_hdg - measured_hdg;
 		_last_static_yaw = predicted_hdg;
 	}
+
 	_mag_use_inhibit_prev = _mag_use_inhibit;
 
 	// wrap the innovation to the interval between +-pi
@@ -810,7 +820,7 @@ void Ekf::fuseDeclination(float decl_sigma)
 	float t3 = magN*magN;
 	float t4 = t2+t3;
 	// if the horizontal magnetic field is too small, this calculation will be badly conditioned
-	if (t4 < h_field_min*h_field_min) {
+	if (t4 < h_field_min * h_field_min) {
 		return;
 	}
 	float t5 = P[16][16]*t2;
@@ -824,8 +834,10 @@ void Ekf::fuseDeclination(float decl_sigma)
 	float t15 = P[17][16]*magE*magN;
 	float t12 = t5+t6+t8+t10+t11-t14-t15;
 	float t13;
+
 	if (fabsf(t12) > 1e-6f) {
 		t13 = 1.0f / t12;
+
 	} else {
 		return;
 	}
@@ -833,6 +845,7 @@ void Ekf::fuseDeclination(float decl_sigma)
 	float t19 = magN*magN;
 	float t20 = t18+t19;
 	float t21;
+
 	if (fabsf(t20) > 1e-6f) {
 		t21 = 1.0f/t20;
 	} else {
@@ -882,6 +895,7 @@ void Ekf::fuseDeclination(float decl_sigma)
 	// take advantage of the empty columns in KH to reduce the number of operations
 	float KHP[_k_num_states][_k_num_states];
 	float KH[2];
+
 	for (unsigned row = 0; row < _k_num_states; row++) {
 
 		KH[0] = Kfusion[row] * H_DECL[16];
@@ -898,6 +912,7 @@ void Ekf::fuseDeclination(float decl_sigma)
 	// the covariance matrix is unhealthy and must be corrected
 	bool healthy = true;
 	_fault_status.flags.bad_mag_decl = false;
+
 	for (int i = 0; i < _k_num_states; i++) {
 		if (P[i][i] < KHP[i][i]) {
 			// zero rows and columns
@@ -939,14 +954,17 @@ void Ekf::limitDeclination()
 	// set to 50% of the horizontal strength from geo tables if location is known
 	float decl_reference;
 	float h_field_min = 0.001f;
+
 	if (_params.mag_declination_source & MASK_USE_GEO_DECL) {
 		// use parameter value until GPS is available, then use value returned by geo library
 		if (_NED_origin_initialised) {
 			decl_reference = _mag_declination_gps;
-			h_field_min = fmaxf(h_field_min , 0.5f * _mag_strength_gps * cosf(_mag_inclination_gps));
+			h_field_min = fmaxf(h_field_min, 0.5f * _mag_strength_gps * cosf(_mag_inclination_gps));
+
 		} else {
 			decl_reference = math::radians(_params.mag_declination_deg);
 		}
+
 	} else {
 		// always use the parameter value
 		decl_reference = math::radians(_params.mag_declination_deg);
@@ -955,18 +973,21 @@ void Ekf::limitDeclination()
 	// do not allow the horizontal field length to collapse - this will make the declination fusion badly conditioned
 	// and can result in a reversal of the NE field states which the filter cannot recover from
 	// apply a circular limit
-	float h_field = sqrtf(_state.mag_I(0)*_state.mag_I(0) + _state.mag_I(1)*_state.mag_I(1));
+	float h_field = sqrtf(_state.mag_I(0) * _state.mag_I(0) + _state.mag_I(1) * _state.mag_I(1));
+
 	if (h_field < h_field_min) {
 		if (h_field > 0.001f * h_field_min) {
 			float h_scaler = h_field_min / h_field;
 			_state.mag_I(0) *= h_scaler;
 			_state.mag_I(1) *= h_scaler;
+
 		} else {
 			// too small to scale radially so set to expected value
 			float mag_declination = getMagDeclination();
 			_state.mag_I(0) = 2.0f * h_field_min * cosf(mag_declination);
 			_state.mag_I(1) = 2.0f * h_field_min * sinf(mag_declination);
 		}
+
 		h_field = h_field_min;
 	}
 
@@ -974,12 +995,17 @@ void Ekf::limitDeclination()
 	const float decl_tolerance = 0.5f;
 	const float decl_max = decl_reference + decl_tolerance;
 	const float decl_min = decl_reference - decl_tolerance;
-	const float decl_estimate = atan2f(_state.mag_I(1) , _state.mag_I(0));
+	const float decl_estimate = atan2f(_state.mag_I(1), _state.mag_I(0));
+
 	if (decl_estimate > decl_max)  {
 		_state.mag_I(0) = h_field * cosf(decl_max);
 		_state.mag_I(1) = h_field * sinf(decl_max);
+
 	} else if (decl_estimate < decl_min)  {
 		_state.mag_I(0) = h_field * cosf(decl_min);
 		_state.mag_I(1) = h_field * sinf(decl_min);
 	}
 }
+
+} // namespace estimator
+

@@ -39,11 +39,15 @@
  *
  */
 
+#include <ecl.h>
+
 #include "ekf.h"
 
-#include <ecl.h>
 #include <mathlib/mathlib.h>
 #include <cstdlib>
+
+namespace estimator
+{
 
 // Reset the velocity states. If we have a recent and valid
 // gps measurement then use for velocity initialisation
@@ -180,8 +184,8 @@ bool Ekf::resetPosition()
 		}
 
 		// estimate is relative to initial position in this mode, so we start with zero error.
-		zeroCols(P,7,8);
-		zeroRows(P,7,8);
+		zeroCols(P, 7, 8);
+		zeroRows(P, 7, 8);
 
 	} else {
 		// Used when falling back to non-aiding mode of operation
@@ -581,6 +585,7 @@ bool Ekf::resetMagHeading(Vector3f &mag_init, bool increase_yaw_var, bool update
 			save_mag_cov_data();
 			_control_status.flags.mag_3D = false;
 		}
+
 		zeroRows(P, 16, 21);
 		zeroCols(P, 16, 21);
 		_mag_decl_cov_reset = false;
@@ -751,6 +756,7 @@ bool Ekf::resetMagHeading(Vector3f &mag_init, bool increase_yaw_var, bool update
 		if (_control_status.flags.ev_yaw) {
 			// using error estimate from external vision data
 			increaseQuatYawErrVariance(sq(fmaxf(_ev_sample_delayed.angErr, 1.0e-2f)));
+
 		} else if (_params.mag_fusion_type <= MAG_FUSE_TYPE_AUTOFW) {
 			// using magnetic heading tuning parameter
 			increaseQuatYawErrVariance(sq(fmaxf(_params.mag_heading_noise, 1.0e-2f)));
@@ -1022,10 +1028,12 @@ bool Ekf::get_gps_drift_metrics(float drift[3], bool *blocked)
 {
 	memcpy(drift, _gps_drift_metrics, 3 * sizeof(float));
 	*blocked = !_vehicle_at_rest;
+
 	if (_gps_drift_updated) {
 		_gps_drift_updated = false;
 		return true;
 	}
+
 	return false;
 }
 
@@ -1286,10 +1294,9 @@ void Ekf::zeroCols(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first
 void Ekf::zeroOffDiag(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last)
 {
 	// save diagonal elements
-	uint8_t row;
 	float variances[_k_num_states];
 
-	for (row = first; row <= last; row++) {
+	for (uint8_t row = first; row <= last; row++) {
 		variances[row] = cov_mat[row][row];
 	}
 
@@ -1298,7 +1305,7 @@ void Ekf::zeroOffDiag(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t fi
 	zeroCols(cov_mat, first, last);
 
 	// restore diagonals
-	for (row = first; row <= last; row++) {
+	for (uint8_t row = first; row <= last; row++) {
 		cov_mat[row][row] = variances[row];
 	}
 }
@@ -1309,6 +1316,7 @@ void Ekf::uncorrelateQuatStates()
 	uint32_t row;
 	uint32_t col;
 	float variances[4][4];
+
 	for (row = 0; row < 4; row++) {
 		for (col = 0; col < 4; col++) {
 			variances[row][col] = P[row][col];
@@ -1461,7 +1469,8 @@ void Ekf::initialiseQuatCovariances(Vector3f &rot_vec_var)
 {
 	// calculate an equivalent rotation vector from the quaternion
 	float q0,q1,q2,q3;
-	if (_state.quat_nominal(0) >= 0.0f) {
+
+	if (_state.quat_nominal(0) >= 0.0) {
 		q0 = _state.quat_nominal(0);
 		q1 = _state.quat_nominal(1);
 		q2 = _state.quat_nominal(2);
@@ -1742,3 +1751,6 @@ float Ekf::kahanSummation(float sum_previous, float input, float &accumulator) c
 	accumulator = (t - sum_previous) - y;
 	return t;
 }
+
+} // namespace estimator
+

@@ -45,6 +45,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 // Accumulate imu data and store to buffer at desired rate
 void EstimatorInterface::setIMUData(const imuSample &imu_sample)
 {
@@ -78,8 +81,8 @@ void EstimatorInterface::setIMUData(const imuSample &imu_sample)
 	// detect if the vehicle is not moving when on ground
 	if (!_control_status.flags.in_air) {
 		if ((_vibe_metrics[1] * 4.0E4f > _params.is_moving_scaler)
-				|| (_vibe_metrics[2] * 2.1E2f > _params.is_moving_scaler)
-				|| ((imu_sample.delta_ang.norm() / dt) > 0.05f * _params.is_moving_scaler)) {
+		    || (_vibe_metrics[2] * 2.1E2f > _params.is_moving_scaler)
+		    || ((imu_sample.delta_ang.norm() / dt) > 0.05f * _params.is_moving_scaler)) {
 
 			_time_last_move_detect_us = imu_sample.time_us;
 		}
@@ -228,8 +231,10 @@ void EstimatorInterface::setGpsData(uint64_t time_usec, const gps_message &gps)
 		gps_sample_new.hgt = (float)gps.alt * 1e-3f;
 
 		gps_sample_new.yaw = gps.yaw;
+
 		if (ISFINITE(gps.yaw_offset)) {
 			_gps_yaw_offset = gps.yaw_offset;
+
 		} else {
 			_gps_yaw_offset = 0.0f;
 		}
@@ -379,6 +384,7 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 		// use this to prevent use of a saturated flow sensor when there are other aiding sources available
 		float flow_rate_magnitude;
 		bool flow_magnitude_good = true;
+
 		if (delta_time_good) {
 			flow_rate_magnitude = flow->flowdata.norm() / delta_time;
 			flow_magnitude_good = (flow_rate_magnitude <= _flow_max_rate);
@@ -392,6 +398,7 @@ void EstimatorInterface::setOpticalFlowData(uint64_t time_usec, flow_message *fl
 		// Check data validity and write to buffers
 		// Invalid flow data is allowed when on ground and is handled as a special case in controlOpticalFlowFusion()
 		bool use_flow_data_to_navigate = delta_time_good && flow_quality_good && (flow_magnitude_good || relying_on_flow);
+
 		if (use_flow_data_to_navigate || (!_control_status.flags.in_air && relying_on_flow)) {
 			flowSample optflow_sample_new;
 			// calculate the system time-stamp for the trailing edge of the flow data integration period
@@ -584,3 +591,6 @@ void EstimatorInterface::print_status()
 	ECL_INFO("output vert buffer: %d (%d Bytes)", _output_vert_buffer.get_length(), _output_vert_buffer.get_total_size());
 	ECL_INFO("drag buffer: %d (%d Bytes)", _drag_buffer.get_length(), _drag_buffer.get_total_size());
 }
+
+} // namespace estimator
+

@@ -44,6 +44,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 bool Ekf::init(uint64_t timestamp)
 {
 	bool ret = initialise_interface(timestamp);
@@ -263,6 +266,7 @@ bool Ekf::initialiseFilter()
 		if (_control_status.flags.ev_yaw) {
 			// using error estimate from external vision data TODO: this is never true
 			increaseQuatYawErrVariance(sq(fmaxf(_ev_sample_delayed.angErr, 1.0e-2f)));
+
 		} else if (_params.mag_fusion_type <= MAG_FUSE_TYPE_AUTOFW) {
 			// using magnetic heading tuning parameter
 			increaseQuatYawErrVariance(sq(fmaxf(_params.mag_heading_noise, 1.0e-2f)));
@@ -673,3 +677,5 @@ Quatf Ekf::calculate_quaternion() const
 	// the quaternions must always be normalised after modification
 	return Quatf{_output_new.quat_nominal * AxisAnglef{delta_angle}}.unit();
 }
+
+} // namespace estimator

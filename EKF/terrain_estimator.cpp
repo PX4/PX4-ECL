@@ -43,6 +43,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 bool Ekf::initHagl()
 {
 	// get most recent range measurement from buffer
@@ -55,11 +58,13 @@ bool Ekf::initHagl()
 		_terrain_var = sq(_params.range_noise);
 		// success
 		return true;
+
 	} else if (_flow_for_terrain_data_ready) {
 		// initialise terrain vertical position to origin as this is the best guess we have
 		_terrain_vpos = fmaxf(0.0f,  _state.pos(2));
 		_terrain_var = 100.0f;
 		return true;
+
 	} else if (!_control_status.flags.in_air) {
 		// if on ground we assume a ground clearance
 		_terrain_vpos = _state.pos(2) + _params.rng_gnd_clearance;
@@ -165,15 +170,18 @@ void Ekf::fuseHagl()
 			// record last successful fusion event
 			_time_last_hagl_fuse = _time_last_imu;
 			_innov_check_fail_status.flags.reject_hagl = false;
+
 		} else {
 			// If we have been rejecting range data for too long, reset to measurement
 			if ((_time_last_imu - _time_last_hagl_fuse) > (uint64_t)10E6) {
 				_terrain_vpos = _state.pos(2) + meas_hagl;
 				_terrain_var = obs_variance;
+
 			} else {
 				_innov_check_fail_status.flags.reject_hagl = true;
 			}
 		}
+
 	} else {
 		_innov_check_fail_status.flags.reject_hagl = true;
 		return;
@@ -222,7 +230,7 @@ void Ekf::fuseFlowForTerrain()
 	float pred_hagl = _terrain_vpos - _state.pos(2);
 
 	// Calculate observation matrix for flow around the vehicle x axis
-	float Hx = vel_body(1) * t0 /(pred_hagl * pred_hagl);
+	float Hx = vel_body(1) * t0 / (pred_hagl * pred_hagl);
 
 	// Constrain terrain variance to be non-negative
 	_terrain_var = fmaxf(_terrain_var, 0.0f);
@@ -234,7 +242,7 @@ void Ekf::fuseFlowForTerrain()
 	float Kx = _terrain_var * Hx / _flow_innov_var[0];
 
 	// calculate prediced optical flow about x axis
-	float pred_flow_x = vel_body(1) * earth_to_body(2,2) / pred_hagl;
+	float pred_flow_x = vel_body(1) * earth_to_body(2, 2) / pred_hagl;
 
 	// calculate flow innovation (x axis)
 	_flow_innov[0] = pred_flow_x - opt_flow_rate(0);
@@ -255,7 +263,7 @@ void Ekf::fuseFlowForTerrain()
 	}
 
 	// Calculate observation matrix for flow around the vehicle y axis
-	float Hy = -vel_body(0) * t0 /(pred_hagl * pred_hagl);
+	float Hy = -vel_body(0) * t0 / (pred_hagl * pred_hagl);
 
 	// Calculuate innovation variance
 	_flow_innov_var[1] = Hy * Hy * _terrain_var + R_LOS;
@@ -264,7 +272,7 @@ void Ekf::fuseFlowForTerrain()
 	float Ky = _terrain_var * Hy / _flow_innov_var[1];
 
 	// calculate prediced optical flow about y axis
-	float pred_flow_y = -vel_body(0) * earth_to_body(2,2) / pred_hagl;
+	float pred_flow_y = -vel_body(0) * earth_to_body(2, 2) / pred_hagl;
 
 	// calculate flow innovation (y axis)
 	_flow_innov[1] = pred_flow_y - opt_flow_rate(1);
@@ -320,7 +328,6 @@ void Ekf::get_hagl_innov(float *hagl_innov)
 	memcpy(hagl_innov, &_hagl_innov, sizeof(_hagl_innov));
 }
 
-
 void Ekf::get_hagl_innov_var(float *hagl_innov_var)
 {
 	memcpy(hagl_innov_var, &_hagl_innov_var, sizeof(_hagl_innov_var));
@@ -346,3 +353,6 @@ void Ekf::checkRangeDataContinuity()
 		_range_data_continuous = false;
 	}
 }
+
+} // namespace estimator
+

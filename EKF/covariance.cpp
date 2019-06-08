@@ -46,6 +46,9 @@
 #include <math.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 void Ekf::initialiseCovariance()
 {
 	for (unsigned i = 0; i < _k_num_states; i++) {
@@ -77,15 +80,15 @@ void Ekf::initialiseCovariance()
 	P[8][8] = P[7][7];
 
 	if (_control_status.flags.rng_hgt) {
-		P[9][9] = sq(fmaxf(_params.range_noise, 0.01f));
+		P[9][9] = sq(fmaxf(_params.range_noise, 0.01));
 
 	} else if (_control_status.flags.gps_hgt) {
-		float lower_limit = fmaxf(_params.gps_pos_noise, 0.01f);
+		float lower_limit = fmaxf(_params.gps_pos_noise, 0.01);
 		float upper_limit = fmaxf(_params.pos_noaid_noise, lower_limit);
 		P[9][9] = sq(1.5f * math::constrain(_gps_sample_delayed.vacc, lower_limit, upper_limit));
 
 	} else {
-		P[9][9] = sq(fmaxf(_params.baro_noise, 0.01f));
+		P[9][9] = sq(fmaxf(_params.baro_noise, 0.01));
 	}
 
 	// gyro bias
@@ -439,8 +442,8 @@ void Ekf::predictCovariance()
 
 	// process noise contribution for delta angle states can be very small compared to
 	// the variances, therefore use algorithm to minimise numerical error
-	for (unsigned i = 10; i <=12; i++) {
-		const int index = i-10;
+	for (unsigned i = 10; i <= 12; i++) {
+		const int index = i - 10;
 		nextP[i][i] = kahanSummation(nextP[i][i], process_noise[i], _delta_angle_bias_var_accum(index));
 	}
 
@@ -498,7 +501,7 @@ void Ekf::predictCovariance()
 		// process noise contributiton for delta velocity states can be very small compared to
 		// the variances, therefore use algorithm to minimise numerical error
 		for (unsigned i = 13; i <= 15; i++) {
-			const int index = i-13;
+			const int index = i - 13;
 			nextP[i][i] = kahanSummation(nextP[i][i], process_noise[i], _delta_vel_bias_var_accum(index));
 		}
 
@@ -957,3 +960,6 @@ void Ekf::resetWindCovariance()
 
 	}
 }
+
+} // namespace estimator
+
