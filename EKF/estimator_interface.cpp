@@ -45,6 +45,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 // Accumulate imu data and store to buffer at desired rate
 void EstimatorInterface::setIMUData(const imuSample &imu_sample)
 {
@@ -616,3 +619,6 @@ void EstimatorInterface::print_status()
 	ECL_INFO("output vert buffer: %d (%d Bytes)", _output_vert_buffer.get_length(), _output_vert_buffer.get_total_size());
 	ECL_INFO("drag buffer: %d (%d Bytes)", _drag_buffer.get_length(), _drag_buffer.get_total_size());
 }
+
+} // namespace estimator
+

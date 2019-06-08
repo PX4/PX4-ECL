@@ -45,6 +45,9 @@
 #include <geo_lookup/geo_mag_declination.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 // GPS pre-flight check bit locations
 #define MASK_GPS_NSATS  (1<<0)
 #define MASK_GPS_PDOP   (1<<1)
@@ -196,8 +199,8 @@ bool Ekf::gps_is_good(const gps_message &gps)
 
 		// Calculate the horizontal and vertical drift velocity components and limit to 10x the threshold
 		const Vector3f vel_limit(_params.req_hdrift, _params.req_hdrift, _params.req_vdrift);
-		Vector3f pos_derived(delta_pos_n, delta_pos_e, (_gps_alt_prev - 1e-3f * (float)gps.alt));
-		pos_derived = matrix::constrain(pos_derived / dt, -10.0f * vel_limit, 10.0f * vel_limit);
+		Vector3f pos_derived(delta_pos_n, delta_pos_e, (_gps_alt_prev - (0.001 * gps.alt)));
+		pos_derived = matrix::constrain(pos_derived / dt, -10. * vel_limit, 10. * vel_limit);
 
 		// Apply a low pass filter
 		_gps_pos_deriv_filt = pos_derived * filter_coef + _gps_pos_deriv_filt * (1.0f - filter_coef);
@@ -211,9 +214,7 @@ bool Ekf::gps_is_good(const gps_message &gps)
 		_gps_check_fail_status.flags.vdrift = (_gps_drift_metrics[1] > _params.req_vdrift);
 
 		// Check the magnitude of the filtered horizontal GPS velocity
-		const Vector2f gps_velNE = matrix::constrain(Vector2f(gps.vel_ned.xy()),
-							     -10.0f * _params.req_hdrift,
-							      10.0f * _params.req_hdrift);
+		const Vector2f gps_velNE = matrix::constrain(Vector2f(gps.vel_ned.xy()), -10.0 * _params.req_hdrift, 10.0 * _params.req_hdrift);
 		_gps_velNE_filt = gps_velNE * filter_coef + _gps_velNE_filt * (1.0f - filter_coef);
 		_gps_drift_metrics[2] = _gps_velNE_filt.norm();
 		_gps_check_fail_status.flags.hspeed = (_gps_drift_metrics[2] > _params.req_hdrift);
@@ -239,12 +240,12 @@ bool Ekf::gps_is_good(const gps_message &gps)
 
 	// save GPS fix for next time
 	map_projection_init_timestamped(&_gps_pos_prev, lat, lon, _time_last_imu);
-	_gps_alt_prev = 1e-3f * (float)gps.alt;
+	_gps_alt_prev = 0.001 * gps.alt;
 
 	// Check  the filtered difference between GPS and EKF vertical velocity
-	const float vz_diff_limit = 10.0f * _params.req_vdrift;
-	const float vertVel = math::constrain(gps.vel_ned(2) - _state.vel(2), -vz_diff_limit, vz_diff_limit);
-	_gps_velD_diff_filt = vertVel * filter_coef + _gps_velD_diff_filt * (1.0f - filter_coef);
+	const ecl_float_t vz_diff_limit = 10 * _params.req_vdrift;
+	const ecl_float_t vertVel = math::constrain(gps.vel_ned(2) - _state.vel(2), -vz_diff_limit, vz_diff_limit);
+	_gps_velD_diff_filt = vertVel * filter_coef + _gps_velD_diff_filt * (1. - filter_coef);
 	_gps_check_fail_status.flags.vspeed = (fabsf(_gps_velD_diff_filt) > _params.req_vdrift);
 
 	// assume failed first time through
@@ -274,3 +275,6 @@ bool Ekf::gps_is_good(const gps_message &gps)
 	// continuous period without fail of x seconds required to return a healthy status
 	return isTimedOut(_last_gps_fail_us, (uint64_t)_min_gps_health_time_us);
 }
+
+} // namespace estimator
+

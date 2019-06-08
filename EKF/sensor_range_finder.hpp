@@ -40,6 +40,8 @@
  */
 #pragma once
 
+#include <ecl.h>
+
 #include "Sensor.hpp"
 #include <matrix/math.hpp>
 
@@ -54,7 +56,7 @@ public:
 	SensorRangeFinder() = default;
 	~SensorRangeFinder() override = default;
 
-	void runChecks(uint64_t current_time_us, const matrix::Dcmf &R_to_earth);
+	void runChecks(uint64_t current_time_us, const Dcmf &R_to_earth);
 	bool isHealthy() const override { return _is_sample_valid; }
 	bool isDataHealthy() const override { return _is_sample_ready && _is_sample_valid; }
 
@@ -97,7 +99,7 @@ public:
 	float getValidMaxVal() const { return _rng_valid_max_val; }
 
 private:
-	void updateSensorToEarthRotation(const matrix::Dcmf &R_to_earth);
+	void updateSensorToEarthRotation(const Dcmf &R_to_earth);
 
 	void updateValidity(uint64_t current_time_us);
 	void updateDtDataLpf(uint64_t current_time_us);

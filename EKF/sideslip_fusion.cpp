@@ -45,6 +45,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 void Ekf::fuseSideslip()
 {
 	// get latest estimated orientation
@@ -212,3 +215,6 @@ void Ekf::fuseSideslip()
 		}
 	}
 }
+
+} // namespace estimator
+

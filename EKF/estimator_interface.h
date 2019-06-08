@@ -42,6 +42,7 @@
 #pragma once
 
 #include <ecl.h>
+
 #include "common.h"
 #include "RingBuffer.h"
 #include <AlphaFilter/AlphaFilter.hpp>
@@ -53,7 +54,8 @@
 #include <matrix/math.hpp>
 #include <mathlib/mathlib.h>
 
-using namespace estimator;
+namespace estimator
+{
 
 class EstimatorInterface
 {
@@ -164,24 +166,23 @@ public:
 	// return true if the EKF is dead reckoning the position using inertial data only
 	bool inertial_dead_reckoning() const { return _is_dead_reckoning; }
 
-	const matrix::Quatf &getQuaternion() const { return _output_new.quat_nominal; }
+	const matrix::Quaternion<ecl_float_t> &getQuaternion() const { return _output_new.quat_nominal; }
 
 	// get the velocity of the body frame origin in local NED earth frame
-	Vector3f getVelocity() const { return _output_new.vel - _vel_imu_rel_body_ned; }
+	matrix::Vector3<ecl_float_t> getVelocity() const { return _output_new.vel - _vel_imu_rel_body_ned; }
 
 	// get the velocity derivative in earth frame
-	const Vector3f &getVelocityDerivative() const { return _vel_deriv; }
+	const matrix::Vector3<ecl_float_t> &getVelocityDerivative() const { return _vel_deriv; }
 
 	// get the derivative of the vertical position of the body frame origin in local NED earth frame
 	float getVerticalPositionDerivative() const { return _output_vert_new.vert_vel - _vel_imu_rel_body_ned(2); }
 
 	// get the position of the body frame origin in local earth frame
-	Vector3f getPosition() const
+	matrix::Vector3<ecl_float_t> getPosition() const
 	{
 		// rotate the position of the IMU relative to the boy origin into earth frame
-		const Vector3f pos_offset_earth = _R_to_earth_now * _params.imu_pos_body;
 		// subtract from the EKF position (which is at the IMU) to get position at the body origin
-		return _output_new.pos - pos_offset_earth;
+		return _output_new.pos - (_R_to_earth_now * _params.imu_pos_body);
 	}
 
 	// Get the value of magnetic declination in degrees to be saved for use at the next startup
@@ -223,7 +224,7 @@ public:
 	void print_status();
 
 	static constexpr unsigned FILTER_UPDATE_PERIOD_MS{10};	// ekf prediction period in milliseconds - this should ideally be an integer multiple of the IMU time delta
-	static constexpr float FILTER_UPDATE_PERIOD_S{FILTER_UPDATE_PERIOD_MS * 0.001f};
+	static constexpr ecl_float_t FILTER_UPDATE_PERIOD_S{FILTER_UPDATE_PERIOD_MS * 0.001f};
 
 protected:
 
@@ -416,3 +417,6 @@ private:
 	bool _auxvel_buffer_fail{false};
 
 };
+
+} // namespace estimator
+

@@ -43,6 +43,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 bool Ekf::initHagl()
 {
 	bool initialized = false;
@@ -294,3 +297,6 @@ void Ekf::updateTerrainValidity()
 
 	_hagl_sensor_status.flags.flow = shouldUseOpticalFlowForHagl() && recent_flow_for_terrain_fusion;
 }
+
+} // namespace estimator
+

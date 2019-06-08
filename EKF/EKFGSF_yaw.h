@@ -1,20 +1,13 @@
 #pragma once
 
+#include <ecl.h>
+
 #include <geo/geo.h>
 #include <matrix/math.hpp>
 #include <mathlib/mathlib.h>
 
 #include "common.h"
 #include "utils.hpp"
-
-using matrix::AxisAnglef;
-using matrix::Dcmf;
-using matrix::Eulerf;
-using matrix::Matrix3f;
-using matrix::Quatf;
-using matrix::Vector2f;
-using matrix::Vector3f;
-using matrix::wrap_pi;
 
 static constexpr uint8_t N_MODELS_EKFGSF = 5;
 
@@ -23,7 +16,7 @@ static constexpr float _m_2pi_inv = 0.159154943f;
 static constexpr float _m_pi = 3.14159265f;
 static constexpr float _m_pi2 = 1.57079632f;
 
-using namespace estimator;
+namespace estimator {
 
 class EKFGSF_yaw
 {
@@ -123,7 +116,8 @@ private:
 	// return false if update failed
 	bool updateEKF(const uint8_t model_index);
 
-	inline float sq(float x) const { return x * x; };
+	template<typename T>
+	static constexpr T sq(T x) { return x * x; }
 
 	// Declarations used by the Gaussian Sum Filter (GSF) that combines the individual EKF yaw estimates
 
@@ -134,3 +128,5 @@ private:
 	// return the probability of the state estimate for the specified EKF assuming a gaussian error distribution
 	float gaussianDensity(const uint8_t model_index) const;
 };
+
+} // namespace estimator

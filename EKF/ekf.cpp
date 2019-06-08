@@ -44,6 +44,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 bool Ekf::init(uint64_t timestamp)
 {
 	bool ret = initialise_interface(timestamp);
@@ -292,7 +295,7 @@ void Ekf::predictState()
 	constrainStates();
 
 	// calculate an average filter update time
-	float input = 0.5f * (_imu_sample_delayed.delta_vel_dt + _imu_sample_delayed.delta_ang_dt);
+	ecl_float_t input = 0.5f * (_imu_sample_delayed.delta_vel_dt + _imu_sample_delayed.delta_ang_dt);
 
 	// filter and limit input between -50% and +100% of nominal value
 	input = math::constrain(input, 0.5f * FILTER_UPDATE_PERIOD_S, 2.0f * FILTER_UPDATE_PERIOD_S);
@@ -406,14 +409,14 @@ void Ekf::calculateOutputStates(const imuSample &imu)
 		const Quatf q_error((_state.quat_nominal.inversed() * output_delayed.quat_nominal).normalized());
 
 		// convert the quaternion delta to a delta angle
-		const float scalar = (q_error(0) >= 0.0f) ? -2.f : 2.f;
+		const ecl_float_t scalar = (q_error(0) >= 0.0f) ? -2.f : 2.f;
 
 		const Vector3f delta_ang_error{scalar * q_error(1), scalar * q_error(2), scalar * q_error(3)};
 
 		// calculate a gain that provides tight tracking of the estimator attitude states and
 		// adjust for changes in time delay to maintain consistent damping ratio of ~0.7
-		const float time_delay = fmaxf((imu.time_us - _imu_sample_delayed.time_us) * 1e-6f, _dt_imu_avg);
-		const float att_gain = 0.5f * _dt_imu_avg / time_delay;
+		const ecl_float_t time_delay = fmaxf((imu.time_us - _imu_sample_delayed.time_us) * 1e-6, _dt_imu_avg);
+		const ecl_float_t att_gain = 0.5 * _dt_imu_avg / time_delay;
 
 		// calculate a corrrection to the delta angle
 		// that will cause the INS to track the EKF quaternions
@@ -428,16 +431,16 @@ void Ekf::calculateOutputStates(const imuSample &imu)
 		 */
 
 		// Complementary filter gains
-		const float vel_gain = _dt_ekf_avg / math::constrain(_params.vel_Tau, _dt_ekf_avg, 10.0f);
-		const float pos_gain = _dt_ekf_avg / math::constrain(_params.pos_Tau, _dt_ekf_avg, 10.0f);
+		const ecl_float_t vel_gain = _dt_ekf_avg / math::constrain(_params.vel_Tau, (float)_dt_ekf_avg, 10.0f);
+		const ecl_float_t pos_gain = _dt_ekf_avg / math::constrain(_params.pos_Tau, (float)_dt_ekf_avg, 10.0f);
 
 		// calculate down velocity and position tracking errors
-		const float vert_vel_err = (_state.vel(2) - output_vert_delayed.vert_vel);
-		const float vert_vel_integ_err = (_state.pos(2) - output_vert_delayed.vert_vel_integ);
+		const ecl_float_t vert_vel_err = (_state.vel(2) - output_vert_delayed.vert_vel);
+		const ecl_float_t vert_vel_integ_err = (_state.pos(2) - output_vert_delayed.vert_vel_integ);
 
 		// calculate a velocity correction that will be applied to the output state history
 		// using a PD feedback tuned to a 5% overshoot
-		const float vert_vel_correction = vert_vel_integ_err * pos_gain + vert_vel_err * vel_gain * 1.1f;
+		const ecl_float_t vert_vel_correction = vert_vel_integ_err * pos_gain + vert_vel_err * vel_gain * 1.1f;
 
 		applyCorrectionToVerticalOutputBuffer(vert_vel_correction);
 
@@ -525,7 +528,8 @@ void Ekf::applyCorrectionToOutputBuffer(const Vector3f& vel_correction, const Ve
 /*
  * Predict the previous quaternion output state forward using the latest IMU delta angle data.
 */
-Quatf Ekf::calculate_quaternion() const
+matrix::Quaternion<float>
+Ekf::calculate_quaternion() const
 {
 	// Correct delta angle data for bias errors using bias state estimates from the EKF and also apply
 	// corrections required to track the EKF quaternion states
@@ -533,5 +537,9 @@ Quatf Ekf::calculate_quaternion() const
 
 	// increment the quaternions using the corrected delta angle vector
 	// the quaternions must always be normalised after modification
-	return Quatf{_output_new.quat_nominal * AxisAnglef{delta_angle}}.unit();
+	const Quatf q{_output_new.quat_nominal * AxisAnglef{delta_angle}};
+	const Quatf q_norm = q.unit();
+	return matrix::Quaternion<float> {q_norm(0), q_norm(1), q_norm(2), q_norm(3)};
 }
+
+} // namespace estimator

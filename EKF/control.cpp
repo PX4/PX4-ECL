@@ -39,9 +39,13 @@
  *
  */
 
-#include "../ecl.h"
+#include <ecl.h>
+
 #include "ekf.h"
 #include <mathlib/mathlib.h>
+
+namespace estimator
+{
 
 void Ekf::controlFusionModes()
 {
@@ -316,7 +320,7 @@ void Ekf::controlExternalVisionFusion()
 				}
 			}
 
-			ev_vel_obs_var = matrix::max(getVisionVelocityVarianceInEkfFrame(), sq(0.05f));
+			ev_vel_obs_var = matrix::max(getVisionVelocityVarianceInEkfFrame(), sq(0.05));
 
 			ev_vel_innov_gates.setAll(fmaxf(_params.ev_vel_innov_gate, 1.0f));
 
@@ -1317,3 +1321,5 @@ void Ekf::controlAuxVelFusion()
 
 	}
 }
+
+} // namespace estimator

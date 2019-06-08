@@ -115,9 +115,21 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
 
 			-Wno-missing-field-initializers # ignore for GCC 4.8 support
 		)
+
+		# enable color output
+		if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+			# force color for gcc > 4.9
+			add_compile_options(-fdiagnostics-color=always)
+		endif()
+
+	elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+		# force color for clang (needed for clang + ccache)
+		add_compile_options(-fcolor-diagnostics)
 	endif()
 
+
 	if(BUILD_TESTING)
+		enable_testing()
 
 		include(CTest)
 
