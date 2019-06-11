@@ -923,28 +923,19 @@ void Ekf::resetWindCovariance()
 	zeroCols(P, 22, 23);
 
 	if (_tas_data_ready && (_imu_sample_delayed.time_us - _airspeed_sample_delayed.time_us < (uint64_t)5e5)) {
-		// Use airspeed and zer sideslip assumption to set initial covariance values for wind states
+		Eulerf euler321(_state.quat_nominal);
+		const float euler_yaw = euler321(2);
+		const float R_TAS = sq(math::constrain(_params.eas_noise, 0.5f, 5.0f) * math::constrain(_airspeed_sample_delayed.eas2tas, 0.9f, 10.0f));
+		const float intitial_sideslip_uncertainty = math::radians(15.0f);
+		const float initial_wind_var_body_y = sq(_airspeed_sample_delayed.true_airspeed * sinf(intitial_sideslip_uncertainty));
+		const float R_yaw = sq(math::radians(10.0f));
+		const float Wx = _state.wind_vel(0) * cosf(euler_yaw) + _state.wind_vel(1) * sinf(euler_yaw);
+		const float Wy = -_state.wind_vel(0) * sinf(euler_yaw) + _state.wind_vel(1) * cosf(euler_yaw);
 
-		// calculate the wind speed and bearing
-		float spd = sqrtf(sq(_state.wind_vel(0)) + sq(_state.wind_vel(1)));
-		float yaw = atan2f(_state.wind_vel(1), _state.wind_vel(0));
-
-		// calculate the uncertainty in wind speed and direction using the uncertainty in airspeed and sideslip angle
-		// used to calculate the initial wind speed
-		float R_spd = sq(math::constrain(_params.eas_noise, 0.5f, 5.0f) * math::constrain(_airspeed_sample_delayed.eas2tas, 0.9f, 10.0f));
-		float R_yaw = sq(math::radians(10.0f));
-
-		// calculate the variance and covariance terms for the wind states
-		float cos_yaw = cosf(yaw);
-		float sin_yaw = sinf(yaw);
-		float cos_yaw_2 = sq(cos_yaw);
-		float sin_yaw_2 = sq(sin_yaw);
-		float sin_cos_yaw = sin_yaw * cos_yaw;
-		float spd_2 = sq(spd);
-		P[22][22] = R_yaw * spd_2 * sin_yaw_2 + R_spd * cos_yaw_2;
-		P[22][23] = - R_yaw * sin_cos_yaw * spd_2 + R_spd * sin_cos_yaw;
-		P[23][22] = P[22][23];
-		P[23][23] = R_yaw * spd_2 * cos_yaw_2 + R_spd * sin_yaw_2;
+		P[22][22] = R_TAS*sq(cosf(euler_yaw)) + R_yaw*sq(-Wx*sinf(euler_yaw) - Wy*cosf(euler_yaw)) + initial_wind_var_body_y*sq(sinf(euler_yaw));
+		P[22][23] = R_TAS*sinf(euler_yaw)*cosf(euler_yaw) + R_yaw*(-Wx*sinf(euler_yaw) - Wy*cosf(euler_yaw))*(Wx*cosf(euler_yaw) - Wy*sinf(euler_yaw)) - initial_wind_var_body_y*sinf(euler_yaw)*cosf(euler_yaw);
+		P[23][22] = R_TAS*sinf(euler_yaw)*cosf(euler_yaw) + R_yaw*(-Wx*sinf(euler_yaw) - Wy*cosf(euler_yaw))*(Wx*cosf(euler_yaw) - Wy*sinf(euler_yaw)) - initial_wind_var_body_y*sinf(euler_yaw)*cosf(euler_yaw);
+		P[23][23] = R_TAS*sq(sinf(euler_yaw)) + R_yaw*sq(Wx*cosf(euler_yaw) - Wy*sinf(euler_yaw)) + initial_wind_var_body_y*sq(cosf(euler_yaw));
 
 		// Now add the variance due to uncertainty in vehicle velocity that was used to calculate the initial wind speed
 		P[22][22] += P[4][4];
