@@ -330,7 +330,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		float cosRoll = constrain(cosf(roll), 0.1f, 1.0f);
 		float sinePitch = constrain(-rotMat(2, 0), -1.0f, 1.0f);
 		float pitch = asinf(sinePitch);
-		float load_factor = cosf(pitch) / (cosf(roll)*(1.0f + sinePitch * sinePitch));
+		float load_factor = cosf(pitch) / (cosRoll * (1.0f + sinePitch * sinePitch));
 		float cosPhi = sqrtf((rotMat(0, 1) * rotMat(0, 1)) + (rotMat(1, 1) * rotMat(1, 1)));
 		STE_rate_setpoint = STE_rate_setpoint + _load_factor_correction * (load_factor * load_factor - 1.0f);
 
