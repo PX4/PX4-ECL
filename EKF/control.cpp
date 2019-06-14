@@ -115,7 +115,7 @@ void Ekf::controlFusionModes()
 		Vector3f pos_offset_earth = _R_to_earth * pos_offset_body;
 		_range_sample_delayed.rng += pos_offset_earth(2) / _R_rng_to_earth_2_2;
 	}
-	
+
 	// We don't fuse flow data immediately because we have to wait for the mid integration point to fall behind the fusion time horizon.
 	// This means we stop looking for new data until the old data has been fused.
 	if (!_flow_data_ready) {
@@ -226,12 +226,11 @@ void Ekf::controlExternalVisionFusion()
 				increaseQuatYawErrVariance(sq(fmaxf(_ev_sample_delayed.angErr, 1.0e-2f)));
 
 				// calculate the amount that the quaternion has changed by
-				_state_reset_status.quat_change = quat_before_reset.inversed() * _state.quat_nominal;
+				_state_reset_status.quat_change = _state.quat_nominal * quat_before_reset.inversed();
 
 				// add the reset amount to the output observer buffered data
-				// Note q1 *= q2 is equivalent to q1 = q2 * q1
 				for (uint8_t i = 0; i < _output_buffer.get_length(); i++) {
-					_output_buffer[i].quat_nominal *= _state_reset_status.quat_change;
+					_output_buffer[i].quat_nominal = _state_reset_status.quat_change * _output_buffer[i].quat_nominal;
 				}
 
 				// apply the change in attitude quaternion to our newest quaternion estimate
@@ -697,7 +696,7 @@ void Ekf::controlGpsFusion()
 		_control_status.flags.gps = false;
 		ECL_WARN("EKF GPS data stopped");
 	}  else if (_control_status.flags.gps && (_imu_sample_delayed.time_us - _gps_sample_delayed.time_us > (uint64_t)1e6) && (_control_status.flags.opt_flow || _control_status.flags.ev_pos)) {
-		// Handle the case where we are fusing another position source along GPS, 
+		// Handle the case where we are fusing another position source along GPS,
 		// stop waiting for GPS after 1 s of lost signal
 		_control_status.flags.gps = false;
 		ECL_WARN("EKF GPS data stopped, using only EV or OF");
