@@ -583,15 +583,10 @@ void Ekf::controlGpsFusion()
 					// if we are not already aiding with optical flow, then we need to reset the position and velocity
 					// otherwise we only need to reset the position
 					_control_status.flags.gps = true;
+					resetPosition();
 
-					if (!_control_status.flags.opt_flow) {
-						if (!resetPosition() || !resetVelocity()) {
-							_control_status.flags.gps = false;
-
-						}
-
-					} else if (!resetPosition()) {
-						_control_status.flags.gps = false;
+					if (!_control_status.flags.opt_flow) {					
+						resetVelocity();
 
 					}
 
