@@ -198,9 +198,9 @@ void TECS::_update_speed_states(float airspeed_setpoint, float indicated_airspee
 
 void TECS::_update_speed_setpoint()
 {
-	// Set the airspeed demand to the minimum value if an underspeed or
-	// or a uncontrolled descent condition exists to maximise climb rate
-	if ((_uncommanded_descent_recovery) || (_underspeed_detected)) {
+	// Set the airspeed demand to the minimum value if an
+	// uncontrolled descent condition exists to maximise climb rate
+	if (_uncommanded_descent_recovery){
 		_TAS_setpoint = 1.1f * _TAS_min;
 	}
 
