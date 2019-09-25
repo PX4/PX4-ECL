@@ -86,6 +86,9 @@ void Ekf::controlFusionModes()
 	const gpsSample &gps_init = _gps_buffer.get_newest();
 	_gps_hgt_intermittent = !((_time_last_imu - gps_init.time_us) < 2 * GPS_MAX_INTERVAL);
 
+	const extVisionSample &ev_init = _ext_vision_buffer.get_newest();
+	_ev_hgt_intermittent = !((_time_last_imu - ev_init.time_us) < 2 * EV_MAX_INTERVAL);
+
 	// check for arrival of new sensor data at the fusion time horizon
 	_gps_data_ready = _gps_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_gps_sample_delayed);
 	_mag_data_ready = _mag_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_mag_sample_delayed);
@@ -268,20 +271,6 @@ void Ekf::controlExternalVisionFusion()
 
 				ECL_INFO_TIMESTAMPED("EKF commencing external vision yaw fusion");
 			}
-		}
-
-		// determine if we should start using the height observations
-		if (_params.vdist_sensor_type == VDIST_SENSOR_EV) {
-			// don't start using EV data unless data is arriving frequently
-			if (!_control_status.flags.ev_hgt && ((_time_last_imu - _time_last_ext_vision) < (2 * EV_MAX_INTERVAL))) {
-				setControlEVHeight();
-				resetHeight();
-			}
-		}
-
-		// determine if we should use the vertical position observation
-		if (_control_status.flags.ev_hgt) {
-			_fuse_height = true;
 		}
 
 		// determine if we should use the horizontal position observations
@@ -1128,7 +1117,32 @@ void Ekf::controlHeightFusion()
 
 	// Determine if we rely on EV height but switched to baro
 	if (_params.vdist_sensor_type == VDIST_SENSOR_EV) {
-		if (_control_status.flags.baro_hgt && _baro_data_ready && !_baro_hgt_faulty) {
+		if (_range_aid_mode_selected && _range_data_ready && _rng_hgt_valid) {
+			setControlRangeHeight();
+			_fuse_height = true;
+
+			// we have just switched to using range finder, calculate height sensor offset such that current
+			// measurement matches our current height estimate
+			if (_control_status_prev.flags.rng_hgt != _control_status.flags.rng_hgt) {
+				if (isTerrainEstimateValid()) {
+					_hgt_sensor_offset = _terrain_vpos;
+
+				} else {
+					_hgt_sensor_offset = _R_rng_to_earth_2_2 * _range_sample_delayed.rng + _state.pos(2);
+				}
+			}
+
+		} else if (!_range_aid_mode_selected && _ev_data_ready && !_ev_hgt_intermittent) {
+			setControlEVHeight();
+			_fuse_height = true;
+
+			// we have just switched to using EV height, calculate height sensor offset such that current
+			// measurement matches our current height estimate
+			if (_control_status_prev.flags.ev_hgt != _control_status.flags.ev_hgt) {
+				_hgt_sensor_offset = -_ev_sample_delayed.pos(2) + _state.pos(2);
+			}
+
+		} else if (_control_status.flags.baro_hgt && _baro_data_ready && !_baro_hgt_faulty) {
 			// switch to baro if there was a reset to baro
 			_fuse_height = true;
 
