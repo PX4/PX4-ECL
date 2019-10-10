@@ -90,7 +90,8 @@ void Ekf::runTerrainEstimator()
 	// Perform a continuity check on range finder data
 	checkRangeDataContinuity();
 
-	// Perform initialisation check
+	// Perform initialisation check and
+	// on ground, continuously reset the terrain estimator
 	if (!_terrain_initialised || !_control_status.flags.in_air) {
 		_terrain_initialised = initHagl();
 
