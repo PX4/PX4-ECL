@@ -154,7 +154,7 @@ void TECS::_update_speed_states(float airspeed_setpoint, float indicated_airspee
 
 	// Convert equivalent airspeed quantities to true airspeed
 	_EAS_setpoint = airspeed_setpoint;
-	_TAS_setpoint  = _EAS_setpoint * EAS2TAS;
+	_TAS_setpoint  = _EAS_setpoint ;
 	_TAS_max   = _indicated_airspeed_max * EAS2TAS;
 	_TAS_min   = _indicated_airspeed_min * EAS2TAS;
 
@@ -535,7 +535,7 @@ void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_alt
 		_hgt_setpoint_adj = _hgt_setpoint_adj_prev;
 		_hgt_setpoint_prev = _hgt_setpoint_adj_prev;
 		_hgt_setpoint_in_prev = _hgt_setpoint_adj_prev;
-		_TAS_setpoint_last = _EAS * EAS2TAS;
+		_TAS_setpoint_last = _EAS ;
 		_TAS_setpoint_adj = _TAS_setpoint_last;
 		_underspeed_detected = false;
 		_uncommanded_descent_recovery = false;
@@ -559,8 +559,8 @@ void TECS::_initialize_states(float pitch, float throttle_cruise, float baro_alt
 		_hgt_setpoint_prev      = _hgt_setpoint_adj_prev;
 
 		// airspeed demand states are set to track the measured airspeed
-		_TAS_setpoint_last      = _EAS * EAS2TAS;
-		_TAS_setpoint_adj       = _EAS * EAS2TAS;
+		_TAS_setpoint_last      = _EAS ;
+		_TAS_setpoint_adj       = _EAS ;
 
 		// disable speed and decent error condition checks
 		_underspeed_detected = false;
