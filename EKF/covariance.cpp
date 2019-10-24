@@ -929,6 +929,7 @@ void Ekf::resetWindCovariance()
 		const float initial_sideslip_uncertainty = math::radians(15.0f);
 		const float initial_wind_var_body_y = sq(_airspeed_sample_delayed.true_airspeed * sinf(initial_sideslip_uncertainty));
 		const float R_yaw = sq(math::radians(10.0f));
+		// TODO: explicitly include the sideslip angle
 		const float Wx = _state.wind_vel(0) * cosf(euler_yaw) + _state.wind_vel(1) * sinf(euler_yaw);
 		const float Wy = -_state.wind_vel(0) * sinf(euler_yaw) + _state.wind_vel(1) * cosf(euler_yaw);
 
