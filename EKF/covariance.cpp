@@ -923,6 +923,7 @@ void Ekf::resetWindCovariance()
 	zeroCols(P, 22, 23);
 
 	if (_tas_data_ready && (_imu_sample_delayed.time_us - _airspeed_sample_delayed.time_us < (uint64_t)5e5)) {
+		// Derived using EKF/matlab/scripts/Inertial Nav EKF/wind_cov.py
 		Eulerf euler321(_state.quat_nominal);
 		const float euler_yaw = euler321(2);
 		const float R_TAS = sq(math::constrain(_params.eas_noise, 0.5f, 5.0f) * math::constrain(_airspeed_sample_delayed.eas2tas, 0.9f, 10.0f));
