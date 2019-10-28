@@ -623,7 +623,10 @@ void Ekf::controlGpsFusion()
 				// If the heading is not aligned, reset the yaw and magnetic field states
 				// Do not use external vision for yaw if using GPS because yaw needs to be
 				// defined relative to an NED reference frame
-				if (!_control_status.flags.yaw_align || _control_status.flags.ev_yaw || _mag_inhibit_yaw_reset_req) {
+				const bool want_to_reset_mag_heading = !_control_status.flags.yaw_align ||
+								       _control_status.flags.ev_yaw ||
+								       _mag_inhibit_yaw_reset_req;
+				if (want_to_reset_mag_heading && canResetMagHeading()) {
 					_control_status.flags.ev_yaw = false;
 					_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
 					// Handle the special case where we have not been constraining yaw drift or learning yaw bias due
@@ -690,7 +693,7 @@ void Ekf::controlGpsFusion()
 				// use GPS velocity data to check and correct yaw angle if a FW vehicle
 				if (_control_status.flags.fixed_wing && _control_status.flags.in_air) {
 					// if flying a fixed wing aircraft, do a complete reset that includes yaw
-					_control_status.flags.mag_align_complete = realignYawGPS();
+					_control_status.flags.mag_aligned_in_flight = realignYawGPS();
 				}
 
 				resetVelocity();
@@ -1323,7 +1326,7 @@ void Ekf::controlMagFusion()
 	// Also reset the flight alignment flag so that the mag fields will be re-initialised next time we achieve flight altitude
 	if (!_control_status.flags.in_air) {
 		_last_on_ground_posD = _state.pos(2);
-		_control_status.flags.mag_align_complete = false;
+		_control_status.flags.mag_aligned_in_flight = false;
 		_num_bad_flight_yaw_events = 0;
 	}
 
@@ -1333,32 +1336,33 @@ void Ekf::controlMagFusion()
 
 		// We need to reset the yaw angle after climbing away from the ground to enable
 		// recovery from ground level magnetic interference.
-		if (!_control_status.flags.mag_align_complete && _control_status.flags.in_air) {
+		if (!_control_status.flags.mag_aligned_in_flight && _control_status.flags.in_air) {
 			// Check if height has increased sufficiently to be away from ground magnetic anomalies
 			// and request a yaw reset if not already requested.
 			float terrain_vpos_estimate = isTerrainEstimateValid() ? _terrain_vpos : _last_on_ground_posD;
-			_mag_yaw_reset_req |= (terrain_vpos_estimate - _state.pos(2)) > 1.5f;
+			static constexpr float mag_reset_altitude = 1.5f;
+			_mag_yaw_reset_req |= (terrain_vpos_estimate - _state.pos(2)) > mag_reset_altitude;
 		}
 
 		// perform a yaw reset if requested by other functions
-		if (_mag_yaw_reset_req && _control_status.flags.tilt_align) {
-			if (!_mag_use_inhibit ) {
-				if (!_control_status.flags.mag_align_complete && _control_status.flags.fixed_wing && _control_status.flags.in_air) {
-					// A fixed wing vehicle can use GPS to bound yaw errors immediately after launch
-					_control_status.flags.mag_align_complete = realignYawGPS();
+		if (_mag_yaw_reset_req && !_mag_use_inhibit
+		    && _control_status.flags.tilt_align
+		    && _control_status.flags.in_air) {
+			const bool has_realigned_yaw = canRealignYawUsingGps()
+						       ? realignYawGPS()
+						       : canResetMagHeading()
+							      ? resetMagHeading(_mag_sample_delayed.mag)
+							      : false;
 
-					if (_velpos_reset_request) {
-						resetVelocity();
-						resetPosition();
-						_velpos_reset_request = false;
-					}
+			_control_status.flags.mag_aligned_in_flight = has_realigned_yaw;
+			_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
+			_mag_yaw_reset_req = !has_realigned_yaw;
+		}
 
-				} else {
-					_control_status.flags.mag_align_complete = resetMagHeading(_mag_sample_delayed.mag) && _control_status.flags.in_air;
-				}
-			}
-			_control_status.flags.yaw_align = _control_status.flags.yaw_align || _control_status.flags.mag_align_complete;
-			_mag_yaw_reset_req = false;
+		if (_velpos_reset_request) {
+			resetVelocity();
+			resetPosition();
+			_velpos_reset_request = false;
 		}
 
 		// Determine if we should use simple magnetic heading fusion which works better when there are large external disturbances
@@ -1411,7 +1415,7 @@ void Ekf::controlMagFusion()
 			// decide whether 3-axis magnetometer fusion can be used
 			bool use_3D_fusion = _control_status.flags.tilt_align && // Use of 3D fusion requires valid tilt estimates
 					_control_status.flags.in_air && // don't use when on the ground because of magnetic anomalies
-					_control_status.flags.mag_align_complete &&
+					_control_status.flags.mag_aligned_in_flight &&
 					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000); // Using 3-axis fusion for a minimum period after to allow for false negatives
 
 			// perform switch-over
@@ -1434,7 +1438,7 @@ void Ekf::controlMagFusion()
 				}
 
 				// only use one type of mag fusion at the same time
-				_control_status.flags.mag_3D = _control_status.flags.mag_align_complete;
+				_control_status.flags.mag_3D = _control_status.flags.mag_aligned_in_flight;
 				_control_status.flags.mag_hdg = !_control_status.flags.mag_3D;
 
 			} else {
@@ -1505,32 +1509,9 @@ void Ekf::controlMagFusion()
 
 		// if we are using 3-axis magnetometer fusion, but without external aiding, then the declination must be fused as an observation to prevent long term heading drift
 		// fusing declination when gps aiding is available is optional, but recommended to prevent problem if the vehicle is static for extended periods of time
-		if (_control_status.flags.mag_3D && (!_control_status.flags.gps || (_params.mag_declination_source & MASK_FUSE_DECL))) {
-			_control_status.flags.mag_dec = true;
+		_control_status.flags.mag_dec = (_control_status.flags.mag_3D && (!_control_status.flags.gps || (_params.mag_declination_source & MASK_FUSE_DECL)));
 
-		} else {
-			_control_status.flags.mag_dec = false;
-		}
-
-		// If the user has selected auto protection against indoor magnetic field errors, only use the magnetometer
-		// if a yaw angle relative to true North is required for navigation. If no GPS or other earth frame aiding
-		// is available, assume that we are operating indoors and the magnetometer should not be used.
-		bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR);
-		bool not_using_gps = !(_params.fusion_mode & MASK_USE_GPS) || !_control_status.flags.gps;
-		bool not_using_evpos = !(_params.fusion_mode & MASK_USE_EVPOS) || !_control_status.flags.ev_pos;
-		bool not_using_evvel = !(_params.fusion_mode & MASK_USE_EVVEL) || !_control_status.flags.ev_vel;
-		bool not_selected_evyaw =  !(_params.fusion_mode & MASK_USE_EVYAW);
-		if (user_selected && not_using_gps && not_using_evpos && not_using_evvel && not_selected_evyaw) {
-			_mag_use_inhibit = true;
-		} else {
-			_mag_use_inhibit = false;
-			_mag_use_not_inhibit_us = _imu_sample_delayed.time_us;
-		}
-
-		// If magnetometer use has been inhibited continuously then a yaw reset is required for a valid heading
-		if (uint32_t(_imu_sample_delayed.time_us - _mag_use_not_inhibit_us) > (uint32_t)5e6) {
-			_mag_inhibit_yaw_reset_req = true;
-		}
+		checkMagInhibition();
 
 		// fuse magnetometer data using the selected methods
 		if (_control_status.flags.mag_3D && _control_status.flags.yaw_align) {
@@ -1560,6 +1541,45 @@ void Ekf::controlMagFusion()
 			// do no fusion at all
 		}
 	}
+}
+
+void Ekf::checkMagInhibition()
+{
+	_mag_use_inhibit = shouldInhibitMag();
+	if (!_mag_use_inhibit) { 
+		_mag_use_not_inhibit_us = _imu_sample_delayed.time_us;
+	}
+
+	// If magnetometer use has been inhibited continuously then a yaw reset is required for a valid heading
+	if (uint32_t(_imu_sample_delayed.time_us - _mag_use_not_inhibit_us) > (uint32_t)5e6) {
+		_mag_inhibit_yaw_reset_req = true;
+	}
+}
+
+bool Ekf::shouldInhibitMag() const
+{
+	// If the user has selected auto protection against indoor magnetic field errors, only use the magnetometer
+	// if a yaw angle relative to true North is required for navigation. If no GPS or other earth frame aiding
+	// is available, assume that we are operating indoors and the magnetometer should not be used.
+	// Also inhibit mag fusion when a strong magnetic field interference is detected
+	const bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR);
+	const bool not_using_gps = !(_params.fusion_mode & MASK_USE_GPS) || !_control_status.flags.gps;
+	const bool not_using_evpos = !(_params.fusion_mode & MASK_USE_EVPOS) || !_control_status.flags.ev_pos;
+	const bool not_using_evvel = !(_params.fusion_mode & MASK_USE_EVVEL) || !_control_status.flags.ev_vel;
+	const bool not_selected_evyaw =  !(_params.fusion_mode & MASK_USE_EVYAW);
+	const bool heading_not_required_for_navigation = not_using_gps &&
+							 not_using_evpos &&
+							 not_using_evvel &&
+							 not_selected_evyaw;
+
+	return (user_selected && heading_not_required_for_navigation)
+	       || isStrongMagneticDisturbance();
+}
+
+bool Ekf::isStrongMagneticDisturbance() const
+{
+	static constexpr float average_earth_mag_field_strength = 0.45f; // Gauss
+	return _mag_sample_delayed.mag.length() > 3.f * average_earth_mag_field_strength;
 }
 
 void Ekf::controlVelPosFusion()

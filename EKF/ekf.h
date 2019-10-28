@@ -622,6 +622,12 @@ private:
 	// control fusion of magnetometer observations
 	void controlMagFusion();
 
+	void checkMagInhibition();
+	bool shouldInhibitMag() const;
+	bool canRealignYawUsingGps() const { return _control_status.flags.fixed_wing; }
+	bool canResetMagHeading() const { return !isStrongMagneticDisturbance(); }
+	bool isStrongMagneticDisturbance() const;
+
 	// control fusion of range finder observations
 	void controlRangeFinderFusion();
 

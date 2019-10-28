@@ -460,7 +460,7 @@ union filter_control_status_u {
 		uint32_t gnd_effect  : 1; ///< 20 - true when protection from ground effect induced static pressure rise is active
 		uint32_t rng_stuck   : 1; ///< 21 - true when rng data wasn't ready for more than 10s and new rng values haven't changed enough
 		uint32_t gps_yaw     : 1; ///< 22 - true when yaw (not ground course) data from a GPS receiver is being fused
-		uint32_t mag_align_complete   : 1; ///< 23 - true when the in-flight mag field alignment has been completed
+		uint32_t mag_aligned_in_flight   : 1; ///< 23 - true when the in-flight mag field alignment has been completed
 		uint32_t ev_vel      : 1; ///< 24 - true when local earth frame velocity data from external vision measurements are being fused
 		uint32_t synthetic_mag_z : 1; ///< 25 - true when we are using a synthesized measurement for the magnetometer Z component
 	} flags;
