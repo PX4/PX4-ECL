@@ -627,6 +627,11 @@ private:
 	bool canRealignYawUsingGps() const { return _control_status.flags.fixed_wing; }
 	bool canResetMagHeading() const { return !isStrongMagneticDisturbance(); }
 	bool isStrongMagneticDisturbance() const;
+	bool canUse3dMagFusion() const;
+	void checkYawAngleObservability();
+	bool isYawAngleObservable() const { return _yaw_angle_observable; }
+	void checkMagBiasObservability();
+	bool isMagBiasObservable() const { return _mag_bias_observable; }
 
 	// control fusion of range finder observations
 	void controlRangeFinderFusion();
@@ -680,6 +685,10 @@ private:
 	// set control flags to use external vision height
 	void setControlEVHeight();
 
+	void setControlMag3D();
+	void setControlMagHdg();
+	void clearControlMag();
+
 	// zero the specified range of rows in the state covariance matrix
 	void zeroRows(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last);
 
@@ -720,8 +729,10 @@ private:
 	// Argument is additional yaw variance in rad**2
 	void increaseQuatYawErrVariance(float yaw_variance);
 
-	// save mag field state covariance data for re-use
-	void save_mag_cov_data();
+	// load and save mag field state covariance data for re-use
+	void loadMagCovData();
+	void saveMagCovData();
+	void zeroMagCov();
 
 	// uncorrelate quaternion states from other states
 	void uncorrelateQuatStates();

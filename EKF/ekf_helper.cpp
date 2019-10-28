@@ -488,9 +488,7 @@ bool Ekf::realignYawGPS()
 			increaseQuatYawErrVariance(sq(asinf(sineYawError)));
 
 			// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
-			zeroRows(P, 16, 21);
-			zeroCols(P, 16, 21);
-			_mag_decl_cov_reset = false;
+			zeroMagCov();
 
 			if (_control_status.flags.mag_3D) {
 				for (uint8_t index = 16; index <= 21; index ++) {
@@ -498,7 +496,7 @@ bool Ekf::realignYawGPS()
 				}
 
 				// save covariance data for re-use when auto-switching between heading and 3-axis fusion
-				save_mag_cov_data();
+				saveMagCovData();
 			}
 
 			// record the start time for the magnetic field alignment
@@ -528,9 +526,7 @@ bool Ekf::realignYawGPS()
 			_state.mag_I = _R_to_earth * _mag_sample_delayed.mag;
 
 			// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
-			zeroRows(P, 16, 21);
-			zeroCols(P, 16, 21);
-			_mag_decl_cov_reset = false;
+			zeroMagCov();
 
 			if (_control_status.flags.mag_3D) {
 				for (uint8_t index = 16; index <= 21; index ++) {
@@ -538,7 +534,7 @@ bool Ekf::realignYawGPS()
 				}
 
 				// save covariance data for re-use when auto-switching between heading and 3-axis fusion
-				save_mag_cov_data();
+				saveMagCovData();
 			}
 
 			// record the start time for the magnetic field alignment
@@ -566,14 +562,10 @@ bool Ekf::resetMagHeading(Vector3f &mag_init, bool increase_yaw_var, bool update
 		// do not use the magnetometer and deactivate magnetic field states
 		// save covariance data for re-use if currently doing 3-axis fusion
 		if (_control_status.flags.mag_3D) {
-			save_mag_cov_data();
-			_control_status.flags.mag_3D = false;
+			saveMagCovData();
 		}
-		zeroRows(P, 16, 21);
-		zeroCols(P, 16, 21);
-		_mag_decl_cov_reset = false;
-		_control_status.flags.mag_hdg = false;
-
+		zeroMagCov();
+		clearControlMag();
 		return false;
 	}
 
@@ -699,9 +691,7 @@ bool Ekf::resetMagHeading(Vector3f &mag_init, bool increase_yaw_var, bool update
 	_state.mag_I = R_to_earth_after * mag_init;
 
 	// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
-	zeroRows(P, 16, 21);
-	zeroCols(P, 16, 21);
-	_mag_decl_cov_reset = false;
+	zeroMagCov();
 
 	if (_control_status.flags.mag_3D) {
 		for (uint8_t index = 16; index <= 21; index ++) {
@@ -709,7 +699,7 @@ bool Ekf::resetMagHeading(Vector3f &mag_init, bool increase_yaw_var, bool update
 		}
 
 		// save covariance data for re-use when auto-switching between heading and 3-axis fusion
-		save_mag_cov_data();
+		saveMagCovData();
 	}
 
 	// record the time for the magnetic field alignment event
@@ -1594,6 +1584,24 @@ void Ekf::setControlEVHeight()
 	_control_status.flags.rng_hgt = false;
 }
 
+void Ekf::setControlMag3D()
+{
+	_control_status.flags.mag_3D = true;
+	_control_status.flags.mag_hdg = false;
+}
+
+void Ekf::setControlMagHdg()
+{
+	_control_status.flags.mag_3D = false;
+	_control_status.flags.mag_hdg = true;
+}
+
+void Ekf::clearControlMag()
+{
+	_control_status.flags.mag_3D = false;
+	_control_status.flags.mag_hdg = false;
+}
+
 // update the estimated misalignment between the EV navigation frame and the EKF navigation frame
 // and calculate a rotation matrix which rotates EV measurements into the EKF's navigation frame
 void Ekf::calcExtVisRotMat()
@@ -1709,7 +1717,7 @@ void Ekf::increaseQuatYawErrVariance(float yaw_variance)
 }
 
 // save covariance data for re-use when auto-switching between heading and 3-axis fusion
-void Ekf::save_mag_cov_data()
+void Ekf::saveMagCovData()
 {
 	// save variances for the D earth axis and XYZ body axis field
 	for (uint8_t index = 0; index <= 3; index ++) {
@@ -1720,6 +1728,20 @@ void Ekf::save_mag_cov_data()
 	for (uint8_t row = 0; row <= 1; row ++) {
 		for (uint8_t col = 0; col <= 1; col ++) {
 			_saved_mag_ef_covmat[row][col] = P[row + 16][col + 16];
+		}
+	}
+}
+
+void Ekf::loadMagCovData()
+{
+	// re-instate variances for the D earth axis and XYZ body axis field
+	for (uint8_t index = 0; index <= 3; index ++) {
+		P[index + 18][index + 18] = _saved_mag_bf_variance[index];
+	}
+	// re-instate the NE axis covariance sub-matrix
+	for (uint8_t row = 0; row <= 1; row ++) {
+		for (uint8_t col = 0; col <= 1; col ++) {
+			P[row + 16][col + 16] = _saved_mag_ef_covmat[row][col];
 		}
 	}
 }

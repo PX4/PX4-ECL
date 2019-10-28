@@ -262,7 +262,7 @@ void Ekf::controlExternalVisionFusion()
 
 				// save covariance data for re-use if currently doing 3-axis fusion
 				if (_control_status.flags.mag_3D) {
-					save_mag_cov_data();
+					saveMagCovData();
 					_control_status.flags.mag_3D = false;
 				}
 
@@ -601,7 +601,7 @@ void Ekf::controlGpsFusion()
 
 				// save covariance data for re-use if currently doing 3-axis fusion
 				if (_control_status.flags.mag_3D) {
-					save_mag_cov_data();
+					saveMagCovData();
 					_control_status.flags.mag_3D = false;
 				}
 
@@ -1311,14 +1311,11 @@ void Ekf::controlMagFusion()
 		// do not use the magnetometer and deactivate magnetic field states
 		// save covariance data for re-use if currently doing 3-axis fusion
 		if (_control_status.flags.mag_3D) {
-			save_mag_cov_data();
-			_control_status.flags.mag_3D = false;
+			saveMagCovData();
 		}
-		zeroRows(P, 16, 21);
-		zeroCols(P, 16, 21);
-		_mag_decl_cov_reset = false;
-		_control_status.flags.mag_hdg = false;
 
+		zeroMagCov();
+		clearControlMag();
 		return;
 	}
 
@@ -1331,7 +1328,7 @@ void Ekf::controlMagFusion()
 	}
 
 	// check for new magnetometer data that has fallen behind the fusion time horizon
-	// If we are using external vision data for heading then no magnetometer fusion is used
+	// If we are using external vision data or GPS-heading for heading then no magnetometer fusion is used
 	if (!_control_status.flags.ev_yaw && !_control_status.flags.gps_yaw && _mag_data_ready) {
 
 		// We need to reset the yaw angle after climbing away from the ground to enable
@@ -1373,82 +1370,28 @@ void Ekf::controlMagFusion()
 			_control_status.flags.mag_3D = false;
 
 		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_AUTO || _params.mag_fusion_type == MAG_FUSE_TYPE_AUTOFW) {
-			// Check if there has been enough change in horizontal velocity to make yaw observable
-			// Apply hysteresis to check to avoid rapid toggling
-			if (_yaw_angle_observable) {
-				_yaw_angle_observable = _accel_lpf_NE.norm() > _params.mag_acc_gate;
-
-			} else {
-				_yaw_angle_observable = _accel_lpf_NE.norm() > 2.0f * _params.mag_acc_gate;
-			}
-
-			_yaw_angle_observable = _yaw_angle_observable && (_control_status.flags.gps || _control_status.flags.ev_pos); // Do we have to add ev_vel here?
-
-			// check if there is enough yaw rotation to make the mag bias states observable
-			if (!_mag_bias_observable && (fabsf(_yaw_rate_lpf_ef) > _params.mag_yaw_rate_gate)) {
-				// initial yaw motion is detected
-				_mag_bias_observable = true;
-				_yaw_delta_ef = 0.0f;
-				_time_yaw_started = _imu_sample_delayed.time_us;
-
-			} else if (_mag_bias_observable) {
-				// monitor yaw rotation in 45 deg sections.
-				// a rotation of 45 deg is sufficient to make the mag bias observable
-				if (fabsf(_yaw_delta_ef) > math::radians(45.0f)) {
-					_time_yaw_started = _imu_sample_delayed.time_us;
-					_yaw_delta_ef = 0.0f;
-				}
-
-				// require sustained yaw motion of 50% the initial yaw rate threshold
-				float min_yaw_change_req =  0.5f * _params.mag_yaw_rate_gate * (1e-6f * (float)(_imu_sample_delayed.time_us - _time_yaw_started));
-				_mag_bias_observable = fabsf(_yaw_delta_ef) > min_yaw_change_req;
-
-			} else {
-				_mag_bias_observable = false;
-			}
+			checkYawAngleObservability();
+			checkMagBiasObservability();
 
 			// record the last time that movement was suitable for use of 3-axis magnetometer fusion
-			if (_mag_bias_observable || _yaw_angle_observable) {
+			if (isMagBiasObservable() || isYawAngleObservable()) {
 				_time_last_movement = _imu_sample_delayed.time_us;
 			}
 
-			// decide whether 3-axis magnetometer fusion can be used
-			bool use_3D_fusion = _control_status.flags.tilt_align && // Use of 3D fusion requires valid tilt estimates
-					_control_status.flags.in_air && // don't use when on the ground because of magnetic anomalies
-					_control_status.flags.mag_aligned_in_flight &&
-					((_imu_sample_delayed.time_us - _time_last_movement) < 2 * 1000 * 1000); // Using 3-axis fusion for a minimum period after to allow for false negatives
-
 			// perform switch-over
-			if (use_3D_fusion) {
+			if (canUse3dMagFusion()) {
 				if (!_control_status.flags.mag_3D) {
-					// reset the mag field covariances
-					zeroRows(P, 16, 21);
-					zeroCols(P, 16, 21);
-
-					// re-instate variances for the D earth axis and XYZ body axis field
-					for (uint8_t index = 0; index <= 3; index ++) {
-						P[index + 18][index + 18] = _saved_mag_bf_variance[index];
-					}
-					// re-instate the NE axis covariance sub-matrix
-					for (uint8_t row = 0; row <= 1; row ++) {
-						for (uint8_t col = 0; col <= 1; col ++) {
-							P[row + 16][col + 16] = _saved_mag_ef_covmat[row][col];
-						}
-					}
+					loadMagCovData();
 				}
 
-				// only use one type of mag fusion at the same time
-				_control_status.flags.mag_3D = _control_status.flags.mag_aligned_in_flight;
-				_control_status.flags.mag_hdg = !_control_status.flags.mag_3D;
+				setControlMag3D();
 
 			} else {
-				// save covariance data for re-use if currently doing 3-axis fusion
 				if (_control_status.flags.mag_3D) {
-					save_mag_cov_data();
-					_control_status.flags.mag_3D = false;
+					saveMagCovData();
 				}
 
-				_control_status.flags.mag_hdg = true;
+				setControlMagHdg();
 			}
 
 			/*
@@ -1468,16 +1411,14 @@ void Ekf::controlMagFusion()
 				// When re-commencing use of magnetometer to correct vehicle states
 				// set the field state variance to the observation variance and zero
 				// the covariance terms to allow the field states re-learn rapidly
-				zeroRows(P, 16, 21);
-				zeroCols(P, 16, 21);
-				_mag_decl_cov_reset = false;
+				zeroMagCov();
 
 				for (uint8_t index = 0; index <= 5; index ++) {
 					P[index + 16][index + 16] = sq(_params.mag_noise);
 				}
 
 				// save covariance data for re-use when auto-switching between heading and 3-axis fusion
-				save_mag_cov_data();
+				saveMagCovData();
 			}
 
 		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_HEADING || _params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR) {
@@ -1486,7 +1427,7 @@ void Ekf::controlMagFusion()
 
 			// save covariance data for re-use if currently doing 3-axis fusion
 			if (_control_status.flags.mag_3D) {
-				save_mag_cov_data();
+				saveMagCovData();
 				_control_status.flags.mag_3D = false;
 			}
 
@@ -1501,7 +1442,7 @@ void Ekf::controlMagFusion()
 
 			// save covariance data for re-use if currently doing 3-axis fusion
 			if (_control_status.flags.mag_3D) {
-				save_mag_cov_data();
+				saveMagCovData();
 				_control_status.flags.mag_3D = false;
 			}
 
@@ -1556,6 +1497,34 @@ void Ekf::checkMagInhibition()
 	}
 }
 
+void Ekf::checkYawAngleObservability()
+{
+	// Check if there has been enough change in horizontal velocity to make yaw observable
+	// Apply hysteresis to check to avoid rapid toggling
+	_yaw_angle_observable = _yaw_angle_observable
+				? _accel_lpf_NE.norm() > _params.mag_acc_gate
+				: _accel_lpf_NE.norm() > 2.0f * _params.mag_acc_gate;
+
+	_yaw_angle_observable = _yaw_angle_observable && (_control_status.flags.gps || _control_status.flags.ev_pos); // Do we have to add ev_vel here?
+}
+
+void Ekf::checkMagBiasObservability()
+{
+	// check if there is enough yaw rotation to make the mag bias states observable
+	if (!_mag_bias_observable && (fabsf(_yaw_rate_lpf_ef) > _params.mag_yaw_rate_gate)) {
+		// initial yaw motion is detected
+		_mag_bias_observable = true;
+
+	} else if (_mag_bias_observable) {
+		// require sustained yaw motion of 50% the initial yaw rate threshold
+		const float min_yaw_change_req =  0.5f * _params.mag_yaw_rate_gate * (1e-6f * (float)(_imu_sample_delayed.time_us - _time_yaw_started));
+		_mag_bias_observable = fabsf(_yaw_delta_ef) > min_yaw_change_req;
+	}
+
+	_yaw_delta_ef = 0.0f;
+	_time_yaw_started = _imu_sample_delayed.time_us;
+}
+
 bool Ekf::shouldInhibitMag() const
 {
 	// If the user has selected auto protection against indoor magnetic field errors, only use the magnetometer
@@ -1580,6 +1549,16 @@ bool Ekf::isStrongMagneticDisturbance() const
 {
 	static constexpr float average_earth_mag_field_strength = 0.45f; // Gauss
 	return _mag_sample_delayed.mag.length() > 3.f * average_earth_mag_field_strength;
+}
+
+bool Ekf::canUse3dMagFusion() const
+{
+	// Use of 3D fusion requires valid tilt estimates and an in-air heading alignment
+	// but it should not be used when the heading and mag biases are not observable for
+	// more than 2 seconds
+	return _control_status.flags.tilt_align
+		&& _control_status.flags.mag_aligned_in_flight
+		&& ((_imu_sample_delayed.time_us - _time_last_movement) < (uint64_t)2e6);
 }
 
 void Ekf::controlVelPosFusion()
