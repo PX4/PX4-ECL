@@ -1546,8 +1546,9 @@ bool Ekf::shouldInhibitMag() const
 
 bool Ekf::isStrongMagneticDisturbance() const
 {
-	static constexpr float average_earth_mag_field_strength = 0.45f; // Gauss
-	return _mag_sample_delayed.mag.length() > 3.f * average_earth_mag_field_strength;
+	// TODO: factor of 5 because mag strength in SITL is 2, fix SITL and lower that
+	// strength in start of STIL (Zurich) should be 0.49 Gs
+	return _mag_sample_delayed.mag.length() > 5.f * _mag_strength_gps;
 }
 
 bool Ekf::canUse3DMagFusion() const
