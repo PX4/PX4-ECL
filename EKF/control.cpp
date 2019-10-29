@@ -1306,7 +1306,8 @@ void Ekf::controlDragFusion()
 
 void Ekf::controlMagFusion()
 {
-	if (_params.mag_fusion_type >= MAG_FUSE_TYPE_NONE) {
+	if ((_params.mag_fusion_type >= MAG_FUSE_TYPE_NONE)
+	    || _control_status.flags.mag_fault) {
 		stopMagFusion();
 		return;
 	}
@@ -1331,32 +1332,28 @@ void Ekf::controlMagFusion()
 
 		// Determine if we should use simple magnetic heading fusion which works better when there are large external disturbances
 		// or the more accurate 3-axis fusion
-		if (_control_status.flags.mag_fault) {
-			stopMagFusion();
+		switch (_params.mag_fusion_type) {
+		case MAG_FUSE_TYPE_AUTO:
+			selectMagAuto();
+			break;
 
-		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_AUTO || _params.mag_fusion_type == MAG_FUSE_TYPE_AUTOFW) {
-			checkYawAngleObservability();
-			checkMagBiasObservability();
+		case MAG_FUSE_TYPE_AUTOFW:
+			selectMagAuto();
+			controlMagStateOnlyFusion();
+			break;
 
-			// record the last time that movement was suitable for use of 3-axis magnetometer fusion
-			if (isMagBiasObservable() || isYawAngleObservable()) {
-				_time_last_movement = _imu_sample_delayed.time_us;
-			}
-
-			canUse3DMagFusion() ? startMag3DFusion() : startMagHdgFusion();
-
-			if (_params.mag_fusion_type == MAG_FUSE_TYPE_AUTOFW) {
-				controlMagStateOnlyFusion();
-			}
-
-		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_HEADING || _params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR) {
+		case MAG_FUSE_TYPE_HEADING:
+		case MAG_FUSE_TYPE_INDOOR:
 			startMagHdgFusion();
+			break;
 
-		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_3D) {
+		case MAG_FUSE_TYPE_3D:
 			startMag3DFusion();
+			break;
 
-		} else {
+		default:
 			stopMagFusion();
+			break;
 		}
 
 		checkMagDeclRequired();
@@ -1432,6 +1429,19 @@ void Ekf::runVelPosReset()
 		resetPosition();
 		_velpos_reset_request = false;
 	}
+}
+
+void Ekf::selectMagAuto()
+{
+	checkYawAngleObservability();
+	checkMagBiasObservability();
+
+	// record the last time that movement was suitable for use of 3-axis magnetometer fusion
+	if (isMagBiasObservable() || isYawAngleObservable()) {
+		_time_last_movement = _imu_sample_delayed.time_us;
+	}
+
+	canUse3DMagFusion() ? startMag3DFusion() : startMagHdgFusion();
 }
 
 void Ekf::controlMagStateOnlyFusion()

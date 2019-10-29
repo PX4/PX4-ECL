@@ -629,6 +629,7 @@ private:
 	void runOnGroundYawReset();
 	bool isYawResetAuthorized() const;
 	void runVelPosReset();
+	void selectMagAuto();
 	void checkMagDeclRequired();
 	void checkMagInhibition();
 	bool shouldInhibitMag() const;
