@@ -200,7 +200,7 @@ public:
 	// check if the EKF is dead reckoning horizontal velocity using inertial data only
 	void update_deadreckoning_status();
 
-	bool isTerrainEstimateValid() override;
+	bool isTerrainEstimateValid() const override;
 
 	void updateTerrainValidity();
 
@@ -623,6 +623,11 @@ private:
 	void controlMagFusion();
 
 	bool canRunMagFusion() const;
+	void checkHaglYawResetReq();
+	float getHaglEstimate() const;
+	void runYawReset();
+	void runVelPosReset();
+	void checkMagDeclRequired();
 	void checkMagInhibition();
 	bool shouldInhibitMag() const;
 	bool canRealignYawUsingGps() const { return _control_status.flags.fixed_wing; }

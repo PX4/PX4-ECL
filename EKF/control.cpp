@@ -1320,36 +1320,10 @@ void Ekf::controlMagFusion()
 	}
 
 	if (canRunMagFusion()) {
-		// We need to reset the yaw angle after climbing away from the ground to enable
-		// recovery from ground level magnetic interference.
-		if (!_control_status.flags.mag_aligned_in_flight && _control_status.flags.in_air) {
-			// Check if height has increased sufficiently to be away from ground magnetic anomalies
-			// and request a yaw reset if not already requested.
-			float terrain_vpos_estimate = isTerrainEstimateValid() ? _terrain_vpos : _last_on_ground_posD;
-			static constexpr float mag_reset_altitude = 1.5f;
-			_mag_yaw_reset_req |= (terrain_vpos_estimate - _state.pos(2)) > mag_reset_altitude;
-		}
-
-		// perform a yaw reset if requested by other functions
-		if (_mag_yaw_reset_req && !_mag_use_inhibit
-		    && _control_status.flags.tilt_align
-		    && _control_status.flags.in_air) {
-			const bool has_realigned_yaw = canRealignYawUsingGps()
-						       ? realignYawGPS()
-						       : canResetMagHeading()
-							      ? resetMagHeading(_mag_sample_delayed.mag)
-							      : false;
-
-			_control_status.flags.mag_aligned_in_flight = has_realigned_yaw;
-			_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
-			_mag_yaw_reset_req = !has_realigned_yaw;
-		}
-
-		// TODO: move that somewhere else
-		if (_velpos_reset_request) {
-			resetVelocity();
-			resetPosition();
-			_velpos_reset_request = false;
+		if (_control_status.flags.in_air) {
+			checkHaglYawResetReq();
+			runYawReset();
+			runVelPosReset();
 		}
 
 		// Determine if we should use simple magnetic heading fusion which works better when there are large external disturbances
@@ -1366,7 +1340,6 @@ void Ekf::controlMagFusion()
 				_time_last_movement = _imu_sample_delayed.time_us;
 			}
 
-			// perform switch-over
 			canUse3DMagFusion() ? startMag3DFusion() : startMagHdgFusion();
 
 			/*
@@ -1409,10 +1382,7 @@ void Ekf::controlMagFusion()
 			stopMagFusion();
 		}
 
-		// if we are using 3-axis magnetometer fusion, but without external NE aiding, then the declination must be fused as an observation to prevent long term heading drift
-		// fusing declination when gps aiding is available is optional, but recommended to prevent problem if the vehicle is static for extended periods of time
-		_control_status.flags.mag_dec = (_control_status.flags.mag_3D && (!_control_status.flags.gps || (_params.mag_declination_source & MASK_FUSE_DECL)));
-
+		checkMagDeclRequired();
 		checkMagInhibition();
 
 		if (_control_status.flags.yaw_align) {
@@ -1426,6 +1396,62 @@ bool Ekf::canRunMagFusion() const
 	// check for new magnetometer data that has fallen behind the fusion time horizon
 	// If we are using external vision data or GPS-heading for heading then no magnetometer fusion is used
 	return !_control_status.flags.ev_yaw && !_control_status.flags.gps_yaw && _mag_data_ready;
+}
+
+void Ekf::checkHaglYawResetReq()
+{
+	// We need to reset the yaw angle after climbing away from the ground to enable
+	// recovery from ground level magnetic interference.
+	if (!_control_status.flags.mag_aligned_in_flight) {
+		// Check if height has increased sufficiently to be away from ground magnetic anomalies
+		// and request a yaw reset if not already requested.
+		static constexpr float mag_anomalies_max_hagl = 1.5f;
+		const bool above_mag_anomalies = (getHaglEstimate() - _state.pos(2)) > mag_anomalies_max_hagl;
+		_mag_yaw_reset_req = _mag_yaw_reset_req || above_mag_anomalies;
+	}
+}
+
+float Ekf::getHaglEstimate() const
+{
+	return isTerrainEstimateValid() ? _terrain_vpos : _last_on_ground_posD;
+}
+
+void Ekf::runYawReset()
+{
+	// perform a yaw reset if requested by other functions
+	if (_mag_yaw_reset_req && !_mag_use_inhibit
+	    && _control_status.flags.tilt_align) {
+		const bool has_realigned_yaw = canRealignYawUsingGps()
+					       ? realignYawGPS()
+					       : canResetMagHeading()
+						      ? resetMagHeading(_mag_sample_delayed.mag)
+						      : false;
+
+		_control_status.flags.mag_aligned_in_flight = has_realigned_yaw;
+		_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
+		_mag_yaw_reset_req = !has_realigned_yaw;
+		printf("here\n");
+	}
+}
+
+void Ekf::runVelPosReset()
+{
+	if (_velpos_reset_request) {
+		resetVelocity();
+		resetPosition();
+		_velpos_reset_request = false;
+	}
+}
+
+void Ekf::checkMagDeclRequired()
+{
+	// if we are using 3-axis magnetometer fusion, but without external NE aiding,
+	// then the declination must be fused as an observation to prevent long term heading drift
+	// fusing declination when gps aiding is available is optional, but recommended to prevent
+	// problem if the vehicle is static for extended periods of time
+	const bool user_selected = (_params.mag_declination_source & MASK_FUSE_DECL);
+	const bool not_using_ne_aiding = !_control_status.flags.gps;
+	_control_status.flags.mag_dec = (_control_status.flags.mag_3D && (not_using_ne_aiding || user_selected));
 }
 
 void Ekf::checkMagInhibition()

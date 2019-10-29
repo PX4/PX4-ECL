@@ -272,7 +272,7 @@ public:
 	// return true if the EKF is dead reckoning the position using inertial data only
 	bool inertial_dead_reckoning() {return _is_dead_reckoning;}
 
-	virtual bool isTerrainEstimateValid() = 0;
+	virtual bool isTerrainEstimateValid() const = 0;
 	//[[deprecated("Replaced by isTerrainEstimateValid")]]
 	bool get_terrain_valid() { return isTerrainEstimateValid(); }
 
