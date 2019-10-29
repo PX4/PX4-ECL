@@ -896,14 +896,14 @@ void Ekf::fixCovarianceErrors()
 	}
 }
 
-void Ekf::resetMagCovariance()
+void Ekf::resetMagRelatedCovariances()
 {
 	// set the quaternion covariance terms to zero
 	zeroRows(P, 0, 3);
 	zeroCols(P, 0, 3);
 
 	// set the magnetic field covariance terms to zero
-	zeroMagCov();
+	clearMagCov();
 
 	// set the field state variance to the observation variance
 	for (uint8_t rc_index = 16; rc_index <= 21; rc_index ++) {
@@ -914,11 +914,16 @@ void Ekf::resetMagCovariance()
 	saveMagCovData();
 }
 
+void Ekf::clearMagCov()
+{
+	zeroMagCov();
+	_mag_decl_cov_reset = false;
+}
+
 void Ekf::zeroMagCov()
 {
 	zeroRows(P, 16, 21);
 	zeroCols(P, 16, 21);
-	_mag_decl_cov_reset = false;
 }
 
 void Ekf::resetWindCovariance()

@@ -622,16 +622,18 @@ private:
 	// control fusion of magnetometer observations
 	void controlMagFusion();
 
+	bool canRunMagFusion() const;
 	void checkMagInhibition();
 	bool shouldInhibitMag() const;
 	bool canRealignYawUsingGps() const { return _control_status.flags.fixed_wing; }
 	bool canResetMagHeading() const { return !isStrongMagneticDisturbance(); }
 	bool isStrongMagneticDisturbance() const;
-	bool canUse3dMagFusion() const;
+	bool canUse3DMagFusion() const;
 	void checkYawAngleObservability();
 	bool isYawAngleObservable() const { return _yaw_angle_observable; }
 	void checkMagBiasObservability();
 	bool isMagBiasObservable() const { return _mag_bias_observable; }
+	void runMagAndMagDeclFusions();
 
 	// control fusion of range finder observations
 	void controlRangeFinderFusion();
@@ -685,9 +687,11 @@ private:
 	// set control flags to use external vision height
 	void setControlEVHeight();
 
-	void setControlMag3D();
-	void setControlMagHdg();
-	void clearControlMag();
+	void stopMagFusion();
+	void stopMag3DFusion();
+	void stopMagHdgFusion();
+	void startMagHdgFusion();
+	void startMag3DFusion();
 
 	// zero the specified range of rows in the state covariance matrix
 	void zeroRows(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last);
@@ -712,7 +716,7 @@ private:
 	void initialiseQuatCovariances(Vector3f &rot_vec_var);
 
 	// perform a limited reset of the magnetic field state covariances
-	void resetMagCovariance();
+	void resetMagRelatedCovariances();
 
 	// perform a limited reset of the wind state covariances
 	void resetWindCovariance();
@@ -732,6 +736,7 @@ private:
 	// load and save mag field state covariance data for re-use
 	void loadMagCovData();
 	void saveMagCovData();
+	void clearMagCov();
 	void zeroMagCov();
 
 	// uncorrelate quaternion states from other states

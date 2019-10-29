@@ -488,7 +488,7 @@ bool Ekf::realignYawGPS()
 			increaseQuatYawErrVariance(sq(asinf(sineYawError)));
 
 			// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
-			zeroMagCov();
+			clearMagCov();
 
 			if (_control_status.flags.mag_3D) {
 				for (uint8_t index = 16; index <= 21; index ++) {
@@ -526,7 +526,7 @@ bool Ekf::realignYawGPS()
 			_state.mag_I = _R_to_earth * _mag_sample_delayed.mag;
 
 			// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
-			zeroMagCov();
+			clearMagCov();
 
 			if (_control_status.flags.mag_3D) {
 				for (uint8_t index = 16; index <= 21; index ++) {
@@ -559,13 +559,7 @@ bool Ekf::resetMagHeading(Vector3f &mag_init, bool increase_yaw_var, bool update
 	}
 
 	if (_params.mag_fusion_type >= MAG_FUSE_TYPE_NONE) {
-		// do not use the magnetometer and deactivate magnetic field states
-		// save covariance data for re-use if currently doing 3-axis fusion
-		if (_control_status.flags.mag_3D) {
-			saveMagCovData();
-		}
-		zeroMagCov();
-		clearControlMag();
+		stopMagFusion();
 		return false;
 	}
 
@@ -691,7 +685,7 @@ bool Ekf::resetMagHeading(Vector3f &mag_init, bool increase_yaw_var, bool update
 	_state.mag_I = R_to_earth_after * mag_init;
 
 	// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
-	zeroMagCov();
+	clearMagCov();
 
 	if (_control_status.flags.mag_3D) {
 		for (uint8_t index = 16; index <= 21; index ++) {
@@ -1584,22 +1578,41 @@ void Ekf::setControlEVHeight()
 	_control_status.flags.rng_hgt = false;
 }
 
-void Ekf::setControlMag3D()
+void Ekf::stopMagFusion()
 {
-	_control_status.flags.mag_3D = true;
+	stopMag3DFusion();
+	stopMagHdgFusion();
+	clearMagCov();
+}
+
+void Ekf::stopMag3DFusion()
+{
+	// save covariance data for re-use if currently doing 3-axis fusion
+	if (_control_status.flags.mag_3D) {
+		saveMagCovData();
+		_control_status.flags.mag_3D = false;
+	}
+}
+
+void Ekf::stopMagHdgFusion()
+{
 	_control_status.flags.mag_hdg = false;
 }
 
-void Ekf::setControlMagHdg()
+void Ekf::startMagHdgFusion()
 {
-	_control_status.flags.mag_3D = false;
+	stopMag3DFusion();
 	_control_status.flags.mag_hdg = true;
 }
 
-void Ekf::clearControlMag()
+void Ekf::startMag3DFusion()
 {
-	_control_status.flags.mag_3D = false;
-	_control_status.flags.mag_hdg = false;
+	if (!_control_status.flags.mag_3D) {
+		stopMagHdgFusion();
+		zeroMagCov();
+		loadMagCovData();
+		_control_status.flags.mag_3D = true;
+	}
 }
 
 // update the estimated misalignment between the EV navigation frame and the EKF navigation frame
