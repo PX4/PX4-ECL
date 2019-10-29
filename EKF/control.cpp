@@ -1322,8 +1322,11 @@ void Ekf::controlMagFusion()
 	if (canRunMagFusion()) {
 		if (_control_status.flags.in_air) {
 			checkHaglYawResetReq();
-			runYawReset();
+			runInAirYawReset();
 			runVelPosReset();
+
+		} else {
+			runOnGroundYawReset();
 		}
 
 		// Determine if we should use simple magnetic heading fusion which works better when there are large external disturbances
@@ -1342,41 +1345,15 @@ void Ekf::controlMagFusion()
 
 			canUse3DMagFusion() ? startMag3DFusion() : startMagHdgFusion();
 
-			/*
-			Control switch-over between only updating the mag states to updating all states
-			When flying as a fixed wing aircraft, a misaligned magnetometer can cause an error in pitch/roll and accel bias estimates.
-			When MAG_FUSE_TYPE_AUTOFW is selected and the vehicle is flying as a fixed wing, then magnetometer fusion is only allowed
-			to access the magnetic field states.
-			*/
-			_control_status.flags.update_mag_states_only = (_params.mag_fusion_type == MAG_FUSE_TYPE_AUTOFW)
-					&& _control_status.flags.fixed_wing;
-
-			// For the first 5 seconds after switching to 3-axis fusion we allow the magnetic field state estimates to stabilise
-			// before they are used to constrain heading drift
-			_flt_mag_align_converging = ((_imu_sample_delayed.time_us - _flt_mag_align_start_time) < (uint64_t)5e6);
-
-			if (_control_status.flags.mag_3D && _control_status_prev.flags.update_mag_states_only && !_control_status.flags.update_mag_states_only) {
-				// When re-commencing use of magnetometer to correct vehicle states
-				// set the field state variance to the observation variance and zero
-				// the covariance terms to allow the field states re-learn rapidly
-				clearMagCov();
-
-				for (uint8_t index = 0; index <= 5; index ++) {
-					P[index + 16][index + 16] = sq(_params.mag_noise);
-				}
-
-				// save covariance data for re-use when auto-switching between heading and 3-axis fusion
-				saveMagCovData();
+			if (_params.mag_fusion_type == MAG_FUSE_TYPE_AUTOFW) {
+				controlMagStateOnlyFusion();
 			}
 
 		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_HEADING || _params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR) {
 			startMagHdgFusion();
 
 		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_3D) {
-			if (!_control_status.flags.mag_3D && _control_status.flags.yaw_align) {
-				// only commence 3-axis fusion when yaw is aligned and field states set
-				startMag3DFusion();
-			}
+			startMag3DFusion();
 
 		} else {
 			stopMagFusion();
@@ -1416,22 +1393,36 @@ float Ekf::getHaglEstimate() const
 	return isTerrainEstimateValid() ? _terrain_vpos : _last_on_ground_posD;
 }
 
-void Ekf::runYawReset()
+void Ekf::runOnGroundYawReset()
 {
-	// perform a yaw reset if requested by other functions
-	if (_mag_yaw_reset_req && !_mag_use_inhibit
-	    && _control_status.flags.tilt_align) {
+	if (_mag_yaw_reset_req && isYawResetAuthorized()) {
+		const bool has_realigned_yaw = canResetMagHeading()
+					       ? resetMagHeading(_mag_sample_delayed.mag)
+					       : false;
+
+		_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
+		_mag_yaw_reset_req = !has_realigned_yaw;
+	}
+}
+
+void Ekf::runInAirYawReset()
+{
+	if (_mag_yaw_reset_req && isYawResetAuthorized()) {
 		const bool has_realigned_yaw = canRealignYawUsingGps()
 					       ? realignYawGPS()
 					       : canResetMagHeading()
 						      ? resetMagHeading(_mag_sample_delayed.mag)
 						      : false;
 
-		_control_status.flags.mag_aligned_in_flight = has_realigned_yaw;
 		_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
 		_mag_yaw_reset_req = !has_realigned_yaw;
-		printf("here\n");
+		_control_status.flags.mag_aligned_in_flight = has_realigned_yaw;
 	}
+}
+
+bool Ekf::isYawResetAuthorized() const
+{
+	return !_mag_use_inhibit && _control_status.flags.tilt_align;
 }
 
 void Ekf::runVelPosReset()
@@ -1440,6 +1431,35 @@ void Ekf::runVelPosReset()
 		resetVelocity();
 		resetPosition();
 		_velpos_reset_request = false;
+	}
+}
+
+void Ekf::controlMagStateOnlyFusion()
+{
+	/*
+	Control switch-over between only updating the mag states to updating all states
+	When flying as a fixed wing aircraft, a misaligned magnetometer can cause an error in pitch/roll and accel bias estimates.
+	When MAG_FUSE_TYPE_AUTOFW is selected and the vehicle is flying as a fixed wing, then magnetometer fusion is only allowed
+	to access the magnetic field states.
+	*/
+	_control_status.flags.update_mag_states_only =  _control_status.flags.fixed_wing;
+
+	// For the first 5 seconds after switching to 3-axis fusion we allow the magnetic field state estimates to stabilise
+	// before they are used to constrain heading drift
+	_flt_mag_align_converging = ((_imu_sample_delayed.time_us - _flt_mag_align_start_time) < (uint64_t)5e6);
+
+	if (_control_status.flags.mag_3D && _control_status_prev.flags.update_mag_states_only && !_control_status.flags.update_mag_states_only) {
+		// When re-commencing use of magnetometer to correct vehicle states
+		// set the field state variance to the observation variance and zero
+		// the covariance terms to allow the field states re-learn rapidly
+		clearMagCov();
+
+		for (uint8_t index = 0; index <= 5; index ++) {
+			P[index + 16][index + 16] = sq(_params.mag_noise);
+		}
+
+		// save covariance data for re-use when auto-switching between heading and 3-axis fusion
+		saveMagCovData();
 	}
 }
 
