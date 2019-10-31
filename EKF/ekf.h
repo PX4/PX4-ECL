@@ -439,7 +439,7 @@ private:
 	float _last_on_ground_posD{0.0f};	///< last vertical position when the in_air status was false (m)
 	bool _flt_mag_align_converging{false};	///< true when the in-flight mag field post alignment convergence is being performd
 	uint64_t _flt_mag_align_start_time{0};	///< time that inflight magnetic field alignment started (uSec)
-	uint64_t _time_last_movement{0};	///< last system time that sufficient movement to use 3-axis magnetometer fusion was detected (uSec)
+	uint64_t _time_last_mov_3d_mag_suitable{0};	///< last system time that sufficient movement to use 3-axis magnetometer fusion was detected (uSec)
 	float _saved_mag_bf_variance[4] {};	///< magnetic field state variances that have been saved for use at the next initialisation (Gauss**2)
 	float _saved_mag_ef_covmat[2][2] {};    ///< NE magnetic field state covariance sub-matrix saved for use at the next initialisation (Gauss**2)
 	bool _velpos_reset_request{false};	///< true when a large yaw error has been fixed and a velocity and position state reset is required
@@ -623,26 +623,31 @@ private:
 	void controlMagFusion();
 
 	bool canRunMagFusion() const;
+
 	void checkHaglYawResetReq();
-	float getHaglEstimate() const;
+	float getTerrainVPos() const;
+
 	void runInAirYawReset();
 	void runOnGroundYawReset();
 	bool isYawResetAuthorized() const;
 	void runVelPosReset();
+
 	void selectMagAuto();
-	void checkMagDeclRequired();
-	void checkMagInhibition();
-	bool shouldInhibitMag() const;
+	void check3DMagFusionSuitability();
 	bool canRealignYawUsingGps() const { return _control_status.flags.fixed_wing; }
 	bool canResetMagHeading() const { return !isStrongMagneticDisturbance(); }
-	bool isStrongMagneticDisturbance() const;
 	bool canUse3DMagFusion() const;
 	void controlMagStateOnlyFusion();
 	void checkYawAngleObservability();
-	bool isYawAngleObservable() const { return _yaw_angle_observable; }
 	void checkMagBiasObservability();
+	bool isYawAngleObservable() const { return _yaw_angle_observable; }
 	bool isMagBiasObservable() const { return _mag_bias_observable; }
+	void checkMagDeclRequired();
+	void checkMagInhibition();
+	bool shouldInhibitMag() const;
+	bool isStrongMagneticDisturbance() const;
 	void runMagAndMagDeclFusions();
+	void run3DMagAndDeclFusions();
 
 	// control fusion of range finder observations
 	void controlRangeFinderFusion();

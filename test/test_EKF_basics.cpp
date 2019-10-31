@@ -196,7 +196,7 @@ TEST_F(EkfInitializationTest, initialControlMode)
 	EXPECT_EQ(0, (int) control_status.flags.gnd_effect);
 	EXPECT_EQ(0, (int) control_status.flags.rng_stuck);
 	EXPECT_EQ(0, (int) control_status.flags.gps_yaw);
-	EXPECT_EQ(0, (int) control_status.flags.mag_align_complete);
+	EXPECT_EQ(0, (int) control_status.flags.mag_aligned_in_flight);
 	EXPECT_EQ(0, (int) control_status.flags.ev_vel);
 	EXPECT_EQ(0, (int) control_status.flags.synthetic_mag_z);
 }
@@ -259,7 +259,7 @@ TEST_F(EkfInitializationTest, gpsFusion)
 	EXPECT_EQ(0, (int) control_status.flags.gnd_effect);
 	EXPECT_EQ(0, (int) control_status.flags.rng_stuck);
 	EXPECT_EQ(0, (int) control_status.flags.gps_yaw);
-	EXPECT_EQ(0, (int) control_status.flags.mag_align_complete);
+	EXPECT_EQ(0, (int) control_status.flags.mag_aligned_in_flight);
 	EXPECT_EQ(0, (int) control_status.flags.ev_vel);
 	EXPECT_EQ(0, (int) control_status.flags.synthetic_mag_z);
 }
