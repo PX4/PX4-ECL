@@ -1306,18 +1306,19 @@ void Ekf::controlDragFusion()
 
 void Ekf::controlMagFusion()
 {
-	if ((_params.mag_fusion_type >= MAG_FUSE_TYPE_NONE)
-	    || _control_status.flags.mag_fault) {
-		stopMagFusion();
-		return;
-	}
-
 	// If we are on ground, store the local position and time to use as a reference
 	// Also reset the flight alignment flag so that the mag fields will be re-initialised next time we achieve flight altitude
 	if (!_control_status.flags.in_air) {
 		_last_on_ground_posD = _state.pos(2);
 		_control_status.flags.mag_aligned_in_flight = false;
 		_num_bad_flight_yaw_events = 0;
+	}
+
+	if ((_params.mag_fusion_type >= MAG_FUSE_TYPE_NONE)
+	    || _control_status.flags.mag_fault
+	    || !_control_status.flags.tilt_align) {
+		stopMagFusion();
+		return;
 	}
 
 	if (canRunMagFusion()) {
@@ -1419,7 +1420,7 @@ void Ekf::runInAirYawReset()
 
 bool Ekf::isYawResetAuthorized() const
 {
-	return !_mag_use_inhibit && _control_status.flags.tilt_align;
+	return !_mag_use_inhibit;
 }
 
 void Ekf::runVelPosReset()
@@ -1479,12 +1480,10 @@ void Ekf::checkMagBiasObservability()
 
 bool Ekf::canUse3DMagFusion() const
 {
-	// Use of 3D fusion requires valid tilt estimates and an in-air heading alignment
-	// but it should not be used when the heading and mag biases are not observable for
-	// more than 2 seconds
-	return _control_status.flags.tilt_align
-		&& _control_status.flags.mag_aligned_in_flight
-		&& ((_imu_sample_delayed.time_us - _time_last_mov_3d_mag_suitable) < (uint64_t)2e6);
+	// Use of 3D fusion requires an in-air heading alignment but it should not
+	// be used when the heading and mag biases are not observable for more than 2 seconds
+	return _control_status.flags.mag_aligned_in_flight
+	       && ((_imu_sample_delayed.time_us - _time_last_mov_3d_mag_suitable) < (uint64_t)2e6);
 }
 
 void Ekf::controlMagStateOnlyFusion()
