@@ -627,21 +627,22 @@ private:
 	void checkHaglYawResetReq();
 	float getTerrainVPos() const;
 
-	void runInAirYawReset();
 	void runOnGroundYawReset();
 	bool isYawResetAuthorized() const;
+	bool canResetMagHeading() const;
+	void runInAirYawReset();
+	bool canRealignYawUsingGps() const;
 	void runVelPosReset();
 
 	void selectMagAuto();
 	void check3DMagFusionSuitability();
-	bool canRealignYawUsingGps() const { return _control_status.flags.fixed_wing; }
-	bool canResetMagHeading() const { return !isStrongMagneticDisturbance(); }
-	bool canUse3DMagFusion() const;
-	void controlMagStateOnlyFusion();
 	void checkYawAngleObservability();
 	void checkMagBiasObservability();
-	bool isYawAngleObservable() const { return _yaw_angle_observable; }
-	bool isMagBiasObservable() const { return _mag_bias_observable; }
+	bool isYawAngleObservable() const;
+	bool isMagBiasObservable() const;
+	bool canUse3DMagFusion() const;
+
+	void controlMagStateOnlyFusion();
 	void checkMagDeclRequired();
 	void checkMagInhibition();
 	bool shouldInhibitMag() const;
