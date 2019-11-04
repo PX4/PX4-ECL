@@ -152,11 +152,10 @@ bool Ekf::canResetMagHeading() const
 void Ekf::runInAirYawReset()
 {
 	if (_mag_yaw_reset_req && isYawResetAuthorized()) {
-		const bool has_realigned_yaw = canRealignYawUsingGps()
-					       ? realignYawGPS()
-					       : canResetMagHeading()
-						      ? resetMagHeading(_mag_sample_delayed.mag)
-						      : false;
+		bool has_realigned_yaw = false;
+
+		if (canRealignYawUsingGps()) { has_realigned_yaw = realignYawGPS(); }
+		else if (canResetMagHeading()) { has_realigned_yaw = resetMagHeading(_mag_sample_delayed.mag); }
 
 		_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
 		_mag_yaw_reset_req = !has_realigned_yaw;
