@@ -78,8 +78,9 @@ void Ekf::controlMagFusion()
 			controlMagStateOnlyFusion();
 			break;
 
-		case MAG_FUSE_TYPE_HEADING:
 		case MAG_FUSE_TYPE_INDOOR:
+		/* fallthrough */
+		case MAG_FUSE_TYPE_HEADING:
 			startMagHdgFusion();
 			break;
 
@@ -303,14 +304,10 @@ bool Ekf::shouldInhibitMag() const
 	// is available, assume that we are operating indoors and the magnetometer should not be used.
 	// Also inhibit mag fusion when a strong magnetic field interference is detected
 	const bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR);
-	const bool not_using_gps = !(_params.fusion_mode & MASK_USE_GPS) || !_control_status.flags.gps;
-	const bool not_using_evpos = !(_params.fusion_mode & MASK_USE_EVPOS) || !_control_status.flags.ev_pos;
-	const bool not_using_evvel = !(_params.fusion_mode & MASK_USE_EVVEL) || !_control_status.flags.ev_vel;
-	const bool not_selected_evyaw =  !(_params.fusion_mode & MASK_USE_EVYAW);
-	const bool heading_not_required_for_navigation = not_using_gps &&
-							 not_using_evpos &&
-							 not_using_evvel &&
-							 not_selected_evyaw;
+
+	const bool heading_not_required_for_navigation = !_control_status.flags.gps
+							 && !_control_status.flags.ev_pos
+							 && !_control_status.flags.ev_vel;
 
 	return (user_selected && heading_not_required_for_navigation)
 	       || isStrongMagneticDisturbance();
