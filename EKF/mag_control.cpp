@@ -318,7 +318,30 @@ bool Ekf::shouldInhibitMag() const
 
 bool Ekf::isStrongMagneticDisturbance() const
 {
-	return _mag_sample_delayed.mag.length() > 2.f * _mag_strength_gps;
+	return _NED_origin_initialised
+	       ? !isMeasuredMatchingGpsMagStrength()
+	       : !isMeasuredMatchingAverageMagStrength();
+}
+
+bool Ekf::isMeasuredMatchingGpsMagStrength() const
+{
+	constexpr float wmm_gate_size = 0.2f; // +/- Gauss
+	return isMeasuredMatchingExpected(_mag_sample_delayed.mag.length(), _mag_strength_gps, wmm_gate_size);
+}
+
+bool Ekf::isMeasuredMatchingAverageMagStrength() const
+{
+	constexpr float average_earth_mag_field_strength = 0.45f; // Gauss
+	constexpr float average_earth_mag_gate_size = 0.40f; // +/- Gauss
+	return isMeasuredMatchingExpected(_mag_sample_delayed.mag.length(),
+					  average_earth_mag_field_strength,
+					  average_earth_mag_gate_size);
+}
+
+bool Ekf::isMeasuredMatchingExpected(const float measured, const float expected, const float gate)
+{
+	return (measured >= expected - gate)
+		&& (measured <= expected + gate);
 }
 
 void Ekf::runMagAndMagDeclFusions()

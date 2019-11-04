@@ -647,6 +647,9 @@ private:
 	void checkMagInhibition();
 	bool shouldInhibitMag() const;
 	bool isStrongMagneticDisturbance() const;
+	bool isMeasuredMatchingGpsMagStrength() const;
+	bool isMeasuredMatchingAverageMagStrength() const;
+	static bool isMeasuredMatchingExpected(float measured, float expected, float gate);
 	void runMagAndMagDeclFusions();
 	void run3DMagAndDeclFusions();
 
