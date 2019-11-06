@@ -42,6 +42,7 @@
 void Ekf::controlMagFusion()
 {
 	updateMagFilter();
+	checkMagFieldStrength();
 
 	// If we are on ground, store the local position and time to use as a reference
 	// Also reset the flight alignment flag so that the mag fields will be re-initialised next time we achieve flight altitude
@@ -321,11 +322,21 @@ bool Ekf::shouldInhibitMag() const
 	       || isStrongMagneticDisturbance();
 }
 
+void Ekf::checkMagFieldStrength()
+{
+	if (_params.check_mag_strength) {
+		_control_status.flags.mag_field_disturbed = _NED_origin_initialised
+							    ? !isMeasuredMatchingGpsMagStrength()
+							    : !isMeasuredMatchingAverageMagStrength();
+
+	} else {
+		_control_status.flags.mag_field_disturbed = false;
+	}
+}
+
 bool Ekf::isStrongMagneticDisturbance() const
 {
-	return _NED_origin_initialised
-	       ? !isMeasuredMatchingGpsMagStrength()
-	       : !isMeasuredMatchingAverageMagStrength();
+	return _control_status.flags.mag_field_disturbed;
 }
 
 bool Ekf::isMeasuredMatchingGpsMagStrength() const

@@ -171,7 +171,7 @@ void Ekf::fuseMag()
 		return;
 	}
 
-	bool update_all_states = !_control_status.flags.update_mag_states_only && !_flt_mag_align_converging;
+	bool update_all_states = !_flt_mag_align_converging;
 
 	// update the states and covariance using sequential fusion of the magnetometer components
 	for (uint8_t index = 0; index <= 2; index++) {

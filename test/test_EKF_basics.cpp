@@ -190,7 +190,7 @@ TEST_F(EkfInitializationTest, initialControlMode)
 	EXPECT_EQ(0, (int) control_status.flags.ev_yaw);
 	EXPECT_EQ(0, (int) control_status.flags.ev_hgt);
 	EXPECT_EQ(0, (int) control_status.flags.fuse_beta);
-	EXPECT_EQ(0, (int) control_status.flags.update_mag_states_only);
+	EXPECT_EQ(0, (int) control_status.flags.mag_field_disturbed);
 	EXPECT_EQ(0, (int) control_status.flags.fixed_wing);
 	EXPECT_EQ(0, (int) control_status.flags.mag_fault);
 	EXPECT_EQ(0, (int) control_status.flags.gnd_effect);
@@ -253,7 +253,7 @@ TEST_F(EkfInitializationTest, gpsFusion)
 	EXPECT_EQ(0, (int) control_status.flags.ev_yaw);
 	EXPECT_EQ(0, (int) control_status.flags.ev_hgt);
 	EXPECT_EQ(0, (int) control_status.flags.fuse_beta);
-	EXPECT_EQ(0, (int) control_status.flags.update_mag_states_only);
+	EXPECT_EQ(0, (int) control_status.flags.mag_field_disturbed);
 	EXPECT_EQ(0, (int) control_status.flags.fixed_wing);
 	EXPECT_EQ(0, (int) control_status.flags.mag_fault);
 	EXPECT_EQ(0, (int) control_status.flags.gnd_effect);
