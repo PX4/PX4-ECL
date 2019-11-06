@@ -545,7 +545,7 @@ bool Ekf::realignYawGPS()
 
 	} else {
 		// attempt a normal alignment using the magnetometer
-		return resetMagHeading(_mag_sample_delayed.mag);
+		return resetMagHeading(_mag_lpf.getState());
 
 	}
 }

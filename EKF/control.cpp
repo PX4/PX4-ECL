@@ -57,7 +57,7 @@ void Ekf::controlFusionModes()
 		// and declare the tilt alignment complete
 		if ((angle_err_var_vec(0) + angle_err_var_vec(1)) < sq(math::radians(3.0f))) {
 			_control_status.flags.tilt_align = true;
-			_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+			_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState());
 
 			// send alignment status message to the console
 			if (_control_status.flags.baro_hgt) {
@@ -506,7 +506,7 @@ void Ekf::controlOpticalFlowFusion()
 		{
 			// If the heading is not aligned, reset the yaw and magnetic field states
 			if (!_control_status.flags.yaw_align) {
-				_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+				_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState());
 			}
 
 			// If the heading is valid and use is not inhibited , start using optical flow aiding
@@ -628,7 +628,7 @@ void Ekf::controlGpsFusion()
 								       _mag_inhibit_yaw_reset_req;
 				if (want_to_reset_mag_heading && canResetMagHeading()) {
 					_control_status.flags.ev_yaw = false;
-					_control_status.flags.yaw_align = resetMagHeading(_mag_sample_delayed.mag);
+					_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState());
 					// Handle the special case where we have not been constraining yaw drift or learning yaw bias due
 					// to assumed invalid mag field associated with indoor operation with a downwards looking flow sensor.
 					if (_mag_inhibit_yaw_reset_req) {

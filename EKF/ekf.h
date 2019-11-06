@@ -621,6 +621,7 @@ private:
 
 	// control fusion of magnetometer observations
 	void controlMagFusion();
+	void updateMagFilter();
 
 	bool canRunMagFusion() const;
 

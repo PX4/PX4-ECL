@@ -41,6 +41,8 @@
 
 void Ekf::controlMagFusion()
 {
+	updateMagFilter();
+
 	// If we are on ground, store the local position and time to use as a reference
 	// Also reset the flight alignment flag so that the mag fields will be re-initialised next time we achieve flight altitude
 	if (!_control_status.flags.in_air) {
@@ -102,6 +104,13 @@ void Ekf::controlMagFusion()
 	}
 }
 
+void Ekf::updateMagFilter()
+{
+	if (_mag_data_ready) {
+		_mag_lpf.update(_mag_sample_delayed.mag);
+	}
+}
+
 bool Ekf::canRunMagFusion() const
 {
 	// check for new magnetometer data that has fallen behind the fusion time horizon
@@ -131,7 +140,7 @@ void Ekf::runOnGroundYawReset()
 {
 	if (_mag_yaw_reset_req && isYawResetAuthorized()) {
 		const bool has_realigned_yaw = canResetMagHeading()
-					       ? resetMagHeading(_mag_sample_delayed.mag)
+					       ? resetMagHeading(_mag_lpf.getState())
 					       : false;
 
 		_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
@@ -155,7 +164,7 @@ void Ekf::runInAirYawReset()
 		bool has_realigned_yaw = false;
 
 		if (canRealignYawUsingGps()) { has_realigned_yaw = realignYawGPS(); }
-		else if (canResetMagHeading()) { has_realigned_yaw = resetMagHeading(_mag_sample_delayed.mag); }
+		else if (canResetMagHeading()) { has_realigned_yaw = resetMagHeading(_mag_lpf.getState()); }
 
 		_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
 		_mag_yaw_reset_req = !has_realigned_yaw;
@@ -354,7 +363,7 @@ void Ekf::run3DMagAndDeclFusions()
 {
 	if (!_mag_decl_cov_reset) {
 		// After any magnetic field covariance reset event the earth field state
-		// covariances need to be corrected to incorporate knowedge of the declination
+		// covariances need to be corrected to incorporate knowledge of the declination
 		// before fusing magnetomer data to prevent rapid rotation of the earth field
 		// states for the first few observations.
 		fuseDeclination(0.02f);
