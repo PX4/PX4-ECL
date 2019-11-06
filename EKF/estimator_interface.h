@@ -44,6 +44,7 @@
 #include <ecl.h>
 #include "common.h"
 #include "RingBuffer.h"
+#include "AlphaFilter.hpp"
 
 #include <geo/geo.h>
 #include <matrix/math.hpp>
@@ -55,6 +56,8 @@ class EstimatorInterface
 {
 
 public:
+	typedef AlphaFilter<Vector3f> AlphaFilterVector3f;
+
 	EstimatorInterface() = default;
 	virtual ~EstimatorInterface() = default;
 

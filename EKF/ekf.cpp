@@ -169,12 +169,10 @@ bool Ekf::initialiseFilter()
 
 			// don't start using data until we can be certain all bad initial data has been flushed
 			if (_mag_counter == (uint8_t)(_obs_buffer_length + 1)) {
-				// initialise filter states
-				_mag_filt_state = _mag_sample_delayed.mag;
+				_mag_lpf.reset(_mag_sample_delayed.mag);
 
 			} else if (_mag_counter > (uint8_t)(_obs_buffer_length + 1)) {
-				// noise filter the data
-				_mag_filt_state = _mag_filt_state * 0.9f + _mag_sample_delayed.mag * 0.1f;
+				_mag_lpf.update(_mag_sample_delayed.mag);
 			}
 		}
 	}
@@ -270,7 +268,7 @@ bool Ekf::initialiseFilter()
 		_R_to_earth = Dcmf(_state.quat_nominal);
 
 		// calculate the initial magnetic field and yaw alignment
-		_control_status.flags.yaw_align = resetMagHeading(_mag_filt_state, false, false);
+		_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState(), false, false);
 
 		// initialise the state covariance matrix
 		initialiseCovariance();

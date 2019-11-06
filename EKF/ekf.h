@@ -430,7 +430,7 @@ private:
 	uint32_t _mag_counter{0};		///< number of magnetometer samples read during initialisation
 	uint32_t _ev_counter{0};		///< number of external vision samples read during initialisation
 	uint64_t _time_last_mag{0};		///< measurement time of last magnetomter sample (uSec)
-	Vector3f _mag_filt_state;		///< filtered magnetometer measurement (Gauss)
+	AlphaFilterVector3f _mag_lpf;		///< filtered magnetometer measurement (Gauss)
 	Vector3f _delVel_sum;			///< summed delta velocity (m/sec)
 	float _hgt_sensor_offset{0.0f};		///< set as necessary if desired to maintain the same height after a height reset (m)
 	float _baro_hgt_offset{0.0f};		///< baro height reading at the local NED origin (m)
@@ -561,7 +561,7 @@ private:
 
 	// reset the heading and magnetic field states using the declination and magnetometer/external vision measurements
 	// return true if successful
-	bool resetMagHeading(Vector3f &mag_init, bool increase_yaw_var = true, bool update_buffer=true);
+	bool resetMagHeading(const Vector3f &mag_init, bool increase_yaw_var = true, bool update_buffer=true);
 
 	// Do a forced re-alignment of the yaw angle to align with the horizontal velocity vector from the GPS.
 	// It is used to align the yaw angle after launch or takeoff for fixed wing vehicle.
