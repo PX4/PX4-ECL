@@ -643,7 +643,6 @@ private:
 	bool isMagBiasObservable() const;
 	bool canUse3DMagFusion() const;
 
-	void controlMagStateOnlyFusion();
 	void checkMagDeclRequired();
 	void checkMagInhibition();
 	bool shouldInhibitMag() const;

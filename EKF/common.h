@@ -200,7 +200,7 @@ struct auxVelSample {
 #define MAG_FUSE_TYPE_AUTO      0	///< The selection of either heading or 3D magnetometer fusion will be automatic
 #define MAG_FUSE_TYPE_HEADING   1	///< Simple yaw angle fusion will always be used. This is less accurate, but less affected by earth field distortions. It should not be used for pitch angles outside the range from -60 to +60 deg
 #define MAG_FUSE_TYPE_3D        2	///< Magnetometer 3-axis fusion will always be used. This is more accurate, but more affected by localised earth field distortions
-#define MAG_FUSE_TYPE_AUTOFW    3	///< The same as option 0, but if fusing airspeed, magnetometer fusion is only allowed to modify the magnetic field states.
+#define MAG_FUSE_TYPE_UNUSED    3	///< Not implemented
 #define MAG_FUSE_TYPE_INDOOR    4	///< The same as option 0, but magnetometer or yaw fusion will not be used unless earth frame external aiding (GPS or External Vision) is being used. This prevents inconsistent magnetic fields associated with indoor operation degrading state estimates.
 #define MAG_FUSE_TYPE_NONE	5	///< Do not use magnetometer under any circumstance. Other sources of yaw may be used if selected via the EKF2_AID_MASK parameter.
 

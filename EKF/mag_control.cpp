@@ -76,11 +76,6 @@ void Ekf::controlMagFusion()
 			selectMagAuto();
 			break;
 
-		case MAG_FUSE_TYPE_AUTOFW:
-			selectMagAuto();
-			controlMagStateOnlyFusion();
-			break;
-
 		case MAG_FUSE_TYPE_INDOOR:
 		/* fallthrough */
 		case MAG_FUSE_TYPE_HEADING:
@@ -92,7 +87,7 @@ void Ekf::controlMagFusion()
 			break;
 
 		default:
-			stopMagFusion();
+			selectMagAuto();
 			break;
 		}
 
@@ -249,37 +244,6 @@ bool Ekf::canUse3DMagFusion() const
 	// be used when the heading and mag biases are not observable for more than 2 seconds
 	return _control_status.flags.mag_aligned_in_flight
 	       && ((_imu_sample_delayed.time_us - _time_last_mov_3d_mag_suitable) < (uint64_t)2e6);
-}
-
-void Ekf::controlMagStateOnlyFusion()
-{
-	/*
-	Control switch-over between only updating the mag states to updating all states
-	When flying as a fixed wing aircraft, a misaligned magnetometer can cause an error in pitch/roll and accel bias estimates.
-	When MAG_FUSE_TYPE_AUTOFW is selected and the vehicle is flying as a fixed wing, then magnetometer fusion is only allowed
-	to access the magnetic field states.
-	*/
-	_control_status.flags.update_mag_states_only =  _control_status.flags.fixed_wing;
-
-	// For the first 5 seconds after switching to 3-axis fusion we allow the magnetic field state estimates to stabilise
-	// before they are used to constrain heading drift
-	_flt_mag_align_converging = ((_imu_sample_delayed.time_us - _flt_mag_align_start_time) < (uint64_t)5e6);
-
-	if (_control_status.flags.mag_3D
-	    && _control_status_prev.flags.update_mag_states_only
-	    && !_control_status.flags.update_mag_states_only) {
-		// When re-commencing use of magnetometer to correct vehicle states
-		// set the field state variance to the observation variance and zero
-		// the covariance terms to allow the field states re-learn rapidly
-		clearMagCov();
-
-		for (uint8_t index = 0; index <= 5; index ++) {
-			P[index + 16][index + 16] = sq(_params.mag_noise);
-		}
-
-		// save covariance data for re-use when auto-switching between heading and 3-axis fusion
-		saveMagCovData();
-	}
 }
 
 void Ekf::checkMagDeclRequired()
