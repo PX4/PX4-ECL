@@ -54,7 +54,7 @@ void Ekf::controlMagFusion()
 
 	if ((_params.mag_fusion_type >= MAG_FUSE_TYPE_NONE)
 	    || _control_status.flags.mag_fault
-	    || !_control_status.flags.tilt_align) {
+	    || !_control_status.flags.yaw_align) {
 		stopMagFusion();
 		return;
 	}
@@ -94,9 +94,7 @@ void Ekf::controlMagFusion()
 		checkMagDeclRequired();
 		checkMagInhibition();
 
-		if (_control_status.flags.yaw_align) {
-			runMagAndMagDeclFusions();
-		}
+		runMagAndMagDeclFusions();
 	}
 }
 
@@ -139,7 +137,6 @@ void Ekf::runOnGroundYawReset()
 					       ? resetMagHeading(_mag_lpf.getState())
 					       : false;
 
-		_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
 		_mag_yaw_reset_req = !has_realigned_yaw;
 	}
 }
@@ -162,7 +159,6 @@ void Ekf::runInAirYawReset()
 		if (canRealignYawUsingGps()) { has_realigned_yaw = realignYawGPS(); }
 		else if (canResetMagHeading()) { has_realigned_yaw = resetMagHeading(_mag_lpf.getState()); }
 
-		_control_status.flags.yaw_align = _control_status.flags.yaw_align || has_realigned_yaw;
 		_mag_yaw_reset_req = !has_realigned_yaw;
 		_control_status.flags.mag_aligned_in_flight = has_realigned_yaw;
 	}
