@@ -257,14 +257,10 @@ void Ekf::controlExternalVisionFusion()
 
 				// turn on fusion of external vision yaw measurements and disable all magnetometer fusion
 				_control_status.flags.ev_yaw = true;
-				_control_status.flags.mag_hdg = false;
 				_control_status.flags.mag_dec = false;
 
-				// save covariance data for re-use if currently doing 3-axis fusion
-				if (_control_status.flags.mag_3D) {
-					saveMagCovData();
-					_control_status.flags.mag_3D = false;
-				}
+				stopMagHdgFusion();
+				stopMag3DFusion();
 
 				ECL_INFO_TIMESTAMPED("EKF commencing external vision yaw fusion");
 			}
@@ -596,14 +592,10 @@ void Ekf::controlGpsFusion()
 				// turn on fusion of external vision yaw measurements and disable all other yaw fusion
 				_control_status.flags.gps_yaw = true;
 				_control_status.flags.ev_yaw = false;
-				_control_status.flags.mag_hdg = false;
 				_control_status.flags.mag_dec = false;
 
-				// save covariance data for re-use if currently doing 3-axis fusion
-				if (_control_status.flags.mag_3D) {
-					saveMagCovData();
-					_control_status.flags.mag_3D = false;
-				}
+				stopMagHdgFusion();
+				stopMag3DFusion();
 
 				ECL_INFO_TIMESTAMPED("EKF commencing GPS yaw fusion");
 			}
