@@ -296,14 +296,6 @@ public:
 		}
 	}
 
-	// get the NED velocity derivative in earth frame
-	void get_vel_deriv_ned(float *vel_deriv)
-	{
-		for (unsigned i = 0; i < 3; i++) {
-			vel_deriv[i] = _vel_deriv_ned(i);
-		}
-	}
-
 	// get the derivative of the vertical position of the body frame origin in local NED earth frame
 	void get_pos_d_deriv(float *pos_d_deriv)
 	{
@@ -464,7 +456,6 @@ protected:
 	imuSample _imu_sample_new{};		// imu sample capturing the newest imu data
 	Matrix3f _R_to_earth_now;		// rotation matrix from body to earth frame at current time
 	Vector3f _vel_imu_rel_body_ned;		// velocity of IMU relative to body origin in NED earth frame
-	Vector3f _vel_deriv_ned;		// velocity derivative at the IMU in NED earth frame (m/s/s)
 
 	bool _imu_updated{false};      // true if the ekf should update (completed downsampling process)
 	bool _initialised{false};      // true if the ekf interface instance (data buffering) is initialized

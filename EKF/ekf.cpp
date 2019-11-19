@@ -485,11 +485,6 @@ void Ekf::calculateOutputStates()
 	// correct for measured acceleration due to gravity
 	delta_vel_NED(2) += CONSTANTS_ONE_G * imu.delta_vel_dt;
 
-	// calculate the earth frame velocity derivatives
-	if (imu.delta_vel_dt > 1e-4f) {
-		_vel_deriv_ned = delta_vel_NED * (1.0f / imu.delta_vel_dt);
-	}
-
 	// save the previous velocity so we can use trapezoidal integration
 	const Vector3f vel_last{_output_new.vel};
 
