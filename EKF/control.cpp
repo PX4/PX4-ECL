@@ -190,8 +190,8 @@ void Ekf::controlExternalVisionFusion()
 			if ((_time_last_imu - _time_last_ext_vision) < (2 * EV_MAX_INTERVAL)) {
 				// turn on use of external vision measurements for position
 				if (_params.fusion_mode & MASK_USE_EVPOS && !_control_status.flags.ev_pos) {
-					resetToEvHorizontalPosition();
 					startEvPosFusion();
+					resetToGeneralHorizontalPosition()
 				}
 
 				// turn on use of external vision measurements for velocity
