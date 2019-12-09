@@ -191,7 +191,7 @@ void Ekf::controlExternalVisionFusion()
 				// turn on use of external vision measurements for position
 				if (_params.fusion_mode & MASK_USE_EVPOS && !_control_status.flags.ev_pos) {
 					startEvPosFusion();
-					resetToGeneralHorizontalPosition()
+					resetToGeneralHorizontalPosition();
 				}
 
 				// turn on use of external vision measurements for velocity
