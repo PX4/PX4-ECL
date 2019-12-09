@@ -687,3 +687,208 @@ Quatf Ekf::calculate_quaternion() const
 	// the quaternions must always be normalised after modification
 	return Quatf{_output_new.quat_nominal * AxisAnglef{delta_angle}}.unit();
 }
+
+
+void Ekf::startGpsFusion()
+{
+	startGpsPosFusion();
+	startGpsVelFusion();
+}
+
+void Ekf::startGpsPosFusion()
+{
+	_control_status.flags.gps = true;
+	resetToGpsHorizontalPosition();
+	_time_last_gps = _time_last_imu;	// TODO: Do we need this?
+	ECL_INFO_TIMESTAMPED("commencing GPS fusion");
+}
+
+void Ekf::startGpsVelFusion()
+{
+	// if we are not already aiding with optical flow, then we need to reset the position and velocity
+	// otherwise we only need to reset the position
+	if (!_control_status.flags.opt_flow) {
+		resetToGpsVelocity();
+	}
+}
+
+void Ekf::startGpsYawFusion()
+{
+	// turn on fusion of gps yaw measurements and disable all other yaw fusion
+	_control_status.flags.gps_yaw = true;
+	stopEvYawFusion();
+	stopMagHdgFusion();
+	stopMag3DFusion();
+	ECL_INFO_TIMESTAMPED("commencing GPS yaw fusion");
+}
+
+void Ekf::startEvPosFusion()
+{
+	_control_status.flags.ev_pos = true;
+	ECL_INFO_TIMESTAMPED("commencing external vision position fusion");
+}
+
+void Ekf::startEvVelFusion()
+{
+	_control_status.flags.ev_vel = true;
+	ECL_INFO_TIMESTAMPED("commencing external vision velocity fusion");
+}
+
+void Ekf::startEvYawFusion()
+{
+	// turn on fusion of external vision yaw measurements and disable all other yaw fusion
+	_control_status.flags.ev_yaw = true;
+	stopMagHdgFusion();
+	stopMag3DFusion();
+	stopGpsYawFusion();
+	ECL_INFO_TIMESTAMPED("commencing external vision yaw fusion");
+}
+
+void Ekf::startAuxVelFusion()
+{
+	_control_status.flags.aux_vel = true;
+	ECL_INFO_TIMESTAMPED("commencing auxiliar velocity fusion");
+}
+
+void Ekf::startFlowFusion()
+{
+	// set the flag and reset the fusion timeout
+	_control_status.flags.opt_flow = true;
+	_time_last_of_fuse = _time_last_imu; // TODO: Does this belong here or to the fuse call itself?
+
+	// if we are not using GPS or external vision aiding, then the velocity and position states and covariances need to be set
+	const bool flow_aid_only = !(_control_status.flags.gps || _control_status.flags.ev_pos || _control_status.flags.ev_vel);
+	if (flow_aid_only) {
+		resetToOptFlowVelocity();
+
+		if (!_control_status.flags.in_air)
+		{
+			// we are likely starting OF for the first time so reset the horizontal position
+			resetToZeroHorizontalPosition();
+		}
+		else
+		{
+			resetToLastKnowHorizontalPosition();
+		}
+
+		// estimate is relative to initial position in this mode, so we start with zero error.
+		// fixCovariances() will take care of this.
+		setDiag(P,7,8, 0.0f);
+
+		// align the output observer to the EKF states
+		alignOutputFilter(); // TODO: is this necessary?
+	}
+
+	ECL_INFO_TIMESTAMPED("commencing optical flow fusion");
+}
+
+void Ekf::stopMagFusion()
+{
+	stopMag3DFusion();
+	stopMagHdgFusion();
+	clearMagCov();
+}
+
+void Ekf::stopMag3DFusion()
+{
+	// save covariance data for re-use if currently doing 3-axis fusion
+	if (_control_status.flags.mag_3D) {
+		saveMagCovData();
+		_control_status.flags.mag_3D = false;
+	}
+}
+
+void Ekf::stopMagHdgFusion()
+{
+	_control_status.flags.mag_hdg = false;
+}
+
+void Ekf::startMagHdgFusion()
+{
+	stopMag3DFusion();
+	_control_status.flags.mag_hdg = true;
+}
+
+void Ekf::startMag3DFusion()
+{
+	if (!_control_status.flags.mag_3D) {
+		stopMagHdgFusion();
+		zeroMagCov();
+		loadMagCovData();
+		_control_status.flags.mag_3D = true;
+	}
+}
+
+// stop fusion function do not contain info message. The message should be published
+// by the functions client, together with the reasoning why we stop the fusion.
+void Ekf::stopGpsFusion()
+{
+	stopGpsPosFusion();
+	stopGpsVelFusion();
+	stopGpsYawFusion();
+}
+
+void Ekf::stopGpsPosFusion()
+{
+	_control_status.flags.gps = false;
+	_control_status.flags.gps_hgt = false;
+	_gps_pos_innov.setZero();
+	_gps_pos_innov_var.setZero();
+	_gps_pos_test_ratio.setZero();
+}
+
+void Ekf::stopGpsVelFusion()
+{
+	_gps_vel_innov.setZero();
+	_gps_vel_innov_var.setZero();
+	_gps_vel_test_ratio.setZero();
+}
+
+void Ekf::stopGpsYawFusion()
+{
+	_control_status.flags.gps_yaw = false;
+}
+
+void Ekf::stopEvFusion()
+{
+	stopEvPosFusion();
+	stopEvVelFusion();
+	stopEvYawFusion();
+}
+
+void Ekf::stopEvPosFusion()
+{
+	_control_status.flags.ev_pos = false;
+	_ev_pos_innov.setZero();
+	_ev_pos_innov_var.setZero();
+	_ev_pos_test_ratio.setZero();
+}
+
+void Ekf::stopEvVelFusion()
+{
+	_control_status.flags.ev_vel = false;
+	_ev_vel_innov.setZero();
+	_ev_vel_innov_var.setZero();
+	_ev_vel_test_ratio.setZero();
+}
+
+void Ekf::stopEvYawFusion()
+{
+	_control_status.flags.ev_yaw = false;
+}
+
+void Ekf::stopAuxVelFusion()
+{
+	_control_status.flags.aux_vel = false;
+	_aux_vel_innov.setZero();
+	_aux_vel_innov_var.setZero();
+	_aux_vel_test_ratio.setZero();
+}
+
+void Ekf::stopFlowFusion()
+{
+	_control_status.flags.opt_flow = false;
+	_flow_innov.setZero();
+	_flow_innov_var.setZero();
+	_optflow_test_ratio = 0.0f;
+}

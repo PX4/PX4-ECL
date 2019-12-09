@@ -45,178 +45,268 @@
 #include <mathlib/mathlib.h>
 #include <cstdlib>
 
-// Reset the velocity states. If we have a recent and valid
-// gps measurement then use for velocity initialisation
-bool Ekf::resetVelocity()
+// Reset the velocity states. Previously called resetVelocity()
+// Be careful to call this function, since you have to make sure that you have recent data
+// for the sensor that will be chosen.
+void Ekf::resetToGeneralVelocity()
 {
-	// used to calculate the velocity change due to the reset
-	Vector3f vel_before_reset = _state.vel;
+	// decide to which velocity we want to reset
+	if (_control_status.flags.gps && _gps_check_fail_status.value==0)
+	{
+		resetToGpsVelocity();
+	}
+	else if (_control_status.flags.opt_flow)
+	{
+		resetToOptFlowVelocity();
+	}
+	else if (_control_status.flags.ev_vel)
+	{
+		resetToEvVelocity();
+	}
+	else	// Used when falling back to non-aiding mode of operation
+	{
+		resetToZeroVelocity();
+	}
+}
 
-	// reset EKF states
-	if (_control_status.flags.gps && _gps_check_fail_status.value==0) {
-		ECL_INFO_TIMESTAMPED("EKF reset velocity to GPS");
-		// this reset is only called if we have new gps data at the fusion time horizon
-		_state.vel = _gps_sample_delayed.vel;
+void Ekf::resetToGpsVelocity()
+{
+	resetVelocity(_gps_sample_delayed.vel);
 
-		// use GPS accuracy to reset variances
-		setDiag(P, 4, 6, sq(_gps_sample_delayed.sacc));
+	setDiag(P, 4, 6, sq(_gps_sample_delayed.sacc));
 
-	} else if (_control_status.flags.opt_flow) {
-		ECL_INFO_TIMESTAMPED("EKF reset velocity to flow");
-		// constrain height above ground to be above minimum possible
-		float heightAboveGndEst = fmaxf((_terrain_vpos - _state.pos(2)), _params.rng_gnd_clearance);
+	ECL_INFO_TIMESTAMPED("reset velocity to GPS");
+}
 
-		// calculate absolute distance from focal point to centre of frame assuming a flat earth
-		float range = heightAboveGndEst / _R_rng_to_earth_2_2;
+void Ekf::resetToEvVelocity()
+{
+	Vector3f _ev_vel = _ev_sample_delayed.vel;
 
-		if ((range - _params.rng_gnd_clearance) > 0.3f && _flow_sample_delayed.dt > 0.05f) {
-			// we should have reliable OF measurements so
-			// calculate X and Y body relative velocities from OF measurements
-			Vector3f vel_optflow_body;
-			vel_optflow_body(0) = - range * _flowRadXYcomp(1) / _flow_sample_delayed.dt;
-			vel_optflow_body(1) =   range * _flowRadXYcomp(0) / _flow_sample_delayed.dt;
-			vel_optflow_body(2) = 0.0f;
-
-			// rotate from body to earth frame
-			Vector3f vel_optflow_earth;
-			vel_optflow_earth = _R_to_earth * vel_optflow_body;
-
-			// take x and Y components
-			_state.vel(0) = vel_optflow_earth(0);
-			_state.vel(1) = vel_optflow_earth(1);
-
-		} else {
-			_state.vel(0) = 0.0f;
-			_state.vel(1) = 0.0f;
-		}
-
-		// reset the velocity covariance terms
-		zeroRows(P, 4, 5);
-		zeroCols(P, 4, 5);
-
-		// reset the horizontal velocity variance using the optical flow noise variance
-		P[5][5] = P[4][4] = sq(range) * calcOptFlowMeasVar();
-	} else if (_control_status.flags.ev_vel) {
-		ECL_INFO_TIMESTAMPED("EKF reset velocity to ev velocity");
-		Vector3f _ev_vel = _ev_sample_delayed.vel;
-		if(_params.fusion_mode & MASK_ROTATE_EV){
-			_ev_vel = _ev_rot_mat *_ev_sample_delayed.vel;
-		}
-		_state.vel(0) = _ev_vel(0);
-		_state.vel(1) = _ev_vel(1);
-		_state.vel(2) = _ev_vel(2);
-		setDiag(P, 4, 6, sq(_ev_sample_delayed.velErr));
-	} else {
-		ECL_INFO_TIMESTAMPED("EKF reset velocity to zero");
-		// Used when falling back to non-aiding mode of operation
-		_state.vel(0) = 0.0f;
-		_state.vel(1) = 0.0f;
-		setDiag(P, 4, 5, 25.0f);
+	if(_params.fusion_mode & MASK_ROTATE_EV){
+		_ev_vel = _ev_rot_mat *_ev_sample_delayed.vel;
 	}
 
-	// calculate the change in velocity and apply to the output predictor state history
-	const Vector3f velocity_change = _state.vel - vel_before_reset;
+	resetVelocity(_ev_vel);
 
+	setDiag(P, 4, 4, sq(_ev_sample_delayed.velErr));
+	setDiag(P, 5, 5, sq(_ev_sample_delayed.velErr));
+	setDiag(P, 6, 6, sq(_ev_sample_delayed.velErr));
+
+	ECL_INFO_TIMESTAMPED("reset velocity to ev velocity");
+}
+
+void Ekf::resetToOptFlowVelocity()
+{
+	Vector3f vel_new;
+
+	// constrain height above ground to be above minimum possible
+	float heightAboveGndEst = fmaxf((_terrain_vpos - _state.pos(2)), _params.rng_gnd_clearance);
+
+	// calculate absolute distance from focal point to centre of frame assuming a flat earth
+	float range = heightAboveGndEst / _R_rng_to_earth_2_2;
+
+	if ((range - _params.rng_gnd_clearance) > 0.3f && _flow_sample_delayed.dt > 0.05f) {
+		// we should have reliable OF measurements so
+		// calculate X and Y body relative velocities from OF measurements
+		Vector3f vel_optflow_body;
+		vel_optflow_body(0) = - range * _flowRadXYcomp(1) / _flow_sample_delayed.dt;
+		vel_optflow_body(1) =   range * _flowRadXYcomp(0) / _flow_sample_delayed.dt;
+		vel_optflow_body(2) = 0.0f;
+
+		// rotate from body to earth frame
+		Vector3f vel_optflow_earth;
+		vel_optflow_earth = _R_to_earth * vel_optflow_body;
+
+		// take x and Y components
+		vel_new(0) = vel_optflow_earth(0);
+		vel_new(1) = vel_optflow_earth(1);
+
+	} else {
+		vel_new(0) = 0.0f;
+		vel_new(1) = 0.0f;
+	}
+
+	resetVelocity(vel_new);
+
+	// reset the velocity covariance terms using the optical flow noise variance
+	setDiag(P, 4, 5, sq(range) * calcOptFlowMeasVar());
+
+	ECL_INFO_TIMESTAMPED("reset velocity to flow");
+}
+
+void Ekf::resetToAuxiliarHorizontalVelocity()
+{
+	Vector3f vel_new;
+	vel_new(0) = _auxvel_sample_delayed.velNE(0);
+	vel_new(1) = _auxvel_sample_delayed.velNE(1);
+	vel_new(2) = _state.vel(2); // keep z velocity unchanged
+	resetVelocity(vel_new);
+
+	setDiag(P, 4, 4, _auxvel_sample_delayed.velVarNE(0));
+	setDiag(P, 5, 5, _auxvel_sample_delayed.velVarNE(1));
+
+	ECL_INFO_TIMESTAMPED("reset velocity to zero");
+}
+
+void Ekf::resetToZeroVelocity()
+{
+	Vector3f vel_new;
+	vel_new(0) = 0.0f;
+	vel_new(1) = 0.0f;
+	// TODO: should we also reset .vel(2) to zero(0)
+	resetVelocity(vel_new);
+
+	setDiag(P, 4, 5, 25.0f);
+
+	ECL_INFO_TIMESTAMPED("reset velocity to zero");
+}
+
+void Ekf::resetVelocity(const Vector3f &vel_new)
+{
+	const Vector3f vel_before_reset = _state.vel;
+
+	_state.vel = vel_new;
+
+	const Vector3f vel_change = vel_new - vel_before_reset;
+
+	// Update output buffered state with velocity change due to reset
 	for (uint8_t index = 0; index < _output_buffer.get_length(); index++) {
-		_output_buffer[index].vel += velocity_change;
+		_output_buffer[index].vel += vel_change;
 	}
 
 	// apply the change in velocity to our newest velocity estimate
 	// which was already taken out from the output buffer
-	_output_new.vel += velocity_change;
+	_output_new.vel += vel_change;
 
 	// capture the reset event
-	_state_reset_status.velNE_change(0) = velocity_change(0);
-	_state_reset_status.velNE_change(1) = velocity_change(1);
-	_state_reset_status.velD_change = velocity_change(2);
+	_state_reset_status.velNE_change(0) = vel_change(0);
+	_state_reset_status.velNE_change(1) = vel_change(1);
+	_state_reset_status.velD_change = vel_change(2);
 	_state_reset_status.velNE_counter++;
 	_state_reset_status.velD_counter++;
-
-	return true;
 }
 
-// Reset position states. If we have a recent and valid
-// gps measurement then use for position initialisation
-bool Ekf::resetPosition()
+// Reset position states.
+// Be careful to call this function, since you have to make sure that you have recent data
+// for the sensor that will be chosen.
+void Ekf::resetToGeneralHorizontalPosition()
 {
-	// ECL_INFO_TIMESTAMPED("Reset Position");
-	// used to calculate the position change due to the reset
-	Vector2f posNE_before_reset;
-	posNE_before_reset(0) = _state.pos(0);
-	posNE_before_reset(1) = _state.pos(1);
-
-	// let the next odometry update know that the previous value of states cannot be used to calculate the change in position
-	_hpos_prev_available = false;
-
-	if (_control_status.flags.gps) {
-		ECL_INFO_TIMESTAMPED("EKF reset position to GPS");
-
-		// this reset is only called if we have new gps data at the fusion time horizon
-		_state.pos(0) = _gps_sample_delayed.pos(0);
-		_state.pos(1) = _gps_sample_delayed.pos(1);
-
-		// use GPS accuracy to reset variances
-		setDiag(P, 7, 8, sq(_gps_sample_delayed.hacc));
-
-	} else if (_control_status.flags.ev_pos) {
-		ECL_INFO_TIMESTAMPED("EKF reset position to ev position");
-
-		// this reset is only called if we have new ev data at the fusion time horizon
-		Vector3f _ev_pos = _ev_sample_delayed.pos;
-		if(_params.fusion_mode & MASK_ROTATE_EV){
-			_ev_pos = _ev_rot_mat *_ev_sample_delayed.pos;
-		}
-		_state.pos(0) = _ev_pos(0);
-		_state.pos(1) = _ev_pos(1);
-
-		// use EV accuracy to reset variances
-		setDiag(P, 7, 8, sq(_ev_sample_delayed.posErr));
-
-	} else if (_control_status.flags.opt_flow) {
-		ECL_INFO_TIMESTAMPED("EKF reset position to last known position");
-
-		if (!_control_status.flags.in_air) {
+	if (_control_status.flags.gps)
+	{
+		// this reset should only be called if we have new gps data at the fusion time horizon
+		resetToGpsHorizontalPosition();
+	}
+	else if (_control_status.flags.ev_pos)
+	{
+		resetToEvHorizontalPosition();
+	}
+	else if (_control_status.flags.opt_flow) // TODO: This should prop
+	{
+		if (!_control_status.flags.in_air)
+		{
 			// we are likely starting OF for the first time so reset the horizontal position
-			_state.pos(0) = 0.0f;
-			_state.pos(1) = 0.0f;
-
-		} else {
-			// set to the last known position
-			_state.pos(0) = _last_known_posNE(0);
-			_state.pos(1) = _last_known_posNE(1);
-
+			resetToZeroHorizontalPosition();
+		}
+		else
+		{
+			resetToLastKnowHorizontalPosition();
 		}
 
 		// estimate is relative to initial position in this mode, so we start with zero error.
-		zeroCols(P,7,8);
-		zeroRows(P,7,8);
-
-	} else {
-		ECL_INFO_TIMESTAMPED("EKF reset position to last known position");
-		// Used when falling back to non-aiding mode of operation
-		_state.pos(0) = _last_known_posNE(0);
-		_state.pos(1) = _last_known_posNE(1);
-		setDiag(P, 7, 8, sq(_params.pos_noaid_noise));
+		// fixCovariances() will take care of this.
+		setDiag(P,7,8, 0.0f);
 	}
+	else
+	{
+		resetToLastKnowHorizontalPosition();
+	}
+}
 
-	// calculate the change in position and apply to the output predictor state history
-	const Vector2f posNE_change{_state.pos(0) - posNE_before_reset(0), _state.pos(1) - posNE_before_reset(1)};
+void Ekf::resetToGpsHorizontalPosition()
+{
+	// let the incremental ev pos fusion know that the previous value of states
+	// cannot be used to calculate the change in position
+	_hpos_prev_available = false;
+
+	Vector3f pos_new;
+	pos_new(0) = _gps_sample_delayed.pos(0);
+	pos_new(1) = _gps_sample_delayed.pos(1);
+
+	resetHorizontalPosition(pos_new);
+
+	setDiag(P, 7, 8, sq(_gps_sample_delayed.hacc));
+
+	ECL_INFO_TIMESTAMPED("reset position to GPS");
+}
+
+void Ekf::resetToEvHorizontalPosition()
+{
+	// let the incremental ev pos fusion know that the previous value of states
+	// cannot be used to calculate the change in position
+	_hpos_prev_available = false;
+
+	Vector3f ev_pos = _ev_sample_delayed.pos;
+	if(_params.fusion_mode & MASK_ROTATE_EV){
+		ev_pos = _ev_rot_mat *_ev_sample_delayed.pos;
+	}
+	resetHorizontalPosition(ev_pos);
+
+	// use EV accuracy to reset variances
+	setDiag(P, 7, 7, sq(_ev_sample_delayed.posErr));
+	setDiag(P, 8, 8, sq(_ev_sample_delayed.posErr));
+
+	ECL_INFO_TIMESTAMPED("reset position to ev position");
+}
+
+void Ekf::resetToLastKnowHorizontalPosition()
+{
+	Vector3f last_known_hpos;
+	last_known_hpos(0) = _last_known_posNE(0);
+	last_known_hpos(1) = _last_known_posNE(1);
+
+	resetHorizontalPosition(last_known_hpos);
+
+	setDiag(P, 7, 8, sq(_params.pos_noaid_noise));
+
+	ECL_INFO_TIMESTAMPED("reset position to last known position");
+}
+
+void Ekf::resetToZeroHorizontalPosition()
+{
+	Vector3f pos_new;
+	pos_new(0) = 0.0f;
+	pos_new(1) = 0.0f;
+
+	resetHorizontalPosition(pos_new);
+
+	setDiag(P, 7, 8, sq(_params.pos_noaid_noise));
+
+	ECL_INFO_TIMESTAMPED("reset position to zero");
+}
+
+void Ekf::resetHorizontalPosition(const Vector3f &hpos_new)
+{
+	const Vector3f hpos_before_reset;
+
+	_state.pos(0) = hpos_new(0);
+	_state.pos(1) = hpos_new(1);
+
+	const Vector3f hpos_change = hpos_new - hpos_before_reset;
 
 	for (uint8_t index = 0; index < _output_buffer.get_length(); index++) {
-		_output_buffer[index].pos(0) += posNE_change(0);
-		_output_buffer[index].pos(1) += posNE_change(1);
+		_output_buffer[index].pos(0) += hpos_change(0);
+		_output_buffer[index].pos(1) += hpos_change(1);
 	}
 
 	// apply the change in position to our newest position estimate
 	// which was already taken out from the output buffer
-	_output_new.pos(0) += posNE_change(0);
-	_output_new.pos(1) += posNE_change(1);
+	_output_new.pos(0) += hpos_change(0);
+	_output_new.pos(1) += hpos_change(1);
 
 	// capture the reset event
-	_state_reset_status.posNE_change = posNE_change;
+	_state_reset_status.posNE_change(0) = hpos_change(0);
+	_state_reset_status.posNE_change(1) = hpos_change(1);
 	_state_reset_status.posNE_counter++;
-
-	return true;
 }
 
 // Reset height state using the last height measurement
@@ -938,12 +1028,14 @@ void Ekf::getAuxVelInnovRatio(float &aux_vel_innov_ratio)
 
 void Ekf::getFlowInnov(float flow_innov[2])
 {
-	memcpy(flow_innov, _flow_innov, sizeof(_flow_innov));
+	flow_innov[0] = _flow_innov(0);
+	flow_innov[1] = _flow_innov(1);
 }
 
 void Ekf::getFlowInnovVar(float flow_innov_var[2])
 {
-	memcpy(flow_innov_var, _flow_innov_var, sizeof(_flow_innov_var));
+	flow_innov_var[0] = _flow_innov_var(0);
+	flow_innov_var[1] = _flow_innov_var(1);
 }
 
 void Ekf::getFlowInnovRatio(float &flow_innov_ratio)
@@ -1202,7 +1294,7 @@ void Ekf::get_ekf_vel_accuracy(float *ekf_evh, float *ekf_evv)
 
 		if (_control_status.flags.opt_flow) {
 			float gndclearance = math::max(_params.rng_gnd_clearance, 0.1f);
-			vel_err_conservative = math::max((_terrain_vpos - _state.pos(2)), gndclearance) * sqrtf(sq(_flow_innov[0]) + sq(_flow_innov[1]));
+			vel_err_conservative = math::max((_terrain_vpos - _state.pos(2)), gndclearance) * sqrtf(sq(_flow_innov(0)) + sq(_flow_innov(1)));
 		}
 
 		if (_control_status.flags.gps) {
@@ -1733,43 +1825,6 @@ void Ekf::setControlEVHeight()
 	_control_status.flags.rng_hgt = false;
 }
 
-void Ekf::stopMagFusion()
-{
-	stopMag3DFusion();
-	stopMagHdgFusion();
-	clearMagCov();
-}
-
-void Ekf::stopMag3DFusion()
-{
-	// save covariance data for re-use if currently doing 3-axis fusion
-	if (_control_status.flags.mag_3D) {
-		saveMagCovData();
-		_control_status.flags.mag_3D = false;
-	}
-}
-
-void Ekf::stopMagHdgFusion()
-{
-	_control_status.flags.mag_hdg = false;
-}
-
-void Ekf::startMagHdgFusion()
-{
-	stopMag3DFusion();
-	_control_status.flags.mag_hdg = true;
-}
-
-void Ekf::startMag3DFusion()
-{
-	if (!_control_status.flags.mag_3D) {
-		stopMagHdgFusion();
-		zeroMagCov();
-		loadMagCovData();
-		_control_status.flags.mag_3D = true;
-	}
-}
-
 // update the estimated misalignment between the EV navigation frame and the EKF navigation frame
 // and calculate a rotation matrix which rotates EV measurements into the EKF's navigation frame
 void Ekf::calcExtVisRotMat()
@@ -1922,74 +1977,8 @@ float Ekf::kahanSummation(float sum_previous, float input, float &accumulator) c
 	return t;
 }
 
-
-void Ekf::stopGpsFusion()
+bool Ekf::isTimedOut(uint64_t timestamp, uint64_t timeout)
 {
-	stopGpsPosFusion();
-	stopGpsVelFusion();
-	stopGpsYawFusion();
-}
-
-void Ekf::stopGpsPosFusion()
-{
-	_control_status.flags.gps = false;
-	_control_status.flags.gps_hgt = false;
-	_gps_pos_innov.setZero();
-	_gps_pos_innov_var.setZero();
-	_gps_pos_test_ratio.setZero();
-}
-
-void Ekf::stopGpsVelFusion()
-{
-	_gps_vel_innov.setZero();
-	_gps_vel_innov_var.setZero();
-	_gps_vel_test_ratio.setZero();
-}
-
-void Ekf::stopGpsYawFusion()
-{
-	_control_status.flags.gps_yaw = false;
-}
-
-void Ekf::stopEvFusion()
-{
-	stopEvPosFusion();
-	stopEvVelFusion();
-	stopEvYawFusion();
-}
-
-void Ekf::stopEvPosFusion()
-{
-	_control_status.flags.ev_pos = false;
-	_ev_pos_innov.setZero();
-	_ev_pos_innov_var.setZero();
-	_ev_pos_test_ratio.setZero();
-}
-
-void Ekf::stopEvVelFusion()
-{
-	_control_status.flags.ev_vel = false;
-	_ev_vel_innov.setZero();
-	_ev_vel_innov_var.setZero();
-	_ev_vel_test_ratio.setZero();
-}
-
-void Ekf::stopEvYawFusion()
-{
-	_control_status.flags.ev_yaw = false;
-}
-
-void Ekf::stopAuxVelFusion()
-{
-	_aux_vel_innov.setZero();
-	_aux_vel_innov_var.setZero();
-	_aux_vel_test_ratio.setZero();
-}
-
-void Ekf::stopFlowFusion()
-{
-	_control_status.flags.opt_flow = false;
-	memset(_flow_innov,0.0f,sizeof(_flow_innov));
-	memset(_flow_innov_var,0.0f,sizeof(_flow_innov_var));
-	memset(&_optflow_test_ratio,0.0f,sizeof(_optflow_test_ratio));
+	return (_time_last_imu >= timestamp)
+		&& ((_time_last_imu - timestamp) > timeout);
 }

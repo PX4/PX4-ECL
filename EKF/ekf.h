@@ -334,6 +334,7 @@ private:
 	bool _baro_data_ready{false};	///< true when new baro height data has fallen behind the fusion time horizon and is available to be fused
 	bool _range_data_ready{false};	///< true when new range finder data has fallen behind the fusion time horizon and is available to be fused
 	bool _flow_data_ready{false};	///< true when the leading edge of the optical flow integration period has fallen behind the fusion time horizon
+	bool _aux_vel_data_ready{false};///< true when new auxiliar velocity data has fallen behind the fusion time horizon and is available to be fused;
 	bool _ev_data_ready{false};	///< true when new external vision system data has fallen behind the fusion time horizon and is available to be fused
 	bool _tas_data_ready{false};	///< true when new true airspeed data has fallen behind the fusion time horizon and is available to be fused
 	bool _flow_for_terrain_data_ready{false}; /// same flag as "_flow_data_ready" but used for separate terrain estimator
@@ -405,6 +406,9 @@ private:
 	Vector3f _rng_hgt_innov {};	///< range hgt innovations (m)
 	Vector3f _rng_hgt_innov_var {};	///< range hgt innovation variances (m**2)
 
+	Vector2f _flow_innov;	///< flow measurement innovation (rad/sec)
+	Vector2f _flow_innov_var;	///< flow innovation variance ((rad/sec)**2)
+
 	Vector3f _aux_vel_innov {};	///< horizontal auxiliary velocity innovations: (m/sec)
 	Vector3f _aux_vel_innov_var {};	///< horizontal auxiliary velocity innovation variances: ((m/sec)**2)
 
@@ -427,8 +431,6 @@ private:
 	float _hagl_innov_var{0.0f};		///< innovation variance for the last height above terrain measurement (m**2)
 
 	// optical flow processing
-	float _flow_innov[2] {};	///< flow measurement innovation (rad/sec)
-	float _flow_innov_var[2] {};	///< flow innovation variance ((rad/sec)**2)
 	Vector3f _flow_gyro_bias;	///< bias errors in optical flow sensor rate gyro outputs (rad/sec)
 	Vector3f _imu_del_ang_of;	///< bias corrected delta angle measurements accumulated across the same time frame as the optical flow rates (rad)
 	float _delta_time_of{0.0f};	///< time in sec that _imu_del_ang_of was accumulated over (sec)
@@ -572,9 +574,6 @@ private:
 	// fuse single velocity and position measurement
 	void fuseVelPosHeight(const float innov, const float innov_var, const int obs_index);
 
-	// reset velocity states of the ekf
-	bool resetVelocity();
-
 	// fuse optical flow line of sight rate measurements
 	void fuseOptFlow();
 
@@ -617,12 +616,6 @@ private:
 
 	// Return the magnetic declination in radians to be used by the alignment and fusion processing
 	float getMagDeclination();
-
-	// reset position states of the ekf (only horizontal position)
-	bool resetPosition();
-
-	// reset height state of the ekf
-	void resetHeight();
 
 	// modify output filter to match the the EKF state at the fusion time horizon
 	void alignOutputFilter();
@@ -818,6 +811,54 @@ private:
 	// calculate a synthetic value for the magnetometer Z component, given the 3D magnetomter
 	// sensor measurement
 	float calculate_synthetic_mag_z_measurement(Vector3f mag_meas, Vector3f mag_earth_predicted);
+
+	bool isTimedOut(uint64_t timestamp, uint64_t timeout);
+
+	void resetToGeneralHorizontalPosition();
+
+	void resetHeight();
+
+	void resetToGpsHorizontalPosition();
+
+	void resetToEvHorizontalPosition();
+
+	void resetToLastKnowHorizontalPosition();
+
+	void resetToZeroHorizontalPosition();
+
+	void resetToGeneralVelocity();
+
+	void resetToGpsVelocity();
+
+	void resetToEvVelocity();
+
+	void resetToOptFlowVelocity();
+
+	void resetToAuxiliarHorizontalVelocity();
+
+	void resetToZeroVelocity();
+
+	void resetHorizontalPosition(const Vector3f &delta_pos);
+
+	void resetVelocity(const Vector3f &delta_vel);
+
+	void startGpsFusion();
+
+	void startGpsPosFusion();
+
+	void startGpsVelFusion();
+
+	void startGpsYawFusion();
+
+	void startEvPosFusion();
+
+	void startEvVelFusion();
+
+	void startEvYawFusion();
+
+	void startAuxVelFusion();
+
+	void startFlowFusion();
 
 	void stopGpsFusion();
 

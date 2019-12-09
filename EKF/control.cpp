@@ -104,6 +104,7 @@ void Ekf::controlFusionModes()
 
 	_delta_time_baro_us = _baro_sample_delayed.time_us;
 	_baro_data_ready = _baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed);
+	_aux_vel_data_ready = _auxvel_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_auxvel_sample_delayed);
 
 	// if we have a new baro sample save the delta time between this sample and the last sample which is
 	// used below for baro offset calculations
@@ -189,16 +190,14 @@ void Ekf::controlExternalVisionFusion()
 			if ((_time_last_imu - _time_last_ext_vision) < (2 * EV_MAX_INTERVAL)) {
 				// turn on use of external vision measurements for position
 				if (_params.fusion_mode & MASK_USE_EVPOS && !_control_status.flags.ev_pos) {
-					_control_status.flags.ev_pos = true;
-					resetPosition();
-					ECL_INFO_TIMESTAMPED("EKF commencing external vision position fusion");
+					resetToEvHorizontalPosition();
+					startEvPosFusion();
 				}
 
 				// turn on use of external vision measurements for velocity
 				if (_params.fusion_mode & MASK_USE_EVVEL && !_control_status.flags.ev_vel) {
-					_control_status.flags.ev_vel = true;
-					resetVelocity();
-					ECL_INFO_TIMESTAMPED("EKF commencing external vision velocity fusion");
+					startEvVelFusion();
+					resetToGeneralVelocity();
 				}
 
 				if ((_params.fusion_mode & MASK_ROTATE_EV) && !(_params.fusion_mode & MASK_USE_EVYAW)
@@ -254,14 +253,7 @@ void Ekf::controlExternalVisionFusion()
 				// flag the yaw as aligned
 				_control_status.flags.yaw_align = true;
 
-				// turn on fusion of external vision yaw measurements and disable all magnetometer fusion
-				_control_status.flags.ev_yaw = true;
-				_control_status.flags.mag_dec = false;
-
-				stopMagHdgFusion();
-				stopMag3DFusion();
-
-				ECL_INFO_TIMESTAMPED("EKF commencing external vision yaw fusion");
+				startEvYawFusion();
 			}
 		}
 
@@ -325,13 +317,13 @@ void Ekf::controlExternalVisionFusion()
 				ev_pos_obs_var(0) = ev_pos_obs_var(1) = sq(fmaxf(_ev_sample_delayed.posErr, 0.01f));
 
 				// check if we have been deadreckoning too long
-				if ((_time_last_imu - _time_last_hor_pos_fuse) > _params.reset_timeout_max) {
-					// don't reset velocity if we have another source of aiding constraining it
-					if (((_time_last_imu - _time_last_of_fuse) > (uint64_t)1E6) && ((_time_last_imu - _time_last_hor_vel_fuse) > (uint64_t)1E6)) {
-						resetVelocity();
+				if (isTimedOut(_time_last_hor_pos_fuse, _params.reset_timeout_max)) {
+					// reset velocity only if we have no another source of aiding constraining it
+					if (isTimedOut(_time_last_of_fuse, (uint64_t)1E6) && isTimedOut(_time_last_hor_vel_fuse, (uint64_t)1E6)) {
+						resetToGeneralVelocity();
 					}
 
-					resetPosition();
+					resetToGeneralHorizontalPosition();
 				}
 			}
 
@@ -365,18 +357,17 @@ void Ekf::controlExternalVisionFusion()
 			_ev_vel_innov(1) = _state.vel(1) - vel_aligned(1);
 			_ev_vel_innov(2) = _state.vel(2) - vel_aligned(2);
 
+			// TODO: Does this belong here?
 			// check if we have been deadreckoning too long
-			if ((_time_last_imu - _time_last_hor_vel_fuse) > _params.reset_timeout_max) {
-				// don't reset velocity if we have another source of aiding constraining it
-				if (((_time_last_imu - _time_last_of_fuse) > (uint64_t)1E6) && ((_time_last_imu - _time_last_hor_pos_fuse) > (uint64_t)1E6)) {
-					resetVelocity();
+			if (isTimedOut(_time_last_hor_pos_fuse, _params.reset_timeout_max)) {
+				// reset velocity only if we have no another source of aiding constraining it
+				if (isTimedOut(_time_last_of_fuse, (uint64_t)1E6) && isTimedOut(_time_last_hor_vel_fuse, (uint64_t)1E6)) {
+ 					resetToGeneralVelocity();
 				}
 			}
 
-			// observation 1-STD error
 			ev_vel_obs_var(0) = ev_vel_obs_var(1) = ev_vel_obs_var(2) = sq(fmaxf(_ev_sample_delayed.velErr, 0.01f));
 
-			// innovation gate size
 			ev_vel_innov_gates(0) = ev_vel_innov_gates(1) = fmaxf(_params.ev_vel_innov_gate, 1.0f);
 
 			fuseHorizontalVelocity(_ev_vel_innov, ev_vel_innov_gates,ev_vel_obs_var, _ev_vel_innov_var, _ev_vel_test_ratio);
@@ -388,9 +379,8 @@ void Ekf::controlExternalVisionFusion()
 			fuseHeading();
 		}
 
-	} else if ((_control_status.flags.ev_pos || _control_status.flags.ev_vel)
-		   && (_time_last_imu >= _time_last_ext_vision)
-		   && ((_time_last_imu - _time_last_ext_vision) > (uint64_t)_params.reset_timeout_max)) {
+	} else if ((_control_status.flags.ev_pos || _control_status.flags.ev_vel) &&
+		    isTimedOut(_time_last_ext_vision, _params.reset_timeout_max)) {
 
 		// Turn off EV fusion mode if no data has been received
 		stopEvFusion();
@@ -487,23 +477,11 @@ void Ekf::controlOpticalFlowFusion()
 
 			// If the heading is valid and use is not inhibited , start using optical flow aiding
 			if (_control_status.flags.yaw_align) {
-				// set the flag and reset the fusion timeout
-				_control_status.flags.opt_flow = true;
-				_time_last_of_fuse = _time_last_imu;
-
-				// if we are not using GPS or external vision aiding, then the velocity and position states and covariances need to be set
-				const bool flow_aid_only = !(_control_status.flags.gps || _control_status.flags.ev_pos || _control_status.flags.ev_vel);
-				if (flow_aid_only) {
-					resetVelocity();
-					resetPosition();
-
-					// align the output observer to the EKF states
-					alignOutputFilter();
-				}
+				startFlowFusion();
 			}
 
 		} else if (!(_params.fusion_mode & MASK_USE_OF)) {
-			_control_status.flags.opt_flow = false;
+			stopFlowFusion();
 		}
 
 		// handle the case when we have optical flow, are reliant on it, but have not been using it for an extended period
@@ -515,8 +493,8 @@ void Ekf::controlOpticalFlowFusion()
 			bool do_reset = ((_time_last_imu - _time_last_of_fuse) > _params.reset_timeout_max);
 
 			if (do_reset) {
-				resetVelocity();
-				resetPosition();
+				resetToGeneralVelocity();
+				resetToGeneralHorizontalPosition();
 			}
 		}
 
@@ -569,15 +547,7 @@ void Ekf::controlGpsFusion()
 				// flag the yaw as aligned
 				_control_status.flags.yaw_align = true;
 
-				// turn on fusion of external vision yaw measurements and disable all other yaw fusion
-				_control_status.flags.gps_yaw = true;
-				_control_status.flags.ev_yaw = false;
-				_control_status.flags.mag_dec = false;
-
-				stopMagHdgFusion();
-				stopMag3DFusion();
-
-				ECL_INFO_TIMESTAMPED("EKF commencing GPS yaw fusion");
+				startGpsYawFusion();
 			}
 		}
 
@@ -599,8 +569,13 @@ void Ekf::controlGpsFusion()
 								       _control_status.flags.ev_yaw ||
 								       _mag_inhibit_yaw_reset_req;
 				if (want_to_reset_mag_heading && canResetMagHeading()) {
-					_control_status.flags.ev_yaw = false;
 					_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState());
+
+					if (_control_status.flags.yaw_align && _control_status.flags.ev_yaw) {
+						stopEvYawFusion();
+						ECL_INFO_TIMESTAMPED("stopped ev yaw fusion to start GPS fusion");
+					}
+
 					// Handle the special case where we have not been constraining yaw drift or learning yaw bias due
 					// to assumed invalid mag field associated with indoor operation with a downwards looking flow sensor.
 					if (_mag_inhibit_yaw_reset_req) {
@@ -612,31 +587,13 @@ void Ekf::controlGpsFusion()
 
 				// If the heading is valid start using gps aiding
 				if (_control_status.flags.yaw_align) {
-					// if we are not already aiding with optical flow, then we need to reset the position and velocity
-					// otherwise we only need to reset the position
-					_control_status.flags.gps = true;
-
-					if (!_control_status.flags.opt_flow) {
-						if (!resetPosition() || !resetVelocity()) {
-							_control_status.flags.gps = false;
-
-						}
-
-					} else if (!resetPosition()) {
-						_control_status.flags.gps = false;
-
-					}
-
-					if (_control_status.flags.gps) {
-						ECL_INFO_TIMESTAMPED("EKF commencing GPS fusion");
-						_time_last_gps = _time_last_imu;
-					}
+					startGpsFusion();
 				}
 			}
 
 		}  else if (!(_params.fusion_mode & MASK_USE_GPS)) {
-			_control_status.flags.gps = false;
-
+			stopGpsPosFusion();
+			stopGpsVelFusion();
 		}
 
 		// Handle the case where we are using GPS and another source of aiding and GPS is failing checks
@@ -644,7 +601,7 @@ void Ekf::controlGpsFusion()
 			stopGpsFusion();
 			// Reset position state to external vision if we are going to use absolute values
 			if (_control_status.flags.ev_pos && !(_params.fusion_mode & MASK_ROTATE_EV)) {
-				resetPosition();
+ 				resetToGeneralHorizontalPosition();
 			}
 			ECL_WARN_TIMESTAMPED("EKF GPS data quality poor - stopping use");
 		}
@@ -668,8 +625,8 @@ void Ekf::controlGpsFusion()
 					_control_status.flags.mag_aligned_in_flight = realignYawGPS();
 				}
 
-				resetVelocity();
-				resetPosition();
+				resetToGpsVelocity();
+				resetToGpsHorizontalPosition();
 				_velpos_reset_request = false;
 				ECL_WARN_TIMESTAMPED("EKF GPS fusion timeout - reset to GPS");
 
@@ -737,14 +694,15 @@ void Ekf::controlGpsFusion()
 			fuseHorizontalPosition(_gps_pos_innov, gps_pos_innov_gates, gps_pos_obs_var, _gps_pos_innov_var, _gps_pos_test_ratio);
 		}
 
-	} else if (_control_status.flags.gps && (_imu_sample_delayed.time_us - _gps_sample_delayed.time_us > (uint64_t)10e6)) {
+	} else if (_control_status.flags.gps && isTimedOut(_gps_sample_delayed.time_us, (uint64_t)10e6)) {
 		stopGpsFusion();
 		ECL_WARN_TIMESTAMPED("EKF GPS data stopped");
-	}  else if (_control_status.flags.gps && (_imu_sample_delayed.time_us - _gps_sample_delayed.time_us > (uint64_t)1e6) && (_control_status.flags.opt_flow || _control_status.flags.ev_pos || _control_status.flags.ev_vel)) {
+	}  else if (_control_status.flags.gps && isTimedOut(_gps_sample_delayed.time_us, (uint64_t)1e6)
+			&& (_control_status.flags.opt_flow || _control_status.flags.ev_pos || _control_status.flags.ev_vel)) {
 		// Handle the case where we are fusing another position source along GPS,
 		// stop waiting for GPS after 1 s of lost signal
 		stopGpsFusion();
-		ECL_WARN_TIMESTAMPED("EKF GPS data stopped, using only EV or OF");
+		ECL_WARN_TIMESTAMPED("EKF GPS data stopped, using EV or OF");
 	}
 }
 
@@ -787,7 +745,7 @@ void Ekf::controlHeightSensorTimeouts()
 	bool continuous_bad_accel_hgt = ((_time_last_imu - _time_good_vert_accel) > (unsigned)_params.bad_acc_reset_delay_us);
 
 	// check if height has been inertial deadreckoning for too long
-	bool hgt_fusion_timeout = ((_time_last_imu - _time_last_hgt_fuse) > (uint64_t)5e6);
+	bool hgt_fusion_timeout = isTimedOut(_time_last_hgt_fuse, (uint64_t)5e6);
 
 	// reset the vertical position and velocity states
 	if (hgt_fusion_timeout || continuous_bad_accel_hgt) {
@@ -1399,9 +1357,9 @@ void Ekf::controlFakePosFusion()
 
 
 			// Reset position and velocity states if we re-commence this aiding method
-			if ((_time_last_imu - _time_last_fake_pos) > (uint64_t)4e5) {
-				resetPosition();
-				resetVelocity();
+			if (isTimedOut(_time_last_fake_pos, (uint64_t)4e5)) {
+				resetToGeneralHorizontalPosition();
+				resetToGeneralVelocity();
 				_fuse_hpos_as_odom = false;
 
 				if (_time_last_fake_pos != 0) {
@@ -1436,22 +1394,33 @@ void Ekf::controlFakePosFusion()
 
 void Ekf::controlAuxVelFusion()
 {
-	bool data_ready = _auxvel_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_auxvel_sample_delayed);
-	bool primary_aiding = _control_status.flags.gps || _control_status.flags.ev_pos || _control_status.flags.ev_vel || _control_status.flags.opt_flow;
+	if(_aux_vel_data_ready)
+	{
+		if (/*(_params.fusion_mode & MASK_USE_AUXVEL) &&*/ !_control_status.flags.aux_vel
+			&& (_time_last_imu - _time_last_auxvel) < (2 * EV_MAX_INTERVAL)){
+			resetToAuxiliarHorizontalVelocity();
+			startAuxVelFusion();
+		}
 
-	if (data_ready && primary_aiding) {
+		if (_control_status.flags.aux_vel) {
 
-		Vector2f aux_vel_innov_gate{};
-		Vector3f aux_vel_obs_var{};
+			Vector2f aux_vel_innov_gate;
+			Vector3f aux_vel_obs_var;
 
-		_aux_vel_innov(0) = _state.vel(0) - _auxvel_sample_delayed.velNE(0);
-		_aux_vel_innov(1) = _state.vel(1) - _auxvel_sample_delayed.velNE(1);
-		aux_vel_innov_gate(0) = _params.auxvel_gate;
-		aux_vel_obs_var(0) = _auxvel_sample_delayed.velVarNE(0);
-		aux_vel_obs_var(1) = _auxvel_sample_delayed.velVarNE(1);
+			// TODO: Add vertical velocity
+			_aux_vel_innov(0) = _state.vel(0) - _auxvel_sample_delayed.velNE(0);
+			_aux_vel_innov(1) = _state.vel(1) - _auxvel_sample_delayed.velNE(1);
+			aux_vel_innov_gate(0) = _params.auxvel_gate;
+			aux_vel_obs_var(0) = _auxvel_sample_delayed.velVarNE(0);
+			aux_vel_obs_var(1) = _auxvel_sample_delayed.velVarNE(1);
 
-		fuseHorizontalVelocity(_aux_vel_innov, aux_vel_innov_gate, aux_vel_obs_var,
-				_aux_vel_innov_var, _aux_vel_test_ratio);
+			fuseHorizontalVelocity(_aux_vel_innov, aux_vel_innov_gate, aux_vel_obs_var,
+					_aux_vel_innov_var, _aux_vel_test_ratio);
 
+		}
+	}
+	else if(_control_status.flags.aux_vel && isTimedOut(_time_last_auxvel, 1e6f)){
+		stopAuxVelFusion();
+		ECL_INFO_TIMESTAMPED("stop auxiliar velocity fusion - data timeout");
 	}
 }

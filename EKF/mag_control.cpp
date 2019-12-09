@@ -165,15 +165,15 @@ void Ekf::runInAirYawReset()
 }
 
 bool Ekf::canRealignYawUsingGps() const
-{ 
+{
 	return _control_status.flags.fixed_wing;
 }
 
 void Ekf::runVelPosReset()
 {
 	if (_velpos_reset_request) {
-		resetVelocity();
-		resetPosition();
+		resetToGeneralVelocity();
+		resetToGeneralHorizontalPosition();
 		_velpos_reset_request = false;
 	}
 }
@@ -256,7 +256,7 @@ void Ekf::checkMagDeclRequired()
 void Ekf::checkMagInhibition()
 {
 	_mag_use_inhibit = shouldInhibitMag();
-	if (!_mag_use_inhibit) { 
+	if (!_mag_use_inhibit) {
 		_mag_use_not_inhibit_us = _imu_sample_delayed.time_us;
 	}
 
