@@ -1396,6 +1396,7 @@ void Ekf::controlAuxVelFusion()
 {
 	if(_aux_vel_data_ready)
 	{
+		// TODO: add this parameter bit to EKF2_AID_MASK
 		if (/*(_params.fusion_mode & MASK_USE_AUXVEL) &&*/ !_control_status.flags.aux_vel
 			&& (_time_last_imu - _time_last_auxvel) < (2 * EV_MAX_INTERVAL)){
 			resetToAuxiliarHorizontalVelocity();
