@@ -40,6 +40,8 @@ set(SRCS
 	mag.cpp
 	baro.cpp
 	gps.cpp
+	flow.cpp
+	range_finder.cpp
    )
 
 add_library(ecl_sensor_sim ${SRCS})
