@@ -18,7 +18,7 @@ void Flow::send(uint32_t time)
 	_ekf->setOpticalFlowData(time, &_flow_data);
 }
 
-void Flow::setData(flow_message flow)
+void Flow::setData(const flow_message& flow)
 {
 	_flow_data = flow;
 

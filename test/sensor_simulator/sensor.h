@@ -54,7 +54,7 @@ public:
 
 	void update(uint32_t time);
 
-	void setRate(uint32_t rate){ _update_period = uint32_t(1000000)/rate; }
+	void setRateHz(uint32_t rate){ _update_period = uint32_t(1000000)/rate; }
 
 	bool isRunning() const { return _is_running; }
 

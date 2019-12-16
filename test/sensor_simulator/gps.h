@@ -51,8 +51,10 @@ public:
 	~Gps();
 
 	void setData(const gps_message& gps);
-	void stepHeight(float hgt_change);
-	void stepHorizontalPosition(Vector2f hpos_change);
+	void stepHeightByMeters(float hgt_change);
+	void stepHorizontalPositionByMeters(Vector2f hpos_change);
+
+	gps_message getDefaultGpsData();
 
 private:
 	gps_message _gps_data;

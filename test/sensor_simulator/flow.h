@@ -50,7 +50,7 @@ public:
 	Flow(std::shared_ptr<Ekf> ekf);
 	~Flow();
 
-	void setData(flow_message flow);
+	void setData(const flow_message& flow);
 	flow_message dataAtRest();
 
 private:

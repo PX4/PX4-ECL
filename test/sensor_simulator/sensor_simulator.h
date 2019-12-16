@@ -62,18 +62,13 @@ private:
 
 	uint32_t _time {0};	// in microseconds
 
-	gps_message getDefaultGpsData();
-
+	void setSensorDataToDefault();
+	void setSensorRateToDefault();
+	void startBasicSensor();
 
 public:
 	SensorSimulator(std::shared_ptr<Ekf> ekf);
 	~SensorSimulator();
-
-	void setImuRate(uint32_t rate){ _imu.setRate(rate); }
-	void setMagRate(uint32_t rate){ _mag.setRate(rate); }
-	void setBaroRate(uint32_t rate){ _baro.setRate(rate); }
-	void setGpsRate(uint32_t rate){ _gps.setRate(rate); }
-	void setFlowRate(uint32_t rate){ _flow.setRate(rate); }
 
 	void run_seconds(float duration_seconds);
 	void run_microseconds(uint32_t duration);

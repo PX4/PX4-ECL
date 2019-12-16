@@ -24,12 +24,12 @@ void Gps::setData(const gps_message& gps)
 	_gps_data = gps;
 }
 
-void Gps::stepHeight(float hgt_change)
+void Gps::stepHeightByMeters(float hgt_change)
 {
 	_gps_data.alt += hgt_change * 1e3f;
 }
 
-void Gps::stepHorizontalPosition(Vector2f hpos_change)
+void Gps::stepHorizontalPositionByMeters(Vector2f hpos_change)
 {
 	float hposN_curr;
 	float hposE_curr;
@@ -40,6 +40,31 @@ void Gps::stepHorizontalPosition(Vector2f hpos_change)
 	map_projection_global_reproject(hpos_new(0), hpos_new(1), &lat_new, &lon_new);
 	_gps_data.lon = (uint32_t)lon_new;
 	_gps_data.lat = (uint32_t)lat_new;
+}
+
+
+gps_message Gps::getDefaultGpsData()
+{
+	gps_message gps_data{};
+	gps_data.time_usec = 0;
+	gps_data.lat = 473566094;
+	gps_data.lon = 85190237;
+	gps_data.alt = 422056;
+	gps_data.yaw = 0.0f;
+	gps_data.yaw_offset = 0.0f;
+	gps_data.fix_type = 3;
+	gps_data.eph = 0.5f;
+	gps_data.epv = 0.8f;
+	gps_data.sacc = 0.2f;
+	gps_data.vel_m_s = 0.0;
+	gps_data.vel_ned[0] = 0.0f;
+	gps_data.vel_ned[1] = 0.0f;
+	gps_data.vel_ned[2] = 0.0f;
+	gps_data.vel_ned_valid = 1;
+	gps_data.nsats = 16;
+	gps_data.pdop = 0.0f;
+
+	return gps_data;
 }
 
 } // namespace sensor
