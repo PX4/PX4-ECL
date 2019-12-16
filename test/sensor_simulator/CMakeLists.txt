@@ -34,6 +34,7 @@
 
 set(SRCS
 	sensor_simulator.cpp
+	ekf_wrapper.cpp
 	sensor.cpp
 	imu.cpp
 	mag.cpp

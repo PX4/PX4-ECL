@@ -36,16 +36,19 @@
 #include <memory>
 #include "EKF/ekf.h"
 #include "sensor_simulator/sensor_simulator.h"
-
+#include "sensor_simulator/ekf_wrapper.h"
 
 class EkfInitializationTest : public ::testing::Test {
  public:
 	EkfInitializationTest(): ::testing::Test(),
 	_ekf{std::make_shared<Ekf>()},
-	_sensor_simulator(_ekf) {};
+	_sensor_simulator(_ekf),
+	_ekf_wrapper(_ekf) {};
 
 	std::shared_ptr<Ekf> _ekf;
 	SensorSimulator _sensor_simulator;
+	EkfWrapper _ekf_wrapper;
+
 
 	// Duration of initalization with only providing baro,mag and IMU
 	const uint32_t _init_duration_s{2};
@@ -110,23 +113,17 @@ TEST_F(EkfInitializationTest, convergesToZero)
 	// GIVEN: initialized EKF with default IMU, baro and mag input
 	_sensor_simulator.run_seconds(4);
 
-	float converged_pos[3];
-	float converged_vel[3];
-	float converged_accel_bias[3];
-	float converged_gyro_bias[3];
-	_ekf->get_position(converged_pos);
-	_ekf->get_velocity(converged_vel);
-	_ekf->get_accel_bias(converged_accel_bias);
-	_ekf->get_gyro_bias(converged_gyro_bias);
+	Vector3f pos = _ekf_wrapper.getPosition();
+	Vector3f vel = _ekf_wrapper.getVelocity();
+	Vector3f accel_bias = _ekf_wrapper.getAccelBias();
+	Vector3f gyro_bias = _ekf_wrapper.getGyroBias();
+	Vector3f ref{0.0f, 0.0f, 0.0f};
 
 	// THEN: EKF should stay or converge to zero
-	for(int i=0; i<3; ++i)
-	{
-		EXPECT_NEAR(0.0f,converged_pos[i],0.001f);
-		EXPECT_NEAR(0.0f,converged_vel[i],0.001f);
-		EXPECT_NEAR(0.0f,converged_accel_bias[i],0.001f);
-		EXPECT_NEAR(0.0f,converged_gyro_bias[i],0.001f);
-	}
+	EXPECT_EQ(true, matrix::isEqual(pos, ref, 0.001f));
+	EXPECT_EQ(true, matrix::isEqual(vel, ref, 0.001f));
+	EXPECT_EQ(true, matrix::isEqual(accel_bias, ref, 0.001f));
+	EXPECT_EQ(true, matrix::isEqual(gyro_bias, ref, 0.001f));
 }
 
 TEST_F(EkfInitializationTest, gpsFusion)
@@ -171,29 +168,23 @@ TEST_F(EkfInitializationTest, accleBiasEstimation)
 {
 	// GIVEN: initialized EKF with default IMU, baro and mag input for 2s
 	// WHEN: Added more sensor measurements with accel bias and gps measurements
-	Vector3f accel_bias = {0.0f,0.0f,0.1f};
+	Vector3f accel_bias_sim = {0.0f,0.0f,0.1f};
 
 	_sensor_simulator.startGps();
-	_sensor_simulator.setImuBias(accel_bias, Vector3f{0.0f,0.0f,0.0f});
+	_sensor_simulator.setImuBias(accel_bias_sim, Vector3f{0.0f,0.0f,0.0f});
 	_sensor_simulator.run_seconds(10);
 
-	float converged_pos[3];
-	float converged_vel[3];
-	float converged_accel_bias[3];
-	float converged_gyro_bias[3];
-	_ekf->get_position(converged_pos);
-	_ekf->get_velocity(converged_vel);
-	_ekf->get_accel_bias(converged_accel_bias);
-	_ekf->get_gyro_bias(converged_gyro_bias);
+	Vector3f pos = _ekf_wrapper.getPosition();
+	Vector3f vel = _ekf_wrapper.getVelocity();
+	Vector3f accel_bias = _ekf_wrapper.getAccelBias();
+	Vector3f gyro_bias = _ekf_wrapper.getGyroBias();
+	Vector3f zero{0.0f, 0.0f, 0.0f};
 
-	// THEN: EKF should estimate bias correctelly
-	for(int i=0; i<3; ++i)
-	{
-		EXPECT_NEAR(0.0f,converged_pos[i],0.001f) << "i: " << i;
-		EXPECT_NEAR(0.0f,converged_vel[i],0.001f) << "i: " << i;
-		EXPECT_NEAR(accel_bias(i),converged_accel_bias[i],0.001f) << "i: " << i;
-		EXPECT_NEAR(0.0f,converged_gyro_bias[i],0.001f) << "i: " << i;
-	}
+	// THEN: EKF should stay or converge to zero
+	EXPECT_EQ(true, matrix::isEqual(pos, zero, 0.001f));
+	EXPECT_EQ(true, matrix::isEqual(vel, zero, 0.001f));
+	EXPECT_EQ(true, matrix::isEqual(accel_bias, accel_bias_sim, 0.001f));
+	EXPECT_EQ(true, matrix::isEqual(gyro_bias, zero, 0.001f));
 }
 
 // TODO: Add sampling tests
