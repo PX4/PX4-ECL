@@ -25,4 +25,4 @@ void Gps::setData(const gps_message& gps)
 }
 
 } // namespace sensor
-} // namespace sensor_simulator::sensor
+} // namespace sensor_simulator
