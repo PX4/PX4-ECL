@@ -169,7 +169,7 @@ bool Ekf::initialiseFilter()
 
 	// accumulate enough height measurements to be confident in the quality of the data
 	if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
-		if ((_baro_sample_delayed.time_us != 0))
+		if (_baro_sample_delayed.time_us != 0)
 		{
 			_baro_counter ++;
 			// wait for all bad initial data to be flushed
@@ -181,8 +181,8 @@ bool Ekf::initialiseFilter()
 		}
 	}
 
-	bool not_enough_baro_samples_accumulated = _baro_counter <= 2u * _obs_buffer_length;
-	bool not_enough_mag_samples_accumulated = _mag_counter <= 2u * _obs_buffer_length;
+	const bool not_enough_baro_samples_accumulated = _baro_counter <= 2u * _obs_buffer_length;
+	const bool not_enough_mag_samples_accumulated = _mag_counter <= 2u * _obs_buffer_length;
 
 	if (not_enough_baro_samples_accumulated || not_enough_mag_samples_accumulated) {
 		return false;
