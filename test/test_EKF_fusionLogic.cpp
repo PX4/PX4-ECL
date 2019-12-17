@@ -77,34 +77,34 @@ TEST_F(EkfFusionLogicTest, doGpsFusion)
 	_sensor_simulator.run_seconds(15);
 
 	// THEN: EKF should intend to fuse GPS
-	EXPECT_EQ(_ekf_wrapper.isIntendingGpsFusion(), true);
+	EXPECT_TRUE(_ekf_wrapper.isIntendingGpsFusion());
 	// THEN: Local and global position should be valid
-	EXPECT_EQ(_ekf->local_position_is_valid(), true);
-	EXPECT_EQ(_ekf->global_position_is_valid(), true);
+	EXPECT_TRUE(_ekf->local_position_is_valid());
+	EXPECT_TRUE(_ekf->global_position_is_valid());
 
 	// WHEN: GPS data is not send for 11s
 	_sensor_simulator.stopGps();
 	_sensor_simulator.run_seconds(11);
 
 	// THEN: EKF should stop to intend to fuse GPS
-	EXPECT_EQ(_ekf_wrapper.isIntendingGpsFusion(), false);
-	EXPECT_EQ(_ekf->local_position_is_valid(), false);
-	EXPECT_EQ(_ekf->global_position_is_valid(), false);
+	EXPECT_FALSE(_ekf_wrapper.isIntendingGpsFusion());
+	EXPECT_FALSE(_ekf->local_position_is_valid());
+	EXPECT_FALSE(_ekf->global_position_is_valid());
 
 	// WHEN: GPS data is send again for 11s
 	_sensor_simulator.startGps();
 	_sensor_simulator.run_seconds(11);
 
 	// THEN: EKF should to intend to fuse GPS
-	EXPECT_EQ(_ekf_wrapper.isIntendingGpsFusion(), true);
-	EXPECT_EQ(_ekf->local_position_is_valid(), true);
-	EXPECT_EQ(_ekf->global_position_is_valid(), true);
+	EXPECT_TRUE(_ekf_wrapper.isIntendingGpsFusion());
+	EXPECT_TRUE(_ekf->local_position_is_valid());
+	EXPECT_TRUE(_ekf->global_position_is_valid());
 
 	// // WHEN: clients decides to stop GPS fusion
 	// _ekf_wrapper.disableGpsFusion();
 	// // THEN: EKF should stop to intend to fuse GPS immediately
 	// _sensor_simulator.run_microseconds(1000);
-	// EXPECT_EQ(_ekf_wrapper.isIntendingGpsFusion(), false);
+	// EXPECT_FALSE(_ekf_wrapper.isIntendingGpsFusion());
 	// THIS is not happening at the moment
 }
 
@@ -117,7 +117,7 @@ TEST_F(EkfFusionLogicTest, rejectGpsSignalJump)
 	_sensor_simulator.run_seconds(15);
 
 	// THEN: EKF should intend to fuse GPS
-	EXPECT_EQ(_ekf_wrapper.isIntendingGpsFusion(), true);
+	EXPECT_TRUE(_ekf_wrapper.isIntendingGpsFusion());
 
 	// WHEN: Having a big horizontal position Gps jump coming from the Gps Receiver
 	Vector3f pos_old = _ekf_wrapper.getPosition();
@@ -142,7 +142,7 @@ TEST_F(EkfFusionLogicTest, rejectGpsSignalJump)
 	EXPECT_TRUE(matrix::isEqual(pos_new, pos_old, 0.01f));
 	EXPECT_TRUE(matrix::isEqual(vel_new, vel_old, 0.01f));
 	EXPECT_TRUE(matrix::isEqual(accel_bias_new, accel_bias_old, 0.01f));
-	// EXPECT_EQ(_ekf_wrapper.isIntendingGpsFusion(), true); // What do we expect here?
+	// EXPECT_TRUE(_ekf_wrapper.isIntendingGpsFusion()); // What do we expect here?
 }
 
 TEST_F(EkfFusionLogicTest, doFlowFusion)
@@ -154,10 +154,10 @@ TEST_F(EkfFusionLogicTest, doFlowFusion)
 	_sensor_simulator.run_seconds(3);
 
 	// THEN: EKF should intend to fuse flow measurements
-	EXPECT_EQ(_ekf_wrapper.isIntendingFlowFusion(), false);
+	EXPECT_FALSE(_ekf_wrapper.isIntendingFlowFusion());
 	// THEN: Local and global position should not be valid
-	EXPECT_EQ(_ekf->local_position_is_valid(), false);
-	EXPECT_EQ(_ekf->global_position_is_valid(), false);
+	EXPECT_FALSE(_ekf->local_position_is_valid());
+	EXPECT_FALSE(_ekf->global_position_is_valid());
 
 	// WHEN: Flow data is not send and we enable flow fusion
 	_sensor_simulator.stopFlow();
@@ -167,10 +167,10 @@ TEST_F(EkfFusionLogicTest, doFlowFusion)
 	_sensor_simulator.run_seconds(3);
 
 	// THEN: EKF should not intend to fuse flow
-	EXPECT_EQ(_ekf_wrapper.isIntendingFlowFusion(), false);
+	EXPECT_FALSE(_ekf_wrapper.isIntendingFlowFusion());
 	// THEN: Local and global position should not be valid
-	EXPECT_EQ(_ekf->local_position_is_valid(), false);
-	EXPECT_EQ(_ekf->global_position_is_valid(), false);
+	EXPECT_FALSE(_ekf->local_position_is_valid());
+	EXPECT_FALSE(_ekf->global_position_is_valid());
 
 	// WHEN: Flow data is  send and we enable flow fusion
 	_sensor_simulator.startFlow();
@@ -178,8 +178,8 @@ TEST_F(EkfFusionLogicTest, doFlowFusion)
 	_sensor_simulator.run_seconds(10);
 
 	// THEN: EKF should intend to fuse flow
-	EXPECT_EQ(_ekf_wrapper.isIntendingFlowFusion(), true);
+	EXPECT_TRUE(_ekf_wrapper.isIntendingFlowFusion());
 	// THEN: Local and global position should be valid
-	EXPECT_EQ(_ekf->local_position_is_valid(), true);
-	EXPECT_EQ(_ekf->global_position_is_valid(), false);
+	EXPECT_TRUE(_ekf->local_position_is_valid());
+	EXPECT_FALSE(_ekf->global_position_is_valid());
 }

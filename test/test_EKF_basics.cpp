@@ -71,7 +71,7 @@ TEST_F(EkfInitializationTest, tiltAlign)
 {
 	// GIVEN: reasonable static sensor data for some duration
 	// THEN: EKF should tilt align
-	EXPECT_EQ(true,_ekf->attitude_valid());
+	EXPECT_TRUE(_ekf->attitude_valid());
 }
 
 TEST_F(EkfInitializationTest, initialControlMode)
