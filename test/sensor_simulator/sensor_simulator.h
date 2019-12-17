@@ -70,8 +70,8 @@ public:
 	SensorSimulator(std::shared_ptr<Ekf> ekf);
 	~SensorSimulator();
 
-	void run_seconds(float duration_seconds);
-	void run_microseconds(uint32_t duration);
+	void runSeconds(float duration_seconds);
+	void runMicroseconds(uint32_t duration);
 
 	void startGps(){ _gps.start(); }
 	void stopGps(){ _gps.stop(); }

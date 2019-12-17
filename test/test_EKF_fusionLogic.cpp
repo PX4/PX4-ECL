@@ -58,7 +58,7 @@ class EkfFusionLogicTest : public ::testing::Test {
 	void SetUp() override
 	{
 		_ekf->init(0);
-		_sensor_simulator.run_seconds(5);
+		_sensor_simulator.runSeconds(5);
 	}
 
 	// Use this method to clean up any memory, network etc. after each test
@@ -74,7 +74,7 @@ TEST_F(EkfFusionLogicTest, doGpsFusion)
 	// WHEN: we enable GPS fusion and we send good quality gps data for 11s
 	_ekf_wrapper.enableGpsFusion();
 	_sensor_simulator.startGps();
-	_sensor_simulator.run_seconds(15);
+	_sensor_simulator.runSeconds(15);
 
 	// THEN: EKF should intend to fuse GPS
 	EXPECT_TRUE(_ekf_wrapper.isIntendingGpsFusion());
@@ -84,7 +84,7 @@ TEST_F(EkfFusionLogicTest, doGpsFusion)
 
 	// WHEN: GPS data is not send for 11s
 	_sensor_simulator.stopGps();
-	_sensor_simulator.run_seconds(11);
+	_sensor_simulator.runSeconds(11);
 
 	// THEN: EKF should stop to intend to fuse GPS
 	EXPECT_FALSE(_ekf_wrapper.isIntendingGpsFusion());
@@ -93,7 +93,7 @@ TEST_F(EkfFusionLogicTest, doGpsFusion)
 
 	// WHEN: GPS data is send again for 11s
 	_sensor_simulator.startGps();
-	_sensor_simulator.run_seconds(11);
+	_sensor_simulator.runSeconds(11);
 
 	// THEN: EKF should to intend to fuse GPS
 	EXPECT_TRUE(_ekf_wrapper.isIntendingGpsFusion());
@@ -103,7 +103,7 @@ TEST_F(EkfFusionLogicTest, doGpsFusion)
 	// // WHEN: clients decides to stop GPS fusion
 	// _ekf_wrapper.disableGpsFusion();
 	// // THEN: EKF should stop to intend to fuse GPS immediately
-	// _sensor_simulator.run_microseconds(1000);
+	// _sensor_simulator.runMicroseconds(1000);
 	// EXPECT_FALSE(_ekf_wrapper.isIntendingGpsFusion());
 	// THIS is not happening at the moment
 }
@@ -114,7 +114,7 @@ TEST_F(EkfFusionLogicTest, rejectGpsSignalJump)
 	// WHEN: we enable GPS fusion and we send good quality gps data for 11s
 	_ekf_wrapper.enableGpsFusion();
 	_sensor_simulator.startGps();
-	_sensor_simulator.run_seconds(15);
+	_sensor_simulator.runSeconds(15);
 
 	// THEN: EKF should intend to fuse GPS
 	EXPECT_TRUE(_ekf_wrapper.isIntendingGpsFusion());
@@ -124,7 +124,7 @@ TEST_F(EkfFusionLogicTest, rejectGpsSignalJump)
 	Vector3f vel_old = _ekf_wrapper.getVelocity();
 	Vector3f accel_bias_old = _ekf_wrapper.getAccelBias();
 	_sensor_simulator._gps.stepHorizontalPositionByMeters(Vector2f{10.0f, 0.0f});
-	_sensor_simulator.run_seconds(2);
+	_sensor_simulator.runSeconds(2);
 
 	// THEN: The estimate should not change much in the short run
 	//       and GPS fusion should be stopped after a while.
@@ -135,7 +135,7 @@ TEST_F(EkfFusionLogicTest, rejectGpsSignalJump)
 	EXPECT_TRUE(matrix::isEqual(vel_new, vel_old, 0.01f));
 	EXPECT_TRUE(matrix::isEqual(accel_bias_new, accel_bias_old, 0.01f));
 
-	_sensor_simulator.run_seconds(10);
+	_sensor_simulator.runSeconds(10);
 	pos_new = _ekf_wrapper.getPosition();
 	vel_new = _ekf_wrapper.getVelocity();
 	accel_bias_new = _ekf_wrapper.getAccelBias();
@@ -151,7 +151,7 @@ TEST_F(EkfFusionLogicTest, doFlowFusion)
 	// WHEN: sending flow data without having the flow fusion enabled
 	//       flow measurement fusion should not be intended.
 	_sensor_simulator.startFlow();
-	_sensor_simulator.run_seconds(3);
+	_sensor_simulator.runSeconds(3);
 
 	// THEN: EKF should intend to fuse flow measurements
 	EXPECT_FALSE(_ekf_wrapper.isIntendingFlowFusion());
@@ -161,10 +161,10 @@ TEST_F(EkfFusionLogicTest, doFlowFusion)
 
 	// WHEN: Flow data is not send and we enable flow fusion
 	_sensor_simulator.stopFlow();
-	_sensor_simulator.run_seconds(3); // TODO: without this line tests fail
+	_sensor_simulator.runSeconds(3); // TODO: without this line tests fail
 	// probably there are still values in the buffer.
 	_ekf_wrapper.enableFlowFusion();
-	_sensor_simulator.run_seconds(3);
+	_sensor_simulator.runSeconds(3);
 
 	// THEN: EKF should not intend to fuse flow
 	EXPECT_FALSE(_ekf_wrapper.isIntendingFlowFusion());
@@ -175,7 +175,7 @@ TEST_F(EkfFusionLogicTest, doFlowFusion)
 	// WHEN: Flow data is  send and we enable flow fusion
 	_sensor_simulator.startFlow();
 	_ekf_wrapper.enableFlowFusion();
-	_sensor_simulator.run_seconds(10);
+	_sensor_simulator.runSeconds(10);
 
 	// THEN: EKF should intend to fuse flow
 	EXPECT_TRUE(_ekf_wrapper.isIntendingFlowFusion());

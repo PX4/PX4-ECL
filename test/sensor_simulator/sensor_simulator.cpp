@@ -46,12 +46,12 @@ void SensorSimulator::startBasicSensor()
 	_baro.start();
 }
 
-void SensorSimulator::run_seconds(float duration_seconds)
+void SensorSimulator::runSeconds(float duration_seconds)
 {
-	run_microseconds( uint32_t(duration_seconds * 1e6f) );
+	runMicroseconds( uint32_t(duration_seconds * 1e6f) );
 }
 
-void SensorSimulator::run_microseconds(uint32_t duration)
+void SensorSimulator::runMicroseconds(uint32_t duration)
 {
 	// simulate in 1000us steps
 	const uint32_t start_time = _time;

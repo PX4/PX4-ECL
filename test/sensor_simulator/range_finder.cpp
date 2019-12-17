@@ -18,9 +18,9 @@ void RangeFinder::send(uint32_t time)
 	_ekf->setRangeData(time, _range_data, _range_quality);
 }
 
-void RangeFinder::setData(float range_data, int8_t range_quality)
+void RangeFinder::setData(float range_data_meters, int8_t range_quality)
 {
-	_range_data = range_data;
+	_range_data = range_data_meters;
 	_range_quality = range_quality;
 }
 

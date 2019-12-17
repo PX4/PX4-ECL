@@ -57,7 +57,7 @@ class EkfInitializationTest : public ::testing::Test {
 	void SetUp() override
 	{
 		_ekf->init(0);
-		_sensor_simulator.run_seconds(_init_duration_s);
+		_sensor_simulator.runSeconds(_init_duration_s);
 	}
 
 	// Use this method to clean up any memory, network etc. after each test
@@ -111,7 +111,7 @@ TEST_F(EkfInitializationTest, initialControlMode)
 TEST_F(EkfInitializationTest, convergesToZero)
 {
 	// GIVEN: initialized EKF with default IMU, baro and mag input
-	_sensor_simulator.run_seconds(4);
+	_sensor_simulator.runSeconds(4);
 
 	Vector3f pos = _ekf_wrapper.getPosition();
 	Vector3f vel = _ekf_wrapper.getVelocity();
@@ -132,7 +132,7 @@ TEST_F(EkfInitializationTest, gpsFusion)
 	// WHEN: setting GPS measurements for 11s, minimum GPS health time is set to 10 sec
 
 	_sensor_simulator.startGps();
-	_sensor_simulator.run_seconds(11);
+	_sensor_simulator.runSeconds(11);
 
 	// THEN: EKF should fuse GPS, but no other position sensor
 	filter_control_status_u control_status;
@@ -172,7 +172,7 @@ TEST_F(EkfInitializationTest, accleBiasEstimation)
 
 	_sensor_simulator.startGps();
 	_sensor_simulator.setImuBias(accel_bias_sim, Vector3f{0.0f,0.0f,0.0f});
-	_sensor_simulator.run_seconds(10);
+	_sensor_simulator.runSeconds(10);
 
 	Vector3f pos = _ekf_wrapper.getPosition();
 	Vector3f vel = _ekf_wrapper.getVelocity();
