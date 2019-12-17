@@ -145,8 +145,9 @@ bool Ekf::initialiseFilter()
 	const imuSample &imu_init = _imu_buffer.get_newest();
 	// Reset to imu sample on boot up
 	// Use mag_counter to reduce number of variables
-	if(_mag_counter == 0){
+	if(_is_first_imu_sample){
 		_accel_lpf.reset(imu_init.delta_vel);
+		_is_first_imu_sample = false;
 	}
 	else
 	{
