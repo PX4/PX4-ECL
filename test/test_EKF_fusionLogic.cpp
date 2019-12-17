@@ -131,17 +131,17 @@ TEST_F(EkfFusionLogicTest, rejectGpsSignalJump)
 	Vector3f pos_new = _ekf_wrapper.getPosition();
 	Vector3f vel_new = _ekf_wrapper.getVelocity();
 	Vector3f accel_bias_new = _ekf_wrapper.getAccelBias();
-	EXPECT_EQ(true, matrix::isEqual(pos_new, pos_old, 0.01f));
-	EXPECT_EQ(true, matrix::isEqual(vel_new, vel_old, 0.01f));
-	EXPECT_EQ(true, matrix::isEqual(accel_bias_new, accel_bias_old, 0.01f));
+	EXPECT_TRUE(matrix::isEqual(pos_new, pos_old, 0.01f));
+	EXPECT_TRUE(matrix::isEqual(vel_new, vel_old, 0.01f));
+	EXPECT_TRUE(matrix::isEqual(accel_bias_new, accel_bias_old, 0.01f));
 
 	_sensor_simulator.run_seconds(10);
 	pos_new = _ekf_wrapper.getPosition();
 	vel_new = _ekf_wrapper.getVelocity();
 	accel_bias_new = _ekf_wrapper.getAccelBias();
-	EXPECT_EQ(true, matrix::isEqual(pos_new, pos_old, 0.01f));
-	EXPECT_EQ(true, matrix::isEqual(vel_new, vel_old, 0.01f));
-	EXPECT_EQ(true, matrix::isEqual(accel_bias_new, accel_bias_old, 0.01f));
+	EXPECT_TRUE(matrix::isEqual(pos_new, pos_old, 0.01f));
+	EXPECT_TRUE(matrix::isEqual(vel_new, vel_old, 0.01f));
+	EXPECT_TRUE(matrix::isEqual(accel_bias_new, accel_bias_old, 0.01f));
 	// EXPECT_EQ(_ekf_wrapper.isIntendingGpsFusion(), true); // What do we expect here?
 }
 

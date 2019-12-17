@@ -120,10 +120,10 @@ TEST_F(EkfInitializationTest, convergesToZero)
 	Vector3f ref{0.0f, 0.0f, 0.0f};
 
 	// THEN: EKF should stay or converge to zero
-	EXPECT_EQ(true, matrix::isEqual(pos, ref, 0.001f));
-	EXPECT_EQ(true, matrix::isEqual(vel, ref, 0.001f));
-	EXPECT_EQ(true, matrix::isEqual(accel_bias, ref, 0.001f));
-	EXPECT_EQ(true, matrix::isEqual(gyro_bias, ref, 0.001f));
+	EXPECT_TRUE(matrix::isEqual(pos, ref, 0.001f));
+	EXPECT_TRUE(matrix::isEqual(vel, ref, 0.001f));
+	EXPECT_TRUE(matrix::isEqual(accel_bias, ref, 0.001f));
+	EXPECT_TRUE(matrix::isEqual(gyro_bias, ref, 0.001f));
 }
 
 TEST_F(EkfInitializationTest, gpsFusion)
@@ -181,10 +181,10 @@ TEST_F(EkfInitializationTest, accleBiasEstimation)
 	Vector3f zero{0.0f, 0.0f, 0.0f};
 
 	// THEN: EKF should stay or converge to zero
-	EXPECT_EQ(true, matrix::isEqual(pos, zero, 0.001f));
-	EXPECT_EQ(true, matrix::isEqual(vel, zero, 0.001f));
-	EXPECT_EQ(true, matrix::isEqual(accel_bias, accel_bias_sim, 0.001f));
-	EXPECT_EQ(true, matrix::isEqual(gyro_bias, zero, 0.001f));
+	EXPECT_TRUE(matrix::isEqual(pos, zero, 0.001f));
+	EXPECT_TRUE(matrix::isEqual(vel, zero, 0.001f));
+	EXPECT_TRUE(matrix::isEqual(accel_bias, accel_bias_sim, 0.001f));
+	EXPECT_TRUE(matrix::isEqual(gyro_bias, zero, 0.001f));
 }
 
 // TODO: Add sampling tests
