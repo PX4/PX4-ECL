@@ -51,13 +51,13 @@ public:
 
 	void disableGpsFusion();
 
-	bool isIntendingGpsFusion();
+	bool isIntendingGpsFusion() const;
 
 	void enableFlowFusion();
 
 	void disableFlowFusion();
 
-	bool isIntendingFlowFusion();
+	bool isIntendingFlowFusion() const;
 
 	Vector3f getPosition() const;
 	Vector3f getVelocity() const;

@@ -56,7 +56,7 @@ public:
 private:
 	flow_message _flow_data;
 
-	void send(uint32_t time);
+	void send(uint32_t time) override;
 
 };
 

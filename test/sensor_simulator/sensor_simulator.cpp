@@ -54,7 +54,7 @@ void SensorSimulator::run_seconds(float duration_seconds)
 void SensorSimulator::run_microseconds(uint32_t duration)
 {
 	// simulate in 1000us steps
-	uint32_t start_time = _time;
+	const uint32_t start_time = _time;
 
 	for(;_time < start_time + duration; _time+=1000)
 	{

@@ -20,7 +20,7 @@ void EkfWrapper::disableGpsFusion()
 	_ekf_params->fusion_mode &= ~MASK_USE_GPS;
 }
 
-bool EkfWrapper::isIntendingGpsFusion()
+bool EkfWrapper::isIntendingGpsFusion() const
 {
 	filter_control_status_u control_status;
 	_ekf->get_control_mode(&control_status.value);
@@ -37,7 +37,7 @@ void EkfWrapper::disableFlowFusion()
 	_ekf_params->fusion_mode &= ~MASK_USE_OF;
 }
 
-bool EkfWrapper::isIntendingFlowFusion()
+bool EkfWrapper::isIntendingFlowFusion() const
 {
 	filter_control_status_u control_status;
 	_ekf->get_control_mode(&control_status.value);
