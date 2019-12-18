@@ -530,7 +530,7 @@ bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 	_imu_sample_delayed.delta_vel_dt = 0.0f;
 	_imu_sample_delayed.time_us = timestamp;
 
-	_initialised = false;
+	_initialised = true;
 
 	_time_last_imu = 0;
 	_time_last_gps = 0;
