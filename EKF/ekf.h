@@ -647,9 +647,10 @@ private:
 	void checkMagInhibition();
 	bool shouldInhibitMag() const;
 	void checkMagFieldStrength();
+	bool isMagStrengthPlausible(float mag_strength) const;
 	bool isStrongMagneticDisturbance() const;
-	bool isMeasuredMatchingGpsMagStrength() const;
-	bool isMeasuredMatchingAverageMagStrength() const;
+	bool isMeasuredMatchingGpsMagStrength(float mag_strength) const;
+	bool isMeasuredMatchingAverageMagStrength(float mag_strength) const;
 	static bool isMeasuredMatchingExpected(float measured, float expected, float gate);
 	void processMagResetFlags();
 	bool isYawResetRequested() const;
