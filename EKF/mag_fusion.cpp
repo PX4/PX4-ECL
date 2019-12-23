@@ -735,7 +735,6 @@ void Ekf::fuseHeading()
 		_last_static_yaw = predicted_hdg;
 
 	}
-	_mag_use_inhibit_prev = _mag_use_inhibit;
 
 	// wrap the innovation to the interval between +-pi
 	_heading_innov = wrap_pi(_heading_innov);
