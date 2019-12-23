@@ -268,19 +268,7 @@ bool Ekf::initialiseFilter()
 		_R_to_earth = Dcmf(_state.quat_nominal);
 
 		// calculate the initial magnetic field and yaw alignment
-		_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState(), false, false);
-
-		// initialise the state covariance matrix
-		initialiseCovariance();
-
-		// update the yaw angle variance using the variance of the measurement
-		if (_control_status.flags.ev_yaw) {
-			// using error estimate from external vision data TODO: this is never true
-			increaseQuatYawErrVariance(sq(fmaxf(_ev_sample_delayed.angErr, 1.0e-2f)));
-		} else if (_params.mag_fusion_type <= MAG_FUSE_TYPE_3D) {
-			// using magnetic heading tuning parameter
-			increaseQuatYawErrVariance(sq(fmaxf(_params.mag_heading_noise, 1.0e-2f)));
-		}
+		_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState(), true, false);
 
 		if (_control_status.flags.rng_hgt) {
 			// if we are using the range finder as the primary source, then calculate the baro height at origin so  we can use baro as a backup
