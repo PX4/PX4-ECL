@@ -47,7 +47,7 @@
 
 // Reset the velocity states. If we have a recent and valid
 // gps measurement then use for velocity initialisation
-bool Ekf::resetVelocity()
+void Ekf::resetVelocity()
 {
 	// used to calculate the velocity change due to the reset
 	Vector3f vel_before_reset = _state.vel;
@@ -126,13 +126,11 @@ bool Ekf::resetVelocity()
 	_state_reset_status.velD_change = velocity_change(2);
 	_state_reset_status.velNE_counter++;
 	_state_reset_status.velD_counter++;
-
-	return true;
 }
 
 // Reset position states. If we have a recent and valid
 // gps measurement then use for position initialisation
-bool Ekf::resetPosition()
+void Ekf::resetPosition()
 {
 	// ECL_INFO_TIMESTAMPED("Reset Position");
 	// used to calculate the position change due to the reset
@@ -209,8 +207,6 @@ bool Ekf::resetPosition()
 	// capture the reset event
 	_state_reset_status.posNE_change = posNE_change;
 	_state_reset_status.posNE_counter++;
-
-	return true;
 }
 
 // Reset height state using the last height measurement

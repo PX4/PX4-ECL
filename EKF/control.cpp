@@ -616,27 +616,25 @@ void Ekf::controlGpsFusion()
 					}
 				}
 
-				// If the heading is valid start using gps aiding
-				if (_control_status.flags.yaw_align) {
-					// if we are not already aiding with optical flow, then we need to reset the position and velocity
-					// otherwise we only need to reset the position
+				const bool is_heading_valid = _control_status.flags.yaw_align && !_mag_yaw_reset_req;
+
+				if (is_heading_valid) {
+					// do not reset the velocity estimate if optical flow aiding is active
+					const bool is_velocity_reset_req = !_control_status.flags.opt_flow;
+
+					resetPosition();
+
+					if(is_velocity_reset_req) {
+						resetVelocity();
+					}
+
+					// Do not use external vision for yaw if using GPS because yaw needs to be
+					// defined relative to an NED reference frame
+					_control_status.flags.ev_yaw = false;
+
 					_control_status.flags.gps = true;
-
-					if (!_control_status.flags.opt_flow) {
-						if (!resetPosition() || !resetVelocity()) {
-							_control_status.flags.gps = false;
-
-						}
-
-					} else if (!resetPosition()) {
-						_control_status.flags.gps = false;
-
-					}
-
-					if (_control_status.flags.gps) {
-						ECL_INFO_TIMESTAMPED("commencing GPS fusion");
-						_time_last_gps = _time_last_imu;
-					}
+					ECL_INFO_TIMESTAMPED("commencing GPS fusion");
+					_time_last_gps = _time_last_imu;
 				}
 			}
 

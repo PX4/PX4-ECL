@@ -560,9 +560,6 @@ private:
 	// fuse single velocity and position measurement
 	void fuseVelPosHeight(const float innov, const float innov_var, const int obs_index);
 
-	// reset velocity states of the ekf
-	bool resetVelocity();
-
 	// fuse optical flow line of sight rate measurements
 	void fuseOptFlow();
 
@@ -606,8 +603,11 @@ private:
 	// Return the magnetic declination in radians to be used by the alignment and fusion processing
 	float getMagDeclination();
 
+	// reset velocity states of the ekf
+	void resetVelocity();
+
 	// reset position states of the ekf (only horizontal position)
-	bool resetPosition();
+	void resetPosition();
 
 	// reset height state of the ekf
 	void resetHeight();
