@@ -43,6 +43,7 @@ void Ekf::controlMagFusion()
 {
 	updateMagFilter();
 	checkMagFieldStrength();
+	processMagResetFlags();
 
 	// If we are on ground, store the local position and time to use as a reference
 	// Also reset the flight alignment flag so that the mag fields will be re-initialised next time we achieve flight altitude
@@ -60,14 +61,7 @@ void Ekf::controlMagFusion()
 	}
 
 	if (canRunMagFusion()) {
-		if (_control_status.flags.in_air) {
-			checkHaglYawResetReq();
-			runInAirYawReset();
-			runVelPosReset();
-
-		} else {
-			runOnGroundYawReset();
-		}
+		checkHaglYawResetReq();
 
 		// Determine if we should use simple magnetic heading fusion which works better when
 		// there are large external disturbances or the more accurate 3-axis fusion
@@ -121,24 +115,13 @@ void Ekf::checkHaglYawResetReq()
 		// and request a yaw reset if not already requested.
 		static constexpr float mag_anomalies_max_hagl = 1.5f;
 		const bool above_mag_anomalies = (getTerrainVPos() - _state.pos(2)) > mag_anomalies_max_hagl;
-		_mag_yaw_reset_req = _mag_yaw_reset_req || above_mag_anomalies;
+		_in_flight_yaw_reset_req = above_mag_anomalies;
 	}
 }
 
 float Ekf::getTerrainVPos() const
 {
 	return isTerrainEstimateValid() ? _terrain_vpos : _last_on_ground_posD;
-}
-
-void Ekf::runOnGroundYawReset()
-{
-	if (_mag_yaw_reset_req && isYawResetAuthorized()) {
-		const bool has_realigned_yaw = canResetMagHeading()
-					       ? resetMagHeading(_mag_lpf.getState())
-					       : false;
-
-		_mag_yaw_reset_req = !has_realigned_yaw;
-	}
 }
 
 bool Ekf::isYawResetAuthorized() const
@@ -151,22 +134,9 @@ bool Ekf::canResetMagHeading() const
 	return !isStrongMagneticDisturbance();
 }
 
-void Ekf::runInAirYawReset()
-{
-	if (_mag_yaw_reset_req && isYawResetAuthorized()) {
-		bool has_realigned_yaw = false;
-
-		if (canRealignYawUsingGps()) { has_realigned_yaw = realignYawGPS(); }
-		else if (canResetMagHeading()) { has_realigned_yaw = resetMagHeading(_mag_lpf.getState()); }
-
-		_mag_yaw_reset_req = !has_realigned_yaw;
-		_control_status.flags.mag_aligned_in_flight = has_realigned_yaw;
-	}
-}
-
 bool Ekf::canRealignYawUsingGps() const
 { 
-	return _control_status.flags.fixed_wing;
+	return _control_status.flags.fixed_wing && _control_status.flags.in_air;
 }
 
 void Ekf::runVelPosReset()
@@ -318,6 +288,55 @@ bool Ekf::isMeasuredMatchingExpected(const float measured, const float expected,
 {
 	return (measured >= expected - gate)
 		&& (measured <= expected + gate);
+}
+
+void Ekf::processMagResetFlags()
+{
+	if (isYawResetRequested() && isYawResetAuthorized()) {
+		bool has_realigned_yaw = false;
+
+		if (canRealignYawUsingGps()) {
+			has_realigned_yaw = realignYawGPS();
+			runVelPosReset(); // TODO: move this somewhere else
+		}
+
+		if (!has_realigned_yaw && canResetMagHeading()) {
+			has_realigned_yaw = _control_status.flags.yaw_align
+					    ? resetMagHeading(_mag_lpf.getState()) // standard reset
+					    : resetMagHeading(_mag_lpf.getState(), true, false); // initial alignement
+		}
+
+		if (has_realigned_yaw) {
+			runPostAlignmentActions();
+		}
+	}
+}
+
+bool Ekf::isYawResetRequested() const
+{
+	return _mag_yaw_reset_req ||
+	       _mag_inhibit_yaw_reset_req ||
+	       _in_flight_yaw_reset_req ||
+	       !_control_status.flags.yaw_align;
+}
+
+void Ekf::runPostAlignmentActions()
+{
+	_control_status.flags.yaw_align = true;
+	_mag_yaw_reset_req = false;
+
+	if (_in_flight_yaw_reset_req) {
+		_control_status.flags.mag_aligned_in_flight = true;
+		_in_flight_yaw_reset_req = false;
+	}
+
+	// Handle the special case where we have not been constraining yaw drift or learning yaw bias due
+	// to assumed invalid mag field associated with indoor operation with a downwards looking flow sensor.
+	if (_mag_inhibit_yaw_reset_req) {
+		// Zero the yaw bias covariance and set the variance to the initial alignment uncertainty
+		setDiag(P, 12, 12, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
+		_mag_inhibit_yaw_reset_req = false;
+	}
 }
 
 void Ekf::runMagAndMagDeclFusions()

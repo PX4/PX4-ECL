@@ -57,7 +57,6 @@ void Ekf::controlFusionModes()
 		// and declare the tilt alignment complete
 		if ((angle_err_var_vec(0) + angle_err_var_vec(1)) < sq(math::radians(3.0f))) {
 			_control_status.flags.tilt_align = true;
-			_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState());
 
 			// send alignment status message to the console
 			if (_control_status.flags.baro_hgt) {
@@ -500,10 +499,6 @@ void Ekf::controlOpticalFlowFusion()
 			&& !_inhibit_flow_use
 			&& isTerrainEstimateValid())
 		{
-			// If the heading is not aligned, reset the yaw and magnetic field states
-			if (!_control_status.flags.yaw_align) {
-				_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState());
-			}
 
 			// If the heading is valid and use is not inhibited , start using optical flow aiding
 			if (_control_status.flags.yaw_align) {
@@ -612,25 +607,12 @@ void Ekf::controlGpsFusion()
 		bool gps_checks_failing = (_time_last_imu - _last_gps_pass_us > (uint64_t)5e6);
 		if ((_params.fusion_mode & MASK_USE_GPS) && !_control_status.flags.gps) {
 			if (_control_status.flags.tilt_align && _NED_origin_initialised && gps_checks_passing) {
-				// If the heading is not aligned, reset the yaw and magnetic field states
-				// Do not use external vision for yaw if using GPS because yaw needs to be
-				// defined relative to an NED reference frame
-				const bool want_to_reset_mag_heading = !_control_status.flags.yaw_align ||
-								       _control_status.flags.ev_yaw ||
-								       _mag_inhibit_yaw_reset_req;
-				if (want_to_reset_mag_heading && canResetMagHeading()) {
-					_control_status.flags.ev_yaw = false;
-					_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState());
-					// Handle the special case where we have not been constraining yaw drift or learning yaw bias due
-					// to assumed invalid mag field associated with indoor operation with a downwards looking flow sensor.
-					if (_mag_inhibit_yaw_reset_req) {
-						_mag_inhibit_yaw_reset_req = false;
-						// Zero the yaw bias covariance and set the variance to the initial alignment uncertainty
-						setDiag(P, 12, 12, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
-					}
-				}
+				// If the heading is aligned for yaw vision, reset the yaw and magnetic field states
+				_mag_yaw_reset_req = _mag_yaw_reset_req
+						     || _control_status.flags.ev_yaw;
 
-				const bool is_heading_valid = _control_status.flags.yaw_align && !_mag_yaw_reset_req;
+				// Do not start GPS fusion if a yaw reset is currently requested
+				const bool is_heading_valid = !isYawResetRequested();
 
 				if (is_heading_valid) {
 					// do not reset the velocity estimate if optical flow aiding is active
@@ -681,15 +663,15 @@ void Ekf::controlGpsFusion()
 
 			if (do_reset) {
 				// use GPS velocity data to check and correct yaw angle if a FW vehicle
-				if (_control_status.flags.fixed_wing && _control_status.flags.in_air) {
+				if (canRealignYawUsingGps()) {
 					// if flying a fixed wing aircraft, do a complete reset that includes yaw
 					_control_status.flags.mag_aligned_in_flight = realignYawGPS();
 				}
+				//TODO: should we also reset heading for a multicopter?
 
-				resetVelocity();
-				resetPosition();
-				_velpos_reset_request = false;
-				ECL_WARN_TIMESTAMPED("EKF GPS fusion timeout - reset to GPS");
+				_velpos_reset_request = true;
+				runVelPosReset(); // TODO: set the request flag here, but move the actual reset somewhere else
+				ECL_WARN_TIMESTAMPED("GPS fusion timeout - reset to GPS");
 
 				// Reset the timeout counters
 				_time_last_pos_fuse = _time_last_imu;

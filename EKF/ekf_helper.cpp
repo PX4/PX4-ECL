@@ -448,7 +448,6 @@ bool Ekf::realignYawGPS()
 				// This is our first flight alignment so we can assume that the recent change in velocity has occurred due to a
 				// forward direction takeoff or launch and therefore the inertial and GPS ground course discrepancy is due to yaw error
 				euler321(2) += courseYawError;
-				_control_status.flags.mag_aligned_in_flight = true;
 
 			} else if (_control_status.flags.wind) {
 				// we have previously aligned yaw in-flight and have wind estimates so set the yaw such that the vehicle nose is
@@ -540,9 +539,8 @@ bool Ekf::realignYawGPS()
 		}
 
 	} else {
-		// attempt a normal alignment using the magnetometer
-		return resetMagHeading(_mag_lpf.getState());
-
+		// Yaw aligment using GPS failed
+		return false;
 	}
 }
 
