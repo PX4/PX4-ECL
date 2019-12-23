@@ -255,13 +255,19 @@ bool Ekf::shouldInhibitMag() const
 void Ekf::checkMagFieldStrength()
 {
 	if (_params.check_mag_strength) {
-		_control_status.flags.mag_field_disturbed = _NED_origin_initialised
-							    ? !isMeasuredMatchingGpsMagStrength()
-							    : !isMeasuredMatchingAverageMagStrength();
+		_control_status.flags.mag_field_disturbed = isMagStrengthPlausible(_mag_sample_delayed.mag.length())
+							    && isMagStrengthPlausible(_mag_lpf.getState().length());
 
 	} else {
 		_control_status.flags.mag_field_disturbed = false;
 	}
+}
+
+bool Ekf::isMagStrengthPlausible(float mag_strength) const
+{
+	return _NED_origin_initialised
+	       ? !isMeasuredMatchingGpsMagStrength(mag_strength)
+	       : !isMeasuredMatchingAverageMagStrength(mag_strength);
 }
 
 bool Ekf::isStrongMagneticDisturbance() const
@@ -269,17 +275,17 @@ bool Ekf::isStrongMagneticDisturbance() const
 	return _control_status.flags.mag_field_disturbed;
 }
 
-bool Ekf::isMeasuredMatchingGpsMagStrength() const
+bool Ekf::isMeasuredMatchingGpsMagStrength(float mag_strength) const
 {
 	constexpr float wmm_gate_size = 0.2f; // +/- Gauss
-	return isMeasuredMatchingExpected(_mag_sample_delayed.mag.length(), _mag_strength_gps, wmm_gate_size);
+	return isMeasuredMatchingExpected(mag_strength, _mag_strength_gps, wmm_gate_size);
 }
 
-bool Ekf::isMeasuredMatchingAverageMagStrength() const
+bool Ekf::isMeasuredMatchingAverageMagStrength(float mag_strength) const
 {
 	constexpr float average_earth_mag_field_strength = 0.45f; // Gauss
 	constexpr float average_earth_mag_gate_size = 0.40f; // +/- Gauss
-	return isMeasuredMatchingExpected(_mag_sample_delayed.mag.length(),
+	return isMeasuredMatchingExpected(mag_strength,
 					  average_earth_mag_field_strength,
 					  average_earth_mag_gate_size);
 }
