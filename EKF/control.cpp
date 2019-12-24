@@ -625,9 +625,13 @@ void Ekf::controlGpsFusion()
 					// defined relative to an NED reference frame
 					_control_status.flags.ev_yaw = false;
 
+					// set the flag and reset the fusion timeout
 					_control_status.flags.gps = true;
-					ECL_INFO_TIMESTAMPED("commencing GPS fusion");
 					_time_last_gps = _time_last_imu;
+					_time_last_pos_fuse = _time_last_imu;
+					_time_last_vel_fuse = _time_last_imu;
+
+					ECL_INFO_TIMESTAMPED("commencing GPS fusion");
 				}
 			}
 
