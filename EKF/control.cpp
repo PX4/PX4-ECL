@@ -486,21 +486,18 @@ void Ekf::controlOpticalFlowFusion()
 			&& isTerrainEstimateValid())
 		{
 
-			// If the heading is valid and use is not inhibited , start using optical flow aiding
-			if (_control_status.flags.yaw_align) {
-				// set the flag and reset the fusion timeout
-				_control_status.flags.opt_flow = true;
-				_time_last_of_fuse = _time_last_imu;
+			// set the flag and reset the fusion timeout
+			_control_status.flags.opt_flow = true;
+			_time_last_of_fuse = _time_last_imu;
 
-				// if we are not using GPS or external vision aiding, then the velocity and position states and covariances need to be set
-				const bool flow_aid_only = !(_control_status.flags.gps || _control_status.flags.ev_pos || _control_status.flags.ev_vel);
-				if (flow_aid_only) {
-					resetVelocity();
-					resetPosition();
+			// if we are not using GPS or external vision aiding, then the velocity and position states and covariances need to be set
+			const bool flow_aid_only = !(_control_status.flags.gps || _control_status.flags.ev_pos || _control_status.flags.ev_vel);
+			if (flow_aid_only) {
+				resetVelocity();
+				resetPosition();
 
-					// align the output observer to the EKF states
-					alignOutputFilter();
-				}
+				// align the output observer to the EKF states
+				alignOutputFilter();
 			}
 
 		} else if (!(_params.fusion_mode & MASK_USE_OF)) {
