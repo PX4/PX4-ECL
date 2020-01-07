@@ -55,6 +55,7 @@ bool Ekf::init(uint64_t timestamp)
 void Ekf::reset(uint64_t timestamp)
 {
 	resetStatesAndCovariances();
+	resetQuaternion();
 
 	_delta_angle_corr.setZero();
 	_imu_down_sampled.delta_ang.setZero();
@@ -104,12 +105,20 @@ void Ekf::resetStates()
 	_state.accel_bias.setZero();
 	_state.mag_I.setZero();
 	_state.mag_B.setZero();
+
+	_control_status.flags.yaw_align = false;
+
 	_state.wind_vel.setZero();
-	_state.quat_nominal.setZero();
-	_state.quat_nominal(0) = 1.0f;
 
 	_output_new.vel.setZero();
 	_output_new.pos.setZero();
+}
+
+void Ekf::resetQuaternion()
+{
+	_state.quat_nominal.setZero();
+	_state.quat_nominal(0) = 1.0f;
+
 	_output_new.quat_nominal.setZero();
 	_output_new.quat_nominal(0) = 1.0f;
 }

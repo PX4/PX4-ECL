@@ -59,6 +59,7 @@ public:
 
 	void resetStatesAndCovariances() override;
 	void resetStates() override;
+	void resetQuaternion();
 
 	// should be called every time new data is pushed into the filter
 	bool update() override;
