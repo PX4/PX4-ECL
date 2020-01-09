@@ -99,8 +99,15 @@ void Ekf::fuseVelPosHeight()
 			fuse_map[5] = true;
 			// vertical position innovation - baro measurement has opposite sign to earth z axis
 			innovation[5] = _state.pos(2) + _baro_sample_delayed.hgt - _baro_hgt_offset - _hgt_sensor_offset;
-			// observation variance - user parameter defined
-			R[5] = fmaxf(_params.baro_noise, 0.01f);
+			// observation variance - user parameter defined, use a smaller value before takeoff to help
+			// constraining the states
+			if (!_control_status.flags.in_air) {
+				R[5] = 1.f;
+
+			} else {
+				R[5] = fmaxf(_params.baro_noise, 0.01f);
+			}
+
 			R[5] = R[5] * R[5];
 			// innovation gate size
 			gate_size[5] = fmaxf(_params.baro_innov_gate, 1.0f);
