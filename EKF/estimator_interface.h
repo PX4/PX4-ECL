@@ -544,6 +544,9 @@ protected:
 	//last time the baro ground effect compensation was turned on externally (uSec)
 	uint64_t _time_last_gnd_effect_on{0};
 
+	// Used to down sample barometer data
+	float _baro_alt_sum {0.0f};			///< summed pressure altitude readings (m)
+	uint8_t _baro_sample_count {0};		///< number of barometric altitude measurements summed
 
 	fault_status_u _fault_status{};
 
@@ -570,6 +573,8 @@ protected:
 
 	inline void computeVibrationMetric();
 	inline bool checkIfVehicleAtRest(float dt);
+
+	virtual float compensateBaroForDynamicPressure(const float baro_alt_uncompensated) = 0;
 
 	void printBufferAllocationFailed(const char * buffer_name);
 };
