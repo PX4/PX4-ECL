@@ -106,8 +106,8 @@ void Ekf::resetVelocityToVision() {
 	if(_params.fusion_mode & MASK_ROTATE_EV){
 		_ev_vel = _R_ev_to_ekf *_ev_sample_delayed.vel;
 	}
-	resetVelocityTo(_ev_vel);
-	P.uncorrelateCovarianceSetVariance<3>(4, _ev_sample_delayed.velVar);
+	resetVelocityTo(getVisionVelocityInEkfFrame());
+	P.uncorrelateCovarianceSetVariance<3>(4, getVisionVelocityVarianceInEkfFrame());
 }
 
 void Ekf::resetHorizontalVelocityToZero() {
@@ -310,13 +310,15 @@ void Ekf::resetHeight()
 		P.uncorrelateCovarianceSetVariance<1>(6, 10.0f);
 	}
 
+	// store the reset amount and time to be published
 	if (vert_pos_reset) {
-		// store the reset amount and time to be published
 		_state_reset_status.posD_change = _state.pos(2) - old_vert_pos;
 		_state_reset_status.posD_counter++;
+	}
 
-		// apply the change in height / height rate to our newest height / height rate estimate
-		// which have already been taken out from the output buffer
+	// apply the change in height / height rate to our newest height / height rate estimate
+	// which have already been taken out from the output buffer
+	if (vert_pos_reset) {
 		_output_new.pos(2) += _state_reset_status.posD_change;
 	}
 
@@ -1504,6 +1506,47 @@ void Ekf::updateBaroHgtOffset()
 	}
 }
 
+Vector3f Ekf::getVisionVelocityInEkfFrame()
+{
+	// correct velocity for offset relative to IMU
+	const Vector3f pos_offset_body = _params.ev_pos_body - _params.imu_pos_body;
+	const Vector3f vel_offset_body = _ang_rate_delayed_raw % pos_offset_body;
+
+	// rotate measurement into correct earth frame if required
+	if (_ev_sample_delayed.vel_frame == BODY_FRAME_FRD)
+	{
+		return _R_to_earth * (_ev_sample_delayed.vel - vel_offset_body);
+	}
+	else // _ev_sample_delayed.vel_frame == LOCAL_FRAME_FRD
+	{
+		const Vector3f vel_offset_earth = _R_to_earth * vel_offset_body;
+		if(_params.fusion_mode & MASK_ROTATE_EV)
+		{
+			return _R_ev_to_ekf *_ev_sample_delayed.vel - vel_offset_earth;
+		}
+		return _ev_sample_delayed.vel - vel_offset_earth;
+	}
+}
+
+Vector3f Ekf::getVisionVelocityVarianceInEkfFrame()
+{
+	Matrix3f ev_vel_cov = _ev_sample_delayed.velCov;
+
+	// rotate measurement into correct earth frame if required
+	if (_ev_sample_delayed.vel_frame == BODY_FRAME_FRD)
+	{
+		ev_vel_cov = _R_to_earth * ev_vel_cov * _R_to_earth.transpose();
+	}
+	else // (_ev_sample_delayed.vel_frame == LOCAL_FRAME_FRD)
+	{
+		if(_params.fusion_mode & MASK_ROTATE_EV)
+		{
+			ev_vel_cov = _R_ev_to_ekf * ev_vel_cov * _R_ev_to_ekf.transpose();
+		}
+	}
+	return ev_vel_cov.diag();
+}
+
 // update the rotation matrix which rotates EV measurements into the EKF's navigation frame
 void Ekf::calcExtVisRotMat()
 {
@@ -1813,5 +1856,20 @@ void Ekf::runYawEKFGSF()
 	// basic sanity check on GPS velocity data
 	if (_gps_data_ready && _gps_sample_delayed.vacc > FLT_EPSILON && ISFINITE(_gps_sample_delayed.vel(0)) && ISFINITE(_gps_sample_delayed.vel(1))) {
 		yawEstimator.setVelocity(_gps_sample_delayed.vel.xy(), _gps_sample_delayed.vacc);
+	}
+}
+
+void Ekf::shrinkYawVariance()
+{
+	if (fabsf(_R_to_earth(2, 0)) < fabsf(_R_to_earth(2, 1))) {
+		// rolled more than pitched so use 321 rotation order to define yaw angle
+		// and fuse a zero innovation yaw to shrink quaternion yaw variance
+		fuseYaw321(0.0f, 0.25f, true);
+
+	} else {
+		// pitched more than rolled so use 312 rotation order to define yaw angle
+		// and fuse a zero innovation yaw to shrink quaternion yaw variance
+		fuseYaw312(0.0f, 0.25f, true);
+
 	}
 }
