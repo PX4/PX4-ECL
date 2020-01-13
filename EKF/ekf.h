@@ -284,6 +284,9 @@ public:
 	// set minimum continuous period without GPS fail required to mark a healthy GPS status
 	void set_min_required_gps_health_time(uint32_t time_us) { _min_gps_health_time_us = time_us; }
 
+	// set GPS sensor position
+	void set_GPS_pos_body(const Vector3f &gps_pos_body) { _params.gps_pos_body = gps_pos_body; }
+
 private:
 
 	static constexpr uint8_t _k_num_states{24};		///< number of EKF states
