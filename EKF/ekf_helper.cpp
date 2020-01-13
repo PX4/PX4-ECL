@@ -1615,32 +1615,6 @@ void Ekf::calcExtVisRotMat()
 	// Calculate the quaternion delta that rotates from the EV to the EKF reference frame at the EKF fusion time horizon.
 	Quatf q_error = _state.quat_nominal * _ev_sample_delayed.quat.inversed();
 	q_error.normalize();
-
-	// convert to a delta angle and apply a spike and low pass filter
-	Vector3f rot_vec = q_error.to_axis_angle();
-
-	float rot_vec_norm = rot_vec.norm();
-
-	if (rot_vec_norm > 1e-6f) {
-
-		// apply an input limiter to protect from spikes
-		Vector3f _input_delta_vec = rot_vec - _ev_rot_vec_filt;
-		float input_delta_len = _input_delta_vec.norm();
-
-		if (input_delta_len > 0.1f) {
-			rot_vec = _ev_rot_vec_filt + _input_delta_vec * (0.1f / input_delta_len);
-		}
-
-		// Apply a first order IIR low pass filter
-		const float omega_lpf_us = 0.2e-6f; // cutoff frequency in rad/uSec
-		float alpha = math::constrain(omega_lpf_us * (float)(_time_last_imu - _ev_rot_last_time_us), 0.0f, 1.0f);
-		_ev_rot_last_time_us = _time_last_imu;
-		_ev_rot_vec_filt = _ev_rot_vec_filt * (1.0f - alpha) + rot_vec * alpha;
-
-	}
-
-	// convert filtered vector to a quaternion and then to a rotation matrix
-	q_error.from_axis_angle(_ev_rot_vec_filt);
 	_ev_rot_mat = Dcmf(q_error); // rotation from EV reference to EKF reference
 
 }
