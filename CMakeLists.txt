@@ -38,7 +38,7 @@ project(ECL CXX)
 if(NOT CMAKE_BUILD_TYPE)
 	# force debug builds if we test ECL as standalone
 	if(BUILD_TESTING AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
-		set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
+		set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type" FORCE)
 	else()
 		set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type" FORCE)
 	endif()
@@ -132,7 +132,7 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
 	include(ExternalProject)
 	ExternalProject_Add(matrix
 			GIT_REPOSITORY "https://github.com/PX4/Matrix.git"
-			GIT_TAG d18be0d0fa17d9a0b60ab34bad3e33160f907b09
+			GIT_TAG a37b91c96a9726cd8336af2d3463e717007e60a5
 			UPDATE_COMMAND ""
 			PATCH_COMMAND ""
 			CONFIGURE_COMMAND ""
