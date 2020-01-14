@@ -200,14 +200,6 @@ void Ekf::controlExternalVisionFusion()
 					resetVelocity();
 					ECL_INFO_TIMESTAMPED("EKF commencing external vision velocity fusion");
 				}
-
-				if ((_params.fusion_mode & MASK_ROTATE_EV) && !(_params.fusion_mode & MASK_USE_EVYAW)
-					&& !_ev_rot_mat_initialised)  {
-					// Reset transformation between EV and EKF navigation frames when starting fusion
-					resetExtVisRotMat();
-					_ev_rot_mat_initialised = true;
-					ECL_INFO_TIMESTAMPED("EKF external vision aligned");
-				}
 			}
 		}
 

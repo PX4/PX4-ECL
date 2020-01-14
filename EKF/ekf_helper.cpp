@@ -706,11 +706,6 @@ bool Ekf::resetMagHeading(const Vector3f &mag_init, bool increase_yaw_var, bool 
 	// update transformation matrix from body to world frame using the current estimate
 	_R_to_earth = Dcmf(_state.quat_nominal);
 
-	// reset the rotation from the EV to EKF frame of reference if it is being used
-	if ((_params.fusion_mode & MASK_ROTATE_EV) && !_control_status.flags.ev_yaw) {
-		resetExtVisRotMat();
-	}
-
 	if (increase_yaw_var) {
 		// update the yaw angle variance using the variance of the measurement
 		if (_control_status.flags.ev_yaw) {
@@ -1616,38 +1611,12 @@ void Ekf::calcExtVisRotMat()
 	Quatf q_error = _state.quat_nominal * _ev_sample_delayed.quat.inversed();
 	q_error.normalize();
 	_ev_rot_mat = Dcmf(q_error); // rotation from EV reference to EKF reference
-
-}
-
-// reset the estimated misalignment between the EV navigation frame and the EKF navigation frame
-// and update the rotation matrix which rotates EV measurements into the EKF's navigation frame
-void Ekf::resetExtVisRotMat()
-{
-	// Calculate the quaternion delta that rotates from the EV to the EKF reference frame at the EKF fusion time horizon.
-	Quatf q_error = _state.quat_nominal * _ev_sample_delayed.quat.inversed();
-	q_error.normalize();
-
-	// convert to a delta angle and reset
-	Vector3f rot_vec = q_error.to_axis_angle();
-
-	float rot_vec_norm = rot_vec.norm();
-
-	if (rot_vec_norm > 1e-9f) {
-		_ev_rot_vec_filt = rot_vec;
-
-	} else {
-		_ev_rot_vec_filt.zero();
-	}
-
-	// reset the rotation matrix
-	_ev_rot_mat = Dcmf(q_error); // rotation from EV reference to EKF reference
 }
 
 // return the quaternions for the rotation from External Vision system reference frame to the EKF reference frame
 void Ekf::get_ev2ekf_quaternion(float *quat)
 {
-	Quatf quat_ev2ekf;
-	quat_ev2ekf.from_axis_angle(_ev_rot_vec_filt);
+	Quatf quat_ev2ekf(_ev_rot_mat);
 
 	for (unsigned i = 0; i < 4; i++) {
 		quat[i] = quat_ev2ekf(i);
