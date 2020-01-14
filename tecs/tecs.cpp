@@ -322,7 +322,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		/*
 		Adjust the demanded total energy rate to compensate for induced drag rise in turns.
 		Assume induced drag scales with lift coefficient/normal load factor squared.
-		Normal load factor is given by cos(pitch) / (cos(roll)*(1 + sin^2(pitch))
+		Normal load factor is given by cos(pitch) / (cos(roll)
 		Pitch is angle of X axis above horizontal plane (second rotation angle from Tait-Bryan 321 sequence)
 		Roll is angle of Y axis below horizontal plane (second rotation angle from Tait-Bryan 312 sequence)
 		*/
@@ -330,7 +330,7 @@ void TECS::_update_throttle_setpoint(const float throttle_cruise, const matrix::
 		float cosRoll = constrain(cosf(roll), 0.1f, 1.0f);
 		float sinePitch = constrain(-rotMat(2, 0), -1.0f, 1.0f);
 		float pitch = asinf(sinePitch);
-		float load_factor = cosf(pitch) / (cosRoll * (1.0f + sinePitch * sinePitch));
+		float load_factor = cosf(pitch) / cosRoll;
 		STE_rate_setpoint = STE_rate_setpoint + _load_factor_correction * (load_factor * load_factor - 1.0f);
 
 		// Calculate a predicted throttle from the demanded rate of change of energy, using the cruise throttle
