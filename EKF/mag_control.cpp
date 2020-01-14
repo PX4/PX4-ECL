@@ -54,8 +54,9 @@ void Ekf::controlMagFusion()
 	}
 
 	if ((_params.mag_fusion_type >= MAG_FUSE_TYPE_NONE)
-	    || _control_status.flags.mag_fault
-	    || !_control_status.flags.yaw_align) {
+	    || _control_status.flags.mag_fault) {
+		// NOTE: we still run the mag fusion logic if the flag _mag_use_inhibit is set because
+		// this special case is handled in the fuseHeading function
 		stopMagFusion();
 		return;
 	}
@@ -126,7 +127,7 @@ float Ekf::getTerrainVPos() const
 
 bool Ekf::isYawResetAuthorized() const
 {
-	return !_mag_use_inhibit;
+	return !_mag_use_inhibit && _control_status.flags.tilt_align;
 }
 
 bool Ekf::canResetMagHeading() const
