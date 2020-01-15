@@ -44,8 +44,6 @@
 
 #include "estimator_interface.h"
 
-typedef matrix::Dual<float, 4> Dual4f;
-
 class Ekf : public EstimatorInterface
 {
 public:
@@ -771,9 +769,9 @@ private:
 
 	bool isRangeDataContinuous() { return _dt_last_range_update_filt_us < 2e6f; }
 
-	Dual4f yaw321FromQuaterion(matrix::Quaternion<Dual4f> q) const;
+	Dual4f yaw321FromQuaterion(const matrix::Quaternion<Dual4f>& q) const;
 
-	Dual4f yaw312FromQuaterion(matrix::Quaternion<Dual4f> q) const;
+	Dual4f yaw312FromQuaterion(const matrix::Quaternion<Dual4f>& q) const;
 
 	// Increase the yaw error variance of the quaternions
 	// Argument is additional yaw variance in rad**2

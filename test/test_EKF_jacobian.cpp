@@ -43,7 +43,7 @@ using matrix::Eulerf;
 
 class EkfJacobianTest : public ::testing::Test {
  public:
-	Dual<float, 4> yaw321FromQuaterion(Quaternion<Dual<float,4 >> q)
+	Dual<float, 4> yaw321FromQuaterion(const Quaternion<Dual<float,4 >>& q)
 	{
 		return atan2(Dual<float, 4>(2) * (q(0) * q(3) + q(1) * q(2)),
 			      q(0) * q(0) + q(1) * q(1) - q(2) * q(2) - q(3) * q(3));
@@ -51,7 +51,7 @@ class EkfJacobianTest : public ::testing::Test {
 		// return atan2(R_to_earth(1, 0), R_to_earth(0, 0));
 	}
 
-	Dual<float, 4> yaw312FromQuaterion(Quaternion<Dual<float,4 >> q)
+	Dual<float, 4> yaw312FromQuaterion(const Quaternion<Dual<float,4 >>& q)
 	{
 		return atan2(Dual<float, 4>(-2) * (q(1) * q(2) - q(0) * q(3)),
 			      q(0) * q(0) - q(1) * q(1) + q(2) * q(2) - q(3) * q(3));

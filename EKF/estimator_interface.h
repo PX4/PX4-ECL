@@ -53,6 +53,8 @@
 
 using namespace estimator;
 
+typedef matrix::Dual<float, 4> Dual4f;
+
 class EstimatorInterface
 {
 

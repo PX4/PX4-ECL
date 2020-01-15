@@ -44,13 +44,13 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
-Dual4f Ekf::yaw321FromQuaterion(matrix::Quaternion<Dual4f> q) const
+Dual4f Ekf::yaw321FromQuaterion(const matrix::Quaternion<Dual4f>& q) const
 {
 	return atan2(Dual4f(2) * (q(0) * q(3) + q(1) * q(2)),
 			q(0) * q(0) + q(1) * q(1) - q(2) * q(2) - q(3) * q(3));
 }
 
-Dual4f Ekf::yaw312FromQuaterion(matrix::Quaternion<Dual4f> q) const
+Dual4f Ekf::yaw312FromQuaterion(const matrix::Quaternion<Dual4f>& q) const
 {
 	return atan2(Dual4f(-2) * (q(1) * q(2) - q(0) * q(3)),
 			q(0) * q(0) - q(1) * q(1) + q(2) * q(2) - q(3) * q(3));
