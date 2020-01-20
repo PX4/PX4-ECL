@@ -191,7 +191,7 @@ public:
 	void setOpticalFlowData(uint64_t time_usec, flow_message *flow);
 
 	// set external vision position and attitude data
-	void setExtVisionData(uint64_t time_usec, ext_vision_message *evdata);
+	void setExtVisionData(const extVisionSample& evdata);
 
 	void setAuxVelData(uint64_t time_usec, const Vector3f &vel, const Vector3f &variance);
 
