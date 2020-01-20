@@ -5,6 +5,8 @@
 
 .cache/
 build/
+astyle/*/*
+astyle/*.txt
 
 */*.a
 .ninja_deps

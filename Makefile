@@ -39,6 +39,8 @@
 FIRST_ARG := $(firstword $(MAKECMDGOALS))
 ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 j ?= 4
+BLUE='\033[1;36m'
+NC='\033[0m' # No Color
 
 NINJA_BIN := ninja
 ifndef NO_NINJA_BUILD
@@ -123,6 +125,27 @@ coverage_html: coverage_build
 
 coverage_html_view: coverage_build
 	@cmake --build $(SRC_DIR)/build/coverage_build --target coverage_html_view
+
+# Code formatting
+# --------------------------------------------------------------------
+.PHONY: check_format format astyle
+
+astyle:
+	@echo -e ${BLUE}Install astyle${NC}
+	@mkdir -p $(SRC_DIR)/astyle/src
+	@cd $(SRC_DIR)/astyle/src
+	@wget http://sourceforge.net/projects/astyle/files/astyle/astyle%202.06/astyle_2.06_linux.tar.gz -O /tmp/astyle.tar.gz
+	@tar -xvf /tmp/astyle.tar.gz
+	@cd astyle/src && make -f ../build/gcc/Makefile
+	@cd $(SRC_DIR)
+
+check_format: astyle
+	@echo -e ${BLUE}Checking formatting with astyle${NC}
+	@$(SRC_DIR)/astyle/format.sh $(SRC_DIR)/astyle/src/bin/astyle $(SRC_DIR)/astyle/astylerc 0
+
+format: astyle
+	@echo -e ${BLUE}Formatting with astyle${NC}
+	@$(SRC_DIR)/astyle/format.sh $(SRC_DIR)/astyle/src/bin/astyle $(SRC_DIR)/astyle/astylerc 1
 
 # Cleanup
 # --------------------------------------------------------------------
