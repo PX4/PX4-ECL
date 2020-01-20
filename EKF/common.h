@@ -73,13 +73,6 @@ struct gps_message {
 	float pdop;		///< position dilution of precision
 };
 
-struct flow_message {
-	uint8_t quality;	///< Quality of Flow data
-	Vector2f flowdata;	///< Optical flow rates about the X and Y body axes (rad/sec)
-	Vector3f gyrodata;	///< Gyro rates about the XYZ body axes (rad/sec)
-	uint32_t dt;		///< integration time of flow samples (microseconds)
-};
-
 struct ext_vision_message {
 	Vector3f pos;	///< XYZ position in external vision's local reference frame (m) - Z must be aligned with down axis
 	Vector3f vel;	///< XYZ velocity in external vision's local reference frame (m/sec) - Z must be aligned with down axis

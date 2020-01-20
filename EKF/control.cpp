@@ -132,12 +132,8 @@ void Ekf::controlFusionModes()
 		_range_sample_delayed.rng += pos_offset_earth(2) / _R_rng_to_earth_2_2;
 	}
 
-	// We don't fuse flow data immediately because we have to wait for the mid integration point to fall behind the fusion time horizon.
-	// This means we stop looking for new data until the old data has been fused.
-	if (!_flow_data_ready) {
-		_flow_data_ready = _flow_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_flow_sample_delayed)
+	_flow_data_ready = _flow_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_flow_sample_delayed)
 				   && (_R_to_earth(2, 2) > _params.range_cos_max_tilt);
-	}
 
 	// check if we should fuse flow data for terrain estimation
 	if (!_flow_for_terrain_data_ready && _flow_data_ready && _control_status.flags.in_air) {

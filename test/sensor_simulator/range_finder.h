@@ -51,7 +51,6 @@ public:
 	~RangeFinder();
 
 	void setData(float range_data, int8_t range_quality);
-	flow_message dataAtRest();
 
 private:
 	float _range_data{0.0f};
