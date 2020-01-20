@@ -66,12 +66,6 @@ bool Ekf::initHagl()
 		// success
 		initialized = true;
 
-	} else if (_flow_for_terrain_data_ready) {
-		// initialise terrain vertical position to origin as this is the best guess we have
-		_terrain_vpos = fmaxf(0.0f,  _state.pos(2));
-		_terrain_var = 100.0f;
-		initialized = true;
-
 	} else {
 		// no information - cannot initialise
 		initialized = false;
@@ -114,11 +108,6 @@ void Ekf::runTerrainEstimator()
 			// we do this here to avoid doing those calculations at a high rate
 			_sin_tilt_rng = sinf(_params.rng_sens_pitch);
 			_cos_tilt_rng = cosf(_params.rng_sens_pitch);
-		}
-
-		if (_flow_for_terrain_data_ready) {
-			fuseFlowForTerrain();
-			_flow_for_terrain_data_ready = false;
 		}
 
 		// constrain _terrain_vpos to be a minimum of _params.rng_gnd_clearance larger than _state.pos(2)
