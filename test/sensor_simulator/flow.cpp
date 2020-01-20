@@ -33,7 +33,6 @@ flowSample Flow::dataAtRest()
 	_flow_at_rest.flowRadXY = Vector2f{0.0f, 0.0f};
 	_flow_at_rest.gyroXYZ = Vector3f{0.0f, 0.0f, 0.0f};
 	_flow_at_rest.quality = 255;
-	_flow_at_rest.time_us = 0;
 	return _flow_at_rest;
 }
 
