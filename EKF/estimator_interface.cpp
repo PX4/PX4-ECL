@@ -323,7 +323,6 @@ void EstimatorInterface::setRangeData(uint64_t time_usec, float data, int8_t qua
 	}
 }
 
-// TODO: Change pointer to constant reference
 void EstimatorInterface::setOpticalFlowData(const flowSample& flow)
 {
 	if (!_initialised || _flow_buffer_fail) {
