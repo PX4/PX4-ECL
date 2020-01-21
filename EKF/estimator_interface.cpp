@@ -354,7 +354,7 @@ void EstimatorInterface::setOpticalFlowData(const flowSample& flow)
 			// check magnitude is within sensor limits
 			// use this to prevent use of a saturated flow sensor
 			// when there are other aiding sources available
-			const float flow_rate_magnitude = flow.flowRadXY.norm() / delta_time;
+			const float flow_rate_magnitude = flow.flow_xy_rad.norm() / delta_time;
 			flow_magnitude_good = (flow_rate_magnitude <= _flow_max_rate);
 		} else {
 			// protect against overflow caused by division with very small delta_time

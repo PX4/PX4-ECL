@@ -529,11 +529,11 @@ void Ekf::controlOpticalFlowFusion()
 
 			if (!flow_quality_good && !_control_status.flags.in_air) {
 				// when on the ground with poor flow quality, assume zero ground relative velocity and LOS rate
-				_flowRadXYcomp.zero();
+				_flow_compensated_XY_rad.zero();
 			} else {
 				// compensate for body motion to give a LOS rate
-				_flowRadXYcomp(0) = _flow_sample_delayed.flowRadXY(0) - _flow_sample_delayed.gyroXYZ(0);
-				_flowRadXYcomp(1) = _flow_sample_delayed.flowRadXY(1) - _flow_sample_delayed.gyroXYZ(1);
+				_flow_compensated_XY_rad(0) = _flow_sample_delayed.flow_xy_rad(0) - _flow_sample_delayed.gyro_xyz(0);
+				_flow_compensated_XY_rad(1) = _flow_sample_delayed.flow_xy_rad(1) - _flow_sample_delayed.gyro_xyz(1);
 			}
 
 			// Fuse optical flow LOS rate observations into the main filter only if height above ground has been updated recently
