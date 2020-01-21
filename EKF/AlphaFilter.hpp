@@ -49,7 +49,7 @@ public:
 
 	void update(const T &input, float tau, float dt)
 	{
-		const float alpha = dt / tau; 
+		const float alpha = dt / tau;
 		update(input, alpha);
 	}
 
@@ -64,7 +64,7 @@ public:
 		update(input, 0.1f);
 	}
 
-	const T& getState() const { return _x; }
+	const T &getState() const { return _x; }
 
 private:
 	T _x{}; ///< current state of the filter
