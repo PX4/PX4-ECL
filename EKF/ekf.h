@@ -785,6 +785,10 @@ private:
 	// sensor measurement
 	float calculate_synthetic_mag_z_measurement(const Vector3f& mag_meas, const Vector3f& mag_earth_predicted);
 
+	bool isTimedOut(uint64_t last_sensor_timestamp, uint64_t timeout_period);
+
+	bool isRecent(uint64_t sensor_timestamp, uint64_t acceptance_interval);
+
 	void stopGpsFusion();
 
 	void stopGpsPosFusion();
