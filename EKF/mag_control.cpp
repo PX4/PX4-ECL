@@ -53,15 +53,13 @@ void Ekf::controlMagFusion()
 		_num_bad_flight_yaw_events = 0;
 	}
 
-	if ((_params.mag_fusion_type >= MAG_FUSE_TYPE_NONE)
-	    || _control_status.flags.mag_fault) {
-		// NOTE: we still run the mag fusion logic if the flag _mag_use_inhibit is set because
-		// we need to fuse fake data to constrain the drift (done in fuseHeading)
+	if (!canRunMagFusion()) {
 		stopMagFusion();
 		return;
 	}
 
-	if (canRunMagFusion()) {
+	// Check for new magnetometer data that has fallen behind the fusion time horizon
+	if (_mag_data_ready) {
 		checkHaglYawResetReq();
 
 		// Determine if we should use simple magnetic heading fusion which works better when
@@ -102,9 +100,19 @@ void Ekf::updateMagFilter()
 
 bool Ekf::canRunMagFusion() const
 {
-	// check for new magnetometer data that has fallen behind the fusion time horizon
 	// If we are using external vision data or GPS-heading for heading then no magnetometer fusion is used
-	return !_control_status.flags.ev_yaw && !_control_status.flags.gps_yaw && _mag_data_ready;
+	const bool is_selected = (_params.mag_fusion_type < MAG_FUSE_TYPE_NONE)
+				 && !_control_status.flags.gps_yaw
+				 && !_control_status.flags.ev_yaw;
+
+	// NOTE: we still run the mag fusion logic if the flag _mag_use_inhibit is set because
+	// we need to fuse fake data to constrain the drift (done in fuseHeading)
+	const bool is_sensor_healthy = !_control_status.flags.mag_fault;
+
+	// It is not safe to fuse mag data before the fine tilt alignement has been completed
+	const bool is_estimator_ready = _control_status.flags.tilt_align;
+
+	return is_selected && is_sensor_healthy && is_estimator_ready;
 }
 
 void Ekf::checkHaglYawResetReq()
@@ -246,7 +254,7 @@ bool Ekf::shouldInhibitMag() const
 	const bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR);
 
 	const bool heading_not_required_for_navigation = !_control_status.flags.gps
-							 && !_control_status.flags.ev_pos
+							 && !_control_status.flags.ev_pos // Is true North really required?
 							 && !_control_status.flags.ev_vel;
 
 	return (user_selected && heading_not_required_for_navigation)
