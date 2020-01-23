@@ -51,9 +51,7 @@ public:
 		update(input, alpha);
 	}
 
-	void update(const T &input, float alpha) {
-		_x = (1.f - alpha) * _x + alpha * input;
-	}
+	void update(const T &input, float alpha) { _x = (1.f - alpha) * _x + alpha * input; }
 
 	// Typical 0.9/0.1 lowpass filter
 	void update(const T &input) { update(input, 0.1f); }
