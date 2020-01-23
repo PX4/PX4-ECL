@@ -688,7 +688,7 @@ private:
 	bool isMeasuredMatchingGpsMagStrength(float mag_strength) const;
 	bool isMeasuredMatchingAverageMagStrength(float mag_strength) const;
 	static bool isMeasuredMatchingExpected(float measured, float expected, float gate);
-	void processMagResetFlags();
+	void processMagResetFlags(bool force = false);
 	bool isYawResetRequested() const;
 	void runPostAlignmentActions();
 	void runMagAndMagDeclFusions();

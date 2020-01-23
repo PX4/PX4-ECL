@@ -297,9 +297,9 @@ bool Ekf::isMeasuredMatchingExpected(const float measured, const float expected,
 		&& (measured <= expected + gate);
 }
 
-void Ekf::processMagResetFlags()
+void Ekf::processMagResetFlags(bool force)
 {
-	if (isYawResetRequested() && isYawResetAuthorized()) {
+	if ((isYawResetRequested() && isYawResetAuthorized()) || force) {
 		bool has_realigned_yaw = false;
 
 		if (canRealignYawUsingGps()) {
@@ -307,7 +307,7 @@ void Ekf::processMagResetFlags()
 			runVelPosReset(); // TODO: move this somewhere else
 		}
 
-		if (!has_realigned_yaw && canResetMagHeading()) {
+		if ((!has_realigned_yaw && canResetMagHeading()) || force) {
 			has_realigned_yaw = _control_status.flags.yaw_align
 					    ? resetMagHeading(_mag_lpf.getState()) // standard reset
 					    : resetMagHeading(_mag_lpf.getState(), true, false); // initial alignement

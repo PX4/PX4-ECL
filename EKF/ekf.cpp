@@ -194,7 +194,7 @@ bool Ekf::initialiseFilter()
 
 		// calculate the initial magnetic field and yaw alignment
 		checkMagFieldStrength();
-		processMagResetFlags();
+		processMagResetFlags(true);
 
 		// try to initialise the terrain estimator
 		_terrain_initialised = initHagl();
