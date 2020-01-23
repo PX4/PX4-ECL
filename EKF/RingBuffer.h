@@ -75,8 +75,8 @@ public:
 		_head = 0;
 		_tail = 0;
 
-		// set the time elements to zero so that bad data is not retrieved from
-		// the buffers
+		// set the time elements to zero so that bad data is not
+		// retrieved from the buffers
 		for (uint8_t index = 0; index < _size; index++) {
 			_buffer[index] = {};
 		}
@@ -119,19 +119,21 @@ public:
 
 	uint8_t get_oldest_index() const { return _tail; }
 
-	bool pop_first_older_than(const uint64_t &timestamp, data_type *sample) {
+	bool pop_first_older_than(const uint64_t &timestamp,
+				  data_type *sample) {
 		// start looking from newest observation data
 		for (uint8_t i = 0; i < _size; i++) {
 			int index = (_head - i);
 			index = index < 0 ? _size + index : index;
 
 			if (timestamp >= _buffer[index].time_us &&
-				timestamp - _buffer[index].time_us < (uint64_t)1e5) {
+			    timestamp - _buffer[index].time_us <
+				(uint64_t)1e5) {
 				*sample = _buffer[index];
 
-				// Now we can set the tail to the item which comes after the one
-				// we removed since we don't want to have any older data in the
-				// buffer
+				// Now we can set the tail to the item which
+				// comes after the one we removed since we don't
+				// want to have any older data in the buffer
 				if (index == _head) {
 					_tail = _head;
 					_first_write = true;
@@ -146,7 +148,8 @@ public:
 			}
 
 			if (index == _tail) {
-				// we have reached the tail and haven't got a match
+				// we have reached the tail and haven't got a
+				// match
 				return false;
 			}
 		}
@@ -154,7 +157,9 @@ public:
 		return false;
 	}
 
-	int get_total_size() { return sizeof(*this) + sizeof(data_type) * _size; }
+	int get_total_size() {
+		return sizeof(*this) + sizeof(data_type) * _size;
+	}
 
 private:
 	data_type *_buffer{nullptr};
