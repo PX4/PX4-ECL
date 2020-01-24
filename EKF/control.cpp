@@ -326,7 +326,7 @@ void Ekf::controlExternalVisionFusion()
 
 				// check if we have been deadreckoning too long
 				if (isTimedOut(_time_last_hor_pos_fuse, _params.reset_timeout_max)) {
-					// only velocity if we have no another source of aiding constraining it
+					// only reset velocity if we have no another source of aiding constraining it
 					if (isTimedOut(_time_last_of_fuse, (uint64_t)1E6) &&
 					    isTimedOut(_time_last_hor_vel_fuse, (uint64_t)1E6)) {
 						resetVelocity();
