@@ -171,6 +171,17 @@ public:
 	void navigate_heading(float navigation_heading, float current_heading, const matrix::Vector2f &ground_speed);
 
 	/**
+	 * Navigate on local velocity
+	 *
+	 * This only holds a certain direction and does not perform cross
+	 * track correction. Helpful for semi-autonomous modes. Introduced
+	 * by [2].
+	 *
+	 * @return sets _lateral_accel setpoint
+	 */
+	void navigate_velocity_local(const matrix::Vector2f &target_velocity, float current_heading, const matrix::Vector2f &ground_speed_vector);
+
+	/**
 	 * Keep the wings level.
 	 *
 	 * This is typically needed for maximum-lift-demand situations,

@@ -334,6 +334,14 @@ void ECL_L1_Pos_Controller::navigate_heading(float navigation_heading, float cur
 	update_roll_setpoint();
 }
 
+void ECL_L1_Pos_Controller::navigate_velocity_local(const Vector2f &target_velocity,
+	float current_heading, const Vector2f &ground_speed_vector)
+{
+	float target_heading = atan2(target_velocity(1), target_velocity(0));
+	/* the complete guidance logic in this section was proposed by [2] */
+	navigate_heading(target_heading, current_heading, ground_speed_vector);
+}
+
 void ECL_L1_Pos_Controller::navigate_level_flight(float current_heading)
 {
 	/* the logic in this section is trivial, but originally proposed by [2] */
