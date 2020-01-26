@@ -274,7 +274,7 @@ public:
 	int getNumberOfActiveHorizontalAidingSources() const;
 
 	// return true if the EKF is dead reckoning the position using inertial data only
-	bool inertial_dead_reckoning() {return _is_dead_reckoning;}
+	bool inertial_dead_reckoning() {return _deadreckon_time_exceeded;}
 
 	virtual bool isTerrainEstimateValid() const = 0;
 	//[[deprecated("Replaced by isTerrainEstimateValid")]]
@@ -413,6 +413,24 @@ public:
 
 	static constexpr unsigned FILTER_UPDATE_PERIOD_MS{8};	// ekf prediction period in milliseconds - this should ideally be an integer multiple of the IMU time delta
 	static constexpr float FILTER_UPDATE_PERIOD_S{FILTER_UPDATE_PERIOD_MS * 0.001f};
+
+	// request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
+	// argment should be incremented only when a new reset is required
+	virtual void request_ekfgsf_yaw_reset(uint8_t counter) = 0;
+
+	// get ekf-gsf debug data
+	virtual void getDataEKFGSF(float *yaw_composite, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]) = 0;
+
+	// gets data which will be logged and used for algorithm development work
+	// returns false when no data avialable
+	virtual bool get_algo_test_data(float delAng[3],
+				float *delAngDt,
+				float delVel[3],
+				float *delVelDt,
+				float vel[3],
+				float *velErr,
+				bool *fuse_vel,
+				float quat[4]) = 0;
 
 protected:
 
