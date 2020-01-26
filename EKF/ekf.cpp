@@ -88,6 +88,8 @@ bool Ekf::init(uint64_t timestamp)
 
 	_dt_ekf_avg = FILTER_UPDATE_PERIOD_S;
 
+	_ang_rate_delayed_raw.zero();
+
 	_fault_status.value = 0;
 	_innov_check_fail_status.value = 0;
 
@@ -124,6 +126,9 @@ bool Ekf::update()
 		runTerrainEstimator();
 
 		updated = true;
+
+		// run test code for EKF-GSF yaw estimator
+		runEKFGSF();
 	}
 
 	// the output observer always runs
@@ -359,6 +364,10 @@ void Ekf::predictState()
 	// filter and limit input between -50% and +100% of nominal value
 	input = math::constrain(input, 0.5f * FILTER_UPDATE_PERIOD_S, 2.0f * FILTER_UPDATE_PERIOD_S);
 	_dt_ekf_avg = 0.99f * _dt_ekf_avg + 0.01f * input;
+
+	// some calculations elsewhere in code require a raw angular rate vector so calculate here to avoid duplication
+	_ang_rate_delayed_raw = _imu_sample_delayed.delta_ang / fmaxf(_imu_sample_delayed.delta_ang_dt, FILTER_UPDATE_PERIOD_S / 4);
+
 }
 
 bool Ekf::collect_imu(const imuSample &imu)

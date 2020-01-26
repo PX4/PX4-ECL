@@ -358,9 +358,8 @@ void Ekf::controlExternalVisionFusion()
 			}
 
 			// correct velocity for offset relative to IMU
-			Vector3f ang_rate = _imu_sample_delayed.delta_ang * (1.0f / _imu_sample_delayed.delta_ang_dt);
 			Vector3f pos_offset_body = _params.ev_pos_body - _params.imu_pos_body;
-			Vector3f vel_offset_body = cross_product(ang_rate, pos_offset_body);
+			Vector3f vel_offset_body = cross_product(_ang_rate_delayed_raw, pos_offset_body);
 			Vector3f vel_offset_earth = _R_to_earth * vel_offset_body;
 			vel_aligned -= vel_offset_earth;
 
@@ -674,7 +673,31 @@ void Ekf::controlGpsFusion()
 			// We haven't had an absolute position fix for a longer time so need to do something
 			do_reset = do_reset || ((_time_last_imu - _time_last_pos_fuse) > (2 * _params.reset_timeout_max));
 
-			if (do_reset) {
+			// A reset to the EKF-GSF estimate can be performed after a recent takeoff which will enable
+			// recovery from a bad magnetometer or field estimate.
+			// This special case reset can also be requested externally.
+			// The minimum time interval between resets to the EKF-GSF estimate must be limited to
+			// allow the EKF-GSF time to improve its estimate if the first reset was not successful.
+			const bool stopped_following_gps_velocity = (_time_last_imu - _time_last_vel_fuse) > _params.EKFGSF_reset_delay &&
+							   (_time_last_vel_fuse > _time_last_on_ground_us);
+			const bool recent_takeoff = (_control_status.flags.in_air && (_imu_sample_delayed.time_us - _time_last_on_ground_us) < 30000000);
+			const bool reset_yaw_to_EKFGSF = (do_reset || _do_emergency_yaw_reset || stopped_following_gps_velocity) && recent_takeoff && ((_imu_sample_delayed.time_us - _emergency_yaw_reset_time) > 5000000);
+
+			if (reset_yaw_to_EKFGSF) {
+				// Attempt to recover using an alternative algorithm for estimating yaw
+				if (_ekf_gsf_vel_fuse_started && (_imu_sample_delayed.time_us - _emergency_yaw_reset_time) > 5000000) {
+					resetYawToEKFGSF();
+					_emergency_yaw_reset_time = _imu_sample_delayed.time_us;
+					_do_emergency_yaw_reset = false;
+				}
+
+				// Reset the timeout counters
+				_time_last_pos_fuse = _time_last_imu;
+				_time_last_vel_fuse = _time_last_imu;
+				_time_last_delpos_fuse = _time_last_imu;
+				_time_last_of_fuse = _time_last_imu;
+
+			} else if (do_reset) {
 				// use GPS velocity data to check and correct yaw angle if a FW vehicle
 				if (_control_status.flags.fixed_wing && _control_status.flags.in_air) {
 					// if flying a fixed wing aircraft, do a complete reset that includes yaw
@@ -700,9 +723,8 @@ void Ekf::controlGpsFusion()
 			_fuse_hor_vel = true;
 
 			// correct velocity for offset relative to IMU
-			Vector3f ang_rate = _imu_sample_delayed.delta_ang * (1.0f / _imu_sample_delayed.delta_ang_dt);
 			Vector3f pos_offset_body = _params.gps_pos_body - _params.imu_pos_body;
-			Vector3f vel_offset_body = cross_product(ang_rate, pos_offset_body);
+			Vector3f vel_offset_body = cross_product(_ang_rate_delayed_raw, pos_offset_body);
 			Vector3f vel_offset_earth = _R_to_earth * vel_offset_body;
 			_gps_sample_delayed.vel -= vel_offset_earth;
 
@@ -1419,6 +1441,7 @@ void Ekf::controlMagFusion()
 		_last_on_ground_posD = _state.pos(2);
 		_control_status.flags.mag_align_complete = false;
 		_num_bad_flight_yaw_events = 0;
+		_time_last_on_ground_us = _imu_sample_delayed.time_us;
 	}
 
 	// check for new magnetometer data that has fallen behind the fusion time horizon
