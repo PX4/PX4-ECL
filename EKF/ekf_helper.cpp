@@ -1750,16 +1750,6 @@ float Ekf::kahanSummation(float sum_previous, float input, float &accumulator) c
 	return t;
 }
 
-bool Ekf::isTimedOut(uint64_t last_sensor_timestamp, uint64_t timeout_period)
-{
-	return last_sensor_timestamp + timeout_period < _time_last_imu;
-}
-
-bool Ekf::isRecent(uint64_t sensor_timestamp, uint64_t acceptance_interval)
-{
-	return sensor_timestamp + acceptance_interval > _time_last_imu;
-}
-
 void Ekf::stopGpsFusion()
 {
 	stopGpsPosFusion();
