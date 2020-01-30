@@ -58,6 +58,8 @@ TEST_F(EkfReplayTest, replaySensorData)
 	_sensor_simulator.loadSensorDataFromFile("../../../test/replay_data/iris_gps.csv");
 	_ekf_logger.setFilePath("../../../test/change_indication/iris_gps.csv");
 
+	// Start simulation and enable fusion of additional sensor types here
+	// By default the IMU, Baro and Mag sensor simulators are already running
 	_sensor_simulator.startGps();
 	_ekf_wrapper.enableGpsFusion();
 
