@@ -248,14 +248,14 @@ void SensorSimulator::setSingleReplaySample(const sensor_info& sample)
 			_rng.setData((float) sample.sensor_data[0], (float) sample.sensor_data[1]);
 
 	} else if (sample.sensor_type == sensor_info::FLOW) {
-		flow_message flow_message;
-		flow_message.flowdata = Vector2f(sample.sensor_data[0],
+		flowSample flow_sample;
+		flow_sample.flow_xy_rad = Vector2f(sample.sensor_data[0],
 						 sample.sensor_data[1]);
-		flow_message.gyrodata = Vector3f(sample.sensor_data[2],
+		flow_sample.gyro_xyz = Vector3f(sample.sensor_data[2],
 					       sample.sensor_data[3],
 					       sample.sensor_data[4]);
-		flow_message.quality = sample.sensor_data[5];
-		_flow.setData(flow_message);
+		flow_sample.quality = sample.sensor_data[5];
+		_flow.setData(flow_sample);
 
 	} else if (sample.sensor_type == sensor_info::VISION) {
 		// sensor not yet implemented
