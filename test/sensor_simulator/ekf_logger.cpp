@@ -66,10 +66,11 @@ void EkfLogger::writeState()
 		}
 		if(_variance_logging_enabled)
 		{
-			matrix::Vector<float, 24> variance = _ekf->covariances_diagonal();
+			float diagonal[24];
+			_ekf->get_covariances_diagonal(diagonal);
 			for(int i = 0; i < 24; i++)
 			{
-				_file << "," << variance(i);
+				_file << "," << diagonal(i);
 			}
 		}
 		_file << std::endl;

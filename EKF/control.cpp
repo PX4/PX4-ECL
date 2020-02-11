@@ -603,7 +603,7 @@ void Ekf::controlGpsFusion()
 					if (_mag_inhibit_yaw_reset_req) {
 						_mag_inhibit_yaw_reset_req = false;
 						// Zero the yaw bias covariance and set the variance to the initial alignment uncertainty
-						P.uncorrelateCovarianceSetVariance<1>(12, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
+						setDiag(P, 12, 12, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
 					}
 				}
 
@@ -836,7 +836,7 @@ void Ekf::controlHeightSensorTimeouts()
 			const baroSample &baro_init = _baro_buffer.get_newest();
 			const bool baro_data_fresh = isRecent(baro_init.time_us, 2 * BARO_MAX_INTERVAL);
 			const float baro_innov = _state.pos(2) - (_hgt_sensor_offset - baro_init.hgt + _baro_hgt_offset);
-			const bool baro_data_consistent = fabsf(baro_innov) < (sq(_params.baro_noise) + P(9,9)) * sq(_params.baro_innov_gate);
+			const bool baro_data_consistent = fabsf(baro_innov) < (sq(_params.baro_noise) + P[9][9]) * sq(_params.baro_innov_gate);
 
 			// if baro data is acceptable and GPS data is inaccurate, reset height to baro
 			const bool reset_to_baro = baro_data_fresh &&
