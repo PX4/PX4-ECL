@@ -131,8 +131,8 @@ coverage_html_view: coverage_build
 .PHONY: check_format format clang-format
 
 clang-format:
-	@echo -e ${BLUE}Check clang-format-6.0 installation${NC}
-	@if ! hash clang-format-6.0; then sudo apt install clang-format-6.0 -y; fi
+	@echo -e ${BLUE}Check clang-format installation${NC}
+	@if ((! hash clang-format) && (! hash clang-format-6.0)); then sudo apt install clang-format-6.0 -y; fi
 
 check_format: clang-format
 	@echo -e ${BLUE}Checking formatting with clang-format${NC}
