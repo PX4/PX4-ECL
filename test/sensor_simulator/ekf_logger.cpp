@@ -70,7 +70,7 @@ void EkfLogger::writeState()
 			_ekf->get_covariances_diagonal(diagonal);
 			for(int i = 0; i < 24; i++)
 			{
-				_file << "," << diagonal(i);
+				_file << "," << diagonal[i];
 			}
 		}
 		_file << std::endl;

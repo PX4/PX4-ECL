@@ -205,17 +205,29 @@ matrix::Vector<float, 24> EkfWrapper::getState() const
 
 matrix::Vector<float, 4> EkfWrapper::getQuaternionVariance() const
 {
-	return matrix::Vector<float, 4>(_ekf->orientation_covariances().diag());
+	// TODO: ugly but does the job for now
+	float variances[24] = {};
+	_ekf->get_covariances_diagonal(variances);
+	const float quat_var[4] = {variances[0], variances[1], variances[2], variances[3]};
+	return matrix::Vector<float, 4>(quat_var);
 }
 
 Vector3f EkfWrapper::getPositionVariance() const
 {
-	return Vector3f(_ekf->position_covariances().diag());
+	// TODO: ugly but does the job for now
+	float variances[24] = {};
+	_ekf->get_covariances_diagonal(variances);
+	const float pos_var[3] = {variances[7], variances[8], variances[9]};
+	return Vector3f(pos_var);
 }
 
 Vector3f EkfWrapper::getVelocityVariance() const
 {
-	return Vector3f(_ekf->velocity_covariances().diag());
+	// TODO: ugly but does the job for now
+	float variances[24] = {};
+	_ekf->get_covariances_diagonal(variances);
+	const float vel_var[3] = {variances[4], variances[5], variances[6]};
+	return Vector3f(vel_var);
 }
 
 Vector2f EkfWrapper::getWindVelocity() const
