@@ -758,8 +758,10 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 		P[i][i] = math::constrain(P[i][i], 0.0f, P_lim[3]);
 	}
 
-	// force symmetry on the quaternion, velocity and position state covariances
-	makeSymmetrical(P, 0, 12);
+	if (force_symmetry) {
+		// force symmetry on the quaternion, velocity and position state covariances
+		makeSymmetrical(P, 0, 12);
+	}
 
 	// the following states are optional and are deactivated when not required
 	// by ensuring the corresponding covariance matrix values are kept at zero
@@ -804,6 +806,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 			}
 
 			// reset all delta velocity bias covariances
+			zeroRows(P, 13, 15);
 			zeroCols(P, 13, 15);
 
 			// restore all delta velocity bias variances
