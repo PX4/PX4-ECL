@@ -146,13 +146,20 @@ public:
 	// get the true airspeed in m/s
 	void get_true_airspeed(float *tas) override;
 
+	// get the full covariance matrix
+	matrix::SquareMatrix<float, 24> covariances() const { return P; }
+
 	// get the diagonal elements of the covariance matrix
-	void get_covariances_diagonal(float diagonal[24]) const
-	{
-		for (uint8_t i=0 ; i<24 ; i++) {
-			diagonal[i] = P[i][i];
-		}
-	}
+	matrix::Vector<float, 24> covariances_diagonal() const { return P.diag(); }
+
+	// get the orientation (quaterion) covariances
+	matrix::SquareMatrix<float, 4> orientation_covariances() const { return P.slice<4, 4>(0, 0); }
+
+	// get the linear velocity covariances
+	matrix::SquareMatrix<float, 3> velocity_covariances() const { return P.slice<3, 3>(4, 4); }
+
+	// get the position covariances
+	matrix::SquareMatrix<float, 3> position_covariances() const { return P.slice<3, 3>(7, 7); }
 
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	bool collect_gps(const gps_message &gps) override;
@@ -368,7 +375,7 @@ private:
 	bool _mag_decl_cov_reset{false};	///< true after the fuseDeclination() function has been used to modify the earth field covariances after a magnetic field reset event.
 	bool _synthetic_mag_z_active{false};	///< true if we are generating synthetic magnetometer Z measurements
 
-	float P[_k_num_states][_k_num_states] {};	///< state covariance matrix
+	matrix::SquareMatrix<float, _k_num_states> P;	///< state covariance matrix
 
 	Vector3f _delta_vel_bias_var_accum;		///< kahan summation algorithm accumulator for delta velocity bias variance
 	Vector3f _delta_angle_bias_var_accum;	///< kahan summation algorithm accumulator for delta angle bias variance
@@ -613,7 +620,7 @@ private:
 	void fixCovarianceErrors(bool force_symmetry);
 
 	// make ekf covariance matrix symmetric between a nominated state indexe range
-	void makeSymmetrical(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last);
+	void makeSymmetrical(matrix::SquareMatrix<float, _k_num_states> &cov_mat, uint8_t first, uint8_t last);
 
 	// constrain the ekf states
 	void constrainStates();
@@ -736,17 +743,17 @@ private:
 	void startMag3DFusion();
 
 	// zero the specified range of rows in the state covariance matrix
-	void zeroRows(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last);
+	void zeroRows(matrix::SquareMatrix<float, _k_num_states> &cov_mat, uint8_t first, uint8_t last);
 
 	// zero the specified range of columns in the state covariance matrix
-	void zeroCols(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last);
+	void zeroCols(matrix::SquareMatrix<float, _k_num_states> &cov_mat, uint8_t first, uint8_t last);
 
 	// zero the specified range of off diagonals in the state covariance matrix
-	void zeroOffDiag(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last);
+	void zeroOffDiag(matrix::SquareMatrix<float, _k_num_states> &cov_mat, uint8_t first, uint8_t last);
 
 	// zero the specified range of off diagonals in the state covariance matrix
 	// set the diagonals to the supplied value
-	void setDiag(float (&cov_mat)[_k_num_states][_k_num_states], uint8_t first, uint8_t last, float variance);
+	void setDiag(matrix::SquareMatrix<float, _k_num_states> &cov_mat, uint8_t first, uint8_t last, float variance);
 
 	// calculate the measurement variance for the optical flow sensor
 	float calcOptFlowMeasVar();
