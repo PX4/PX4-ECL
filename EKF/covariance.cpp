@@ -488,8 +488,7 @@ void Ekf::predictCovariance()
 
 	} else {
 		// Inhibit delta velocity bias learning by zeroing the covariance terms
-		zeroRows(nextP, 13, 15);
-		zeroCols(nextP, 13, 15);
+		nextP.uncorrelateCovarianceSetVariance<3>(13, 0.0f);
 		_delta_vel_bias_var_accum.setZero();
 	}
 
@@ -748,8 +747,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 
 	// force symmetry on the quaternion, velocity and position state covariances
 	if (force_symmetry) {
-		// force symmetry on the quaternion, velocity and position state covariances
-		makeSymmetrical(P, 0, 12);
+		P.makeRowColSymmetric<13>(0);
 	}
 
 	// the following states are optional and are deactivated when not required
@@ -757,8 +755,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 
 	// accelerometer bias states
 	if ((_params.fusion_mode & MASK_INHIBIT_ACC_BIAS) || _accel_bias_inhibit) {
-		zeroRows(P, 13, 15);
-		zeroCols(P, 13, 15);
+		P.uncorrelateCovarianceSetVariance<3>(13, 0.0f);
 
 	} else {
 		// Find the maximum delta velocity bias state variance and request a covariance reset if any variance is below the safe minimum
@@ -787,21 +784,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 
 		// If any one axis has fallen below the safe minimum, all delta velocity covariance terms must be reset to zero
 		if (resetRequired) {
-			float delVelBiasVar[3];
-
-			// store all delta velocity bias variances
-			for (uint8_t stateIndex = 13; stateIndex <= 15; stateIndex++) {
-				delVelBiasVar[stateIndex - 13] = P(stateIndex, stateIndex);
-			}
-
-			// reset all delta velocity bias covariances
-			zeroRows(P, 13, 15);
-			zeroCols(P, 13, 15);
-
-			// restore all delta velocity bias variances
-			for (uint8_t stateIndex = 13; stateIndex <= 15; stateIndex++) {
-				P(stateIndex, stateIndex) = delVelBiasVar[stateIndex - 13];
-			}
+			P.uncorrelateCovariance<3>(13);
 		}
 
 		// Run additional checks to see if the delta velocity bias has hit limits in a direction that is clearly wrong
@@ -832,14 +815,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 		// the covariance matrix but preserve the variances (diagonals) to allow bias learning to continue
 		if (isTimedOut(_time_acc_bias_check, (uint64_t)7e6)) {
 
-			float varX = P(13, 13);
-			float varY = P(14, 14);
-			float varZ = P(15, 15);
-			zeroRows(P, 13, 15);
-			zeroCols(P, 13, 15);
-			P(13, 13) = varX;
-			P(14, 14) = varY;
-			P(15, 15) = varZ;
+			P.uncorrelateCovariance<3>(13);
 
 			_time_acc_bias_check = _time_last_imu;
 			_fault_status.flags.bad_acc_bias = false;
@@ -847,15 +823,14 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 
 		} else if (force_symmetry) {
 			// ensure the covariance values are symmetrical
-			makeSymmetrical(P, 13, 15);
+			P.makeRowColSymmetric<3>(13);
 		}
 
 	}
 
 	// magnetic field states
 	if (!_control_status.flags.mag_3D) {
-		zeroRows(P, 16, 21);
-		zeroCols(P, 16, 21);
+		zeroMagCov();
 
 	} else {
 		// constrain variances
@@ -868,13 +843,16 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 		}
 
 		// force symmetry
-		makeSymmetrical(P, 16, 21);
+		if (force_symmetry) {
+			P.makeRowColSymmetric<3>(16);
+			P.makeRowColSymmetric<3>(19);
+		}
+
 	}
 
 	// wind velocity states
 	if (!_control_status.flags.wind) {
-		zeroRows(P, 22, 23);
-		zeroCols(P, 22, 23);
+		P.uncorrelateCovarianceSetVariance<2>(22, 0.0f);
 
 	} else {
 		// constrain variances
@@ -883,23 +861,21 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 		}
 
 		// force symmetry
-		makeSymmetrical(P, 22, 23);
+		if (force_symmetry) {
+			P.makeRowColSymmetric<2>(22);
+		}
 	}
 }
 
 void Ekf::resetMagRelatedCovariances()
 {
 	// set the quaternion covariance terms to zero
-	zeroRows(P, 0, 3);
-	zeroCols(P, 0, 3);
+	P.uncorrelateCovarianceSetVariance<2>(0, 0.0f);
+	P.uncorrelateCovarianceSetVariance<2>(2, 0.0f);
 
-	// set the magnetic field covariance terms to zero
-	clearMagCov();
-
-	// set the field state variance to the observation variance
-	for (uint8_t rc_index = 16; rc_index <= 21; rc_index ++) {
-		P(rc_index, rc_index) = sq(_params.mag_noise);
-	}
+	// reset the field state variance to the observation variance
+	P.uncorrelateCovarianceSetVariance<3>(16, sq(_params.mag_noise));
+	P.uncorrelateCovarianceSetVariance<3>(19, sq(_params.mag_noise));
 
 	// save covariance data for re-use when auto-switching between heading and 3-axis fusion
 	saveMagCovData();
@@ -913,16 +889,12 @@ void Ekf::clearMagCov()
 
 void Ekf::zeroMagCov()
 {
-	zeroRows(P, 16, 21);
-	zeroCols(P, 16, 21);
+	P.uncorrelateCovarianceSetVariance<3>(16, 0.0f);
+	P.uncorrelateCovarianceSetVariance<3>(19, 0.0f);
 }
 
 void Ekf::resetWindCovariance()
 {
-	// set the wind  covariance terms to zero
-	zeroRows(P, 22, 23);
-	zeroCols(P, 22, 23);
-
 	if (_tas_data_ready && (_imu_sample_delayed.time_us - _airspeed_sample_delayed.time_us < (uint64_t)5e5)) {
 		// Derived using EKF/matlab/scripts/Inertial Nav EKF/wind_cov.py
 		// TODO: explicitly include the sideslip angle in the derivation
@@ -938,8 +910,7 @@ void Ekf::resetWindCovariance()
 		const float Wy = -_state.wind_vel(0) * sinf(euler_yaw) + _state.wind_vel(1) * cosf(euler_yaw);
 
 		// it is safer to remove all existing correlations to other states at this time
-		zeroRows(P,22,23);
-		zeroCols(P,22,23);
+		P.uncorrelateCovarianceSetVariance<2>(22, 0.0f);
 
 		P(22,22) = R_TAS*sq(cosf(euler_yaw)) + R_yaw*sq(-Wx*sinf(euler_yaw) - Wy*cosf(euler_yaw)) + initial_wind_var_body_y*sq(sinf(euler_yaw));
 		P(22,23) = R_TAS*sinf(euler_yaw)*cosf(euler_yaw) + R_yaw*(-Wx*sinf(euler_yaw) - Wy*cosf(euler_yaw))*(Wx*cosf(euler_yaw) - Wy*sinf(euler_yaw)) - initial_wind_var_body_y*sinf(euler_yaw)*cosf(euler_yaw);
@@ -952,8 +923,6 @@ void Ekf::resetWindCovariance()
 
 	} else {
 		// without airspeed, start with a small initial uncertainty to improve the initial estimate
-		P(22, 22) = sq(1.0f);
-		P(23, 23) = sq(1.0f);
-
+		P.uncorrelateCovarianceSetVariance<2>(22, 1.0f);
 	}
 }

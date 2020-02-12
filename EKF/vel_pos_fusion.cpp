@@ -162,8 +162,7 @@ void Ekf::fuseVelPosHeight(const float innov, const float innov_var, const int o
 	for (int i = 0; i < _k_num_states; i++) {
 		if (P(i, i) < KHP(i, i)) {
 			// zero rows and columns
-			zeroRows(P, i, i);
-			zeroCols(P, i, i);
+			P.uncorrelateCovarianceSetVariance<1>(i, 0.0f);
 
 			healthy = false;
 

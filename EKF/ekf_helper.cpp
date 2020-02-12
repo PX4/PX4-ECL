@@ -59,7 +59,7 @@ bool Ekf::resetVelocity()
 		_state.vel = _gps_sample_delayed.vel;
 
 		// use GPS accuracy to reset variances
-		setDiag(P, 4, 6, sq(_gps_sample_delayed.sacc));
+		P.uncorrelateCovarianceSetVariance<3>(4, sq(_gps_sample_delayed.sacc));
 
 	} else if (_control_status.flags.opt_flow) {
 		ECL_INFO_TIMESTAMPED("reset velocity to flow");
@@ -90,30 +90,23 @@ bool Ekf::resetVelocity()
 			_state.vel(1) = 0.0f;
 		}
 
-		// reset the velocity covariance terms
-		zeroRows(P, 4, 5);
-		zeroCols(P, 4, 5);
-
 		// reset the horizontal velocity variance using the optical flow noise variance
-		P(5, 5) = P(4, 4) = sq(range) * calcOptFlowMeasVar();
+		P.uncorrelateCovarianceSetVariance<2>(4, sq(range) * calcOptFlowMeasVar());
+
 	} else if (_control_status.flags.ev_vel) {
 		ECL_INFO_TIMESTAMPED("reset velocity to ev velocity");
 		Vector3f _ev_vel = _ev_sample_delayed.vel;
 		if(_params.fusion_mode & MASK_ROTATE_EV){
 			_ev_vel = _R_ev_to_ekf *_ev_sample_delayed.vel;
 		}
-		_state.vel(0) = _ev_vel(0);
-		_state.vel(1) = _ev_vel(1);
-		_state.vel(2) = _ev_vel(2);
-		setDiag(P, 4, 4, _ev_sample_delayed.velVar(0));
-		setDiag(P, 5, 5, _ev_sample_delayed.velVar(1));
-		setDiag(P, 6, 6, _ev_sample_delayed.velVar(2));
+		_state.vel = _ev_vel;
+		P.uncorrelateCovarianceSetVariance<3>(4, _ev_sample_delayed.velVar);
 	} else {
 		ECL_INFO_TIMESTAMPED("reset velocity to zero");
 		// Used when falling back to non-aiding mode of operation
 		_state.vel(0) = 0.0f;
 		_state.vel(1) = 0.0f;
-		setDiag(P, 4, 5, 25.0f);
+		P.uncorrelateCovarianceSetVariance<2>(4, 25.0f);
 	}
 
 	// calculate the change in velocity and apply to the output predictor state history
@@ -158,7 +151,7 @@ bool Ekf::resetPosition()
 		_state.pos(1) = _gps_sample_delayed.pos(1);
 
 		// use GPS accuracy to reset variances
-		setDiag(P, 7, 8, sq(_gps_sample_delayed.hacc));
+		P.uncorrelateCovarianceSetVariance<2>(7, sq(_gps_sample_delayed.hacc));
 
 	} else if (_control_status.flags.ev_pos) {
 		ECL_INFO_TIMESTAMPED("reset position to ev position");
@@ -172,8 +165,7 @@ bool Ekf::resetPosition()
 		_state.pos(1) = _ev_pos(1);
 
 		// use EV accuracy to reset variances
-		setDiag(P, 7, 7, _ev_sample_delayed.posVar(0));
-		setDiag(P, 8, 8, _ev_sample_delayed.posVar(1));
+		P.uncorrelateCovarianceSetVariance<2>(7, _ev_sample_delayed.posVar.slice<2, 1>(0, 0));
 
 	} else if (_control_status.flags.opt_flow) {
 		ECL_INFO_TIMESTAMPED("reset position to last known position");
@@ -191,15 +183,14 @@ bool Ekf::resetPosition()
 		}
 
 		// estimate is relative to initial position in this mode, so we start with zero error.
-		zeroCols(P,7,8);
-		zeroRows(P,7,8);
+		P.uncorrelateCovarianceSetVariance<2>(7, 0.0f);
 
 	} else {
 		ECL_INFO_TIMESTAMPED("reset position to last known position");
 		// Used when falling back to non-aiding mode of operation
 		_state.pos(0) = _last_known_posNE(0);
 		_state.pos(1) = _last_known_posNE(1);
-		setDiag(P, 7, 8, sq(_params.pos_noaid_noise));
+		P.uncorrelateCovarianceSetVariance<2>(7, sq(_params.pos_noaid_noise));
 	}
 
 	// calculate the change in position and apply to the output predictor state history
@@ -242,12 +233,8 @@ void Ekf::resetHeight()
 			// update the state and associated variance
 			_state.pos(2) = new_pos_down;
 
-			// reset the associated covariance values
-			zeroRows(P, 9, 9);
-			zeroCols(P, 9, 9);
-
 			// the state variance is the same as the observation
-			P(9, 9) = sq(_params.range_noise);
+			P.uncorrelateCovarianceSetVariance<1>(9, sq(_params.range_noise));
 
 			vert_pos_reset = true;
 
@@ -262,12 +249,8 @@ void Ekf::resetHeight()
 		if (isRecent(baro_newest.time_us, 2 * BARO_MAX_INTERVAL)) {
 			_state.pos(2) = _hgt_sensor_offset - baro_newest.hgt + _baro_hgt_offset;
 
-			// reset the associated covariance values
-			zeroRows(P, 9, 9);
-			zeroCols(P, 9, 9);
-
 			// the state variance is the same as the observation
-			P(9, 9) = sq(_params.baro_noise);
+			P.uncorrelateCovarianceSetVariance<1>(9, sq(_params.baro_noise));
 
 			vert_pos_reset = true;
 
@@ -280,12 +263,8 @@ void Ekf::resetHeight()
 		if (isRecent(gps_newest.time_us, 2 * GPS_MAX_INTERVAL)) {
 			_state.pos(2) = _hgt_sensor_offset - gps_newest.hgt + _gps_alt_ref;
 
-			// reset the associated covariance values
-			zeroRows(P, 9, 9);
-			zeroCols(P, 9, 9);
-
 			// the state variance is the same as the observation
-			P(9, 9) = sq(gps_newest.hacc);
+			P.uncorrelateCovarianceSetVariance<1>(9, sq(gps_newest.hacc));
 
 			vert_pos_reset = true;
 
@@ -316,17 +295,13 @@ void Ekf::resetHeight()
 
 	}
 
-	// reset the vertical velocity covariance values
-	zeroRows(P, 6, 6);
-	zeroCols(P, 6, 6);
-
 	// reset the vertical velocity state
 	if (_control_status.flags.gps && isRecent(gps_newest.time_us, 2 * GPS_MAX_INTERVAL)) {
 		// If we are using GPS, then use it to reset the vertical velocity
 		_state.vel(2) = gps_newest.vel(2);
 
 		// the state variance is the same as the observation
-		P(6, 6) = sq(1.5f * gps_newest.sacc);
+		P.uncorrelateCovarianceSetVariance<1>(6, sq(1.5f * gps_newest.sacc));
 
 	} else {
 		// we don't know what the vertical velocity is, so set it to zero
@@ -334,7 +309,7 @@ void Ekf::resetHeight()
 
 		// Set the variance to a value large enough to allow the state to converge quickly
 		// that does not destabilise the filter
-		P(6, 6) = 10.0f;
+		P.uncorrelateCovarianceSetVariance<1>(6, 10.0f);
 
 	}
 
@@ -1305,14 +1280,10 @@ bool Ekf::reset_imu_bias()
 	_state.delta_ang_bias.zero();
 	_state.delta_vel_bias.zero();
 
-	// Zero the corresponding covariances
-	zeroCols(P, 10, 15);
-	zeroRows(P, 10, 15);
-
-	// Set the corresponding variances to the values use for initial alignment
-	float dt = FILTER_UPDATE_PERIOD_S;
-	P(12, 12) = P(11, 11) = P(10, 10) = sq(_params.switch_on_gyro_bias * dt);
-	P(15, 15) = P(14, 14) = P(13, 13) = sq(_params.switch_on_accel_bias * dt);
+	// Zero the corresponding covariances and set
+	// variances to the values use for initial alignment
+	P.uncorrelateCovarianceSetVariance<3>(10, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
+	P.uncorrelateCovarianceSetVariance<3>(13, sq(_params.switch_on_accel_bias * FILTER_UPDATE_PERIOD_S));
 	_last_imu_bias_cov_reset_us = _imu_sample_delayed.time_us;
 
 	// Set previous frame values
@@ -1442,7 +1413,6 @@ void Ekf::zeroOffDiag(matrix::SquareMatrix<float, _k_num_states> &cov_mat, uint8
 	for (row = first; row <= last; row++) {
 		variances[row] = cov_mat(row, row);
 	}
-
 	// zero rows and columns
 	zeroRows(cov_mat, first, last);
 	zeroCols(cov_mat, first, last);
@@ -1489,7 +1459,6 @@ void Ekf::setDiag(matrix::SquareMatrix<float, _k_num_states> &cov_mat, uint8_t f
 	for (row = first; row <= last; row++) {
 		cov_mat(row, row) = variance;
 	}
-
 }
 
 bool Ekf::global_position_is_valid()
@@ -1667,8 +1636,9 @@ void Ekf::initialiseQuatCovariances(Vector3f &rot_vec_var)
 		float t44 = t17-t36;
 
 		// zero all the quaternion covariances
-		zeroRows(P, 0, 3);
-		zeroCols(P, 0, 3);
+		P.uncorrelateCovarianceSetVariance<2>(0, 0.0f);
+		P.uncorrelateCovarianceSetVariance<2>(2, 0.0f);
+
 
 		// Update the quaternion internal covariances using auto-code generated using matlab symbolic toolbox
 		P(0,0) = rot_vec_var(0)*t2*t9*t10*0.25f+rot_vec_var(1)*t4*t9*t10*0.25f+rot_vec_var(2)*t5*t9*t10*0.25f;
@@ -1690,23 +1660,8 @@ void Ekf::initialiseQuatCovariances(Vector3f &rot_vec_var)
 
 	} else {
 		// the equations are badly conditioned so use a small angle approximation
-		P(0, 0) = 0.0f;
-		P(0, 1) = 0.0f;
-		P(0, 2) = 0.0f;
-		P(0, 3) = 0.0f;
-		P(1, 0) = 0.0f;
-		P(1, 1) = 0.25f * rot_vec_var(0);
-		P(1, 2) = 0.0f;
-		P(1, 3) = 0.0f;
-		P(2, 0) = 0.0f;
-		P(2, 1) = 0.0f;
-		P(2, 2) = 0.25f * rot_vec_var(1);
-		P(2, 3) = 0.0f;
-		P(3, 0) = 0.0f;
-		P(3, 1) = 0.0f;
-		P(3, 2) = 0.0f;
-		P(3, 3) = 0.25f * rot_vec_var(2);
-
+		P.uncorrelateCovarianceSetVariance<1>(0, 0.0f);
+		P.uncorrelateCovarianceSetVariance<3>(1, 0.25f * rot_vec_var);
 	}
 }
 
