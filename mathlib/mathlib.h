@@ -65,5 +65,5 @@ float degrees(float radians);
 
 #include <mathlib/mathlib.h>
 
-#endif  // ECL_STANDALONE
-#endif  // MATHLIB_H
+#endif	// ECL_STANDALONE
+#endif	// MATHLIB_H

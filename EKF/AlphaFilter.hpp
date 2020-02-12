@@ -59,5 +59,5 @@ public:
 	const T &getState() const { return _x; }
 
 private:
-	T _x{};  ///< current state of the filter
+	T _x{};	 ///< current state of the filter
 };

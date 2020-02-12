@@ -167,7 +167,7 @@ private:
 
 	uint32_t _timeout_interval{20000}; /**< interval in which the datastream times out in us */
 
-	uint64_t _time_last{0};   /**< last timestamp */
+	uint64_t _time_last{0};	  /**< last timestamp */
 	uint64_t _event_count{0}; /**< total data counter */
 	uint64_t _error_count{0}; /**< error count */
 

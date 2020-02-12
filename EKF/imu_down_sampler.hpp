@@ -55,7 +55,7 @@ public:
 private:
 	imuSample _imu_down_sampled;
 	Quatf _delta_angle_accumulated;
-	const float _target_dt;  // [sec]
+	const float _target_dt;	 // [sec]
 	float _imu_collection_time_adj;
 	bool _do_reset;
 

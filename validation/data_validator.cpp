@@ -44,7 +44,7 @@
 #include <ecl.h>
 
 void DataValidator::put(uint64_t timestamp, float val, uint64_t error_count_in, int priority_in) {
-	float data[dimensions] = {val};  // sets the first value and all others to 0
+	float data[dimensions] = {val};	 // sets the first value and all others to 0
 	put(timestamp, data, error_count_in, priority_in);
 }
 

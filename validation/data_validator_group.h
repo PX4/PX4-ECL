@@ -125,7 +125,7 @@ public:
 
 private:
 	DataValidator *_first{nullptr}; /**< first node in the group */
-	DataValidator *_last{nullptr};  /**< last node in the group */
+	DataValidator *_last{nullptr};	/**< last node in the group */
 
 	uint32_t _timeout_interval_us{0}; /**< currently set timeout */
 
