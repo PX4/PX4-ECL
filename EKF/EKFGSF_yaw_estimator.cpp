@@ -546,13 +546,20 @@ void Ekf::runEKFGSF()
 		_ekf_gsf_vel_fuse_started = false;
 	}
 
-	// calculate a composite state vector as a weighted average of the states for each model
+	// Calculate a composite state vector as a weighted average of the states for each model.
+	// To avoid issues with angle wrapping, the yaw state is converted to a vector with legnth
+	// equal to the weighting value before it is summed.
 	memset(&X_GSF, 0, sizeof(X_GSF));
+	Vector2f yaw_vector = {};
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-		for (uint8_t state_index = 0; state_index < 3; state_index++) {
+		for (uint8_t state_index = 0; state_index < 2; state_index++) {
 			X_GSF[state_index] += _ekf_gsf[model_index].X[state_index] * _ekf_gsf[model_index].W;
 		}
+		yaw_vector(0) += _ekf_gsf[model_index].W * cosf(_ekf_gsf[model_index].X[2]);
+		yaw_vector(1) += _ekf_gsf[model_index].W * sinf(_ekf_gsf[model_index].X[2]);
 	}
+	X_GSF[2] = atan2f(yaw_vector(1),yaw_vector(0));
+
 	/*
 	// calculate a composite covariance matrix from a weighted average of the covariance for each model
 	// models with larger innovations are weighted less
