@@ -676,7 +676,7 @@ void Ekf::resetYawToEKFGSF()
 
 	// update quaternion states
 	_state.quat_nominal = quat_after_reset;
-	uncorrelateQuatStates();
+	uncorrelateQuatFromOtherStates();
 
 	// record the state change
 	_state_reset_status.quat_change = q_error;
