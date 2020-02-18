@@ -678,14 +678,16 @@ void Ekf::controlGpsFusion()
 			// This special case reset can also be requested externally.
 			// The minimum time interval between resets to the EKF-GSF estimate must be limited to
 			// allow the EKF-GSF time to improve its estimate if the first reset was not successful.
-			const bool stopped_following_gps_velocity = (_time_last_imu - _time_last_vel_fuse) > _params.EKFGSF_reset_delay &&
+			const bool stopped_following_gps_velocity = _time_last_imu > (_params.EKFGSF_reset_delay + _time_last_vel_fuse) &&
 							   (_time_last_vel_fuse > _time_last_on_ground_us);
 			const bool recent_takeoff = (_control_status.flags.in_air && (_imu_sample_delayed.time_us - _time_last_on_ground_us) < 30000000);
-			const bool reset_yaw_to_EKFGSF = (do_reset || _do_emergency_yaw_reset || stopped_following_gps_velocity) && recent_takeoff && ((_imu_sample_delayed.time_us - _emergency_yaw_reset_time) > 5000000);
+			const bool reset_yaw_to_EKFGSF = (do_reset || _do_emergency_yaw_reset || stopped_following_gps_velocity) &&
+								recent_takeoff &&
+								_time_last_imu > (5000000 + _emergency_yaw_reset_time);
 
-			if (reset_yaw_to_EKFGSF && (_imu_sample_delayed.time_us - _emergency_yaw_reset_time) > 5000000) {
+			if (reset_yaw_to_EKFGSF) {
 				if (resetYawToEKFGSF()) {
-					_emergency_yaw_reset_time = _imu_sample_delayed.time_us;
+					_emergency_yaw_reset_time = _time_last_imu;
 					_do_emergency_yaw_reset = false;
 
 					// Reset the timeout counters
