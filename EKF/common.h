@@ -219,8 +219,6 @@ struct auxVelSample {
 
 #define N_MODELS_EKFGSF 8 // number of models used by EKF-GSF yaw estimator
 
-#define M_TWOPI_F 6.28318531f
-
 struct parameters {
 	// measurement source control
 	int32_t fusion_mode{MASK_USE_GPS};		///< bitmasked integer that selects which aiding sources will be used
