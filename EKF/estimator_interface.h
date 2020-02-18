@@ -274,7 +274,7 @@ public:
 	int getNumberOfActiveHorizontalAidingSources() const;
 
 	// return true if the EKF is dead reckoning the position using inertial data only
-	bool inertial_dead_reckoning() {return _deadreckon_time_exceeded;}
+	bool inertial_dead_reckoning() {return _is_dead_reckoning;}
 
 	virtual bool isTerrainEstimateValid() const = 0;
 	//[[deprecated("Replaced by isTerrainEstimateValid")]]
