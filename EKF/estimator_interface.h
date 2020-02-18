@@ -265,8 +265,8 @@ public:
 	// return true if the global position estimate is valid
 	virtual bool global_position_is_valid() = 0;
 
-	// return true if the EKF has exceeded the maximum time for dead reckoning the position using inertial data only
-	bool inertial_dead_reckoning() {return _deadreckon_time_exceeded;}
+	// return true if the EKF is dead reckoning the position using inertial data only
+	bool inertial_dead_reckoning() {return _is_dead_reckoning;}
 
 	// return true if the terrain estimate is valid
 	virtual bool get_terrain_valid() = 0;
