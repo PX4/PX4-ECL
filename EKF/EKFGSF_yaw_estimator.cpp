@@ -423,6 +423,13 @@ void Ekf::stateUpdateEKFGSF(const uint8_t model_index)
 
 void Ekf::initialiseEKFGSF()
 {
+	memset(&X_GSF, 0, sizeof(X_GSF));
+	_ekf_gsf_vel_fuse_started = false;
+	_emergency_yaw_reset_time = 0;
+	_time_last_on_ground_us = 0;
+	_yaw_extreset_counter = 0;
+	_do_emergency_yaw_reset = false;
+	_ekf_gsf_yaw_variance = sq(M_PI_2_F);
 	memset(&_ekf_gsf, 0, sizeof(_ekf_gsf));
 	const float yaw_increment = 2.0f * M_PI_F / (float)N_MODELS_EKFGSF;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
@@ -560,7 +567,7 @@ void Ekf::runEKFGSF()
 	}
 	X_GSF[2] = atan2f(yaw_vector(1),yaw_vector(0));
 
-	/*
+	/* Example of how a full covaraince matrix can be generated for the GSF state vector
 	// calculate a composite covariance matrix from a weighted average of the covariance for each model
 	// models with larger innovations are weighted less
 	memset(&P_GSF, 0, sizeof(P_GSF));
@@ -576,6 +583,14 @@ void Ekf::runEKFGSF()
 		}
 	}
 	*/
+
+	// calculate a composite variance for the yaw state from a weighted average of the variance for each model
+	// models with larger innovations are weighted less
+	_ekf_gsf_yaw_variance = 0.0f;
+	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
+		float yaw_delta = _ekf_gsf[model_index].X[2] - X_GSF[2];
+		_ekf_gsf_yaw_variance += _ekf_gsf[model_index].W * (_ekf_gsf[model_index].P[2][2] + sq(yaw_delta));
+	}
 }
 
 float Ekf::gaussianDensityEKFGSF(const uint8_t model_index) const
@@ -632,88 +647,95 @@ void Ekf::makeCovSymEKFGSF(const uint8_t model_index)
 }
 
 // Reset heading and magnetic field states
-void Ekf::resetYawToEKFGSF()
+bool Ekf::resetYawToEKFGSF()
 {
-	// save a copy of the quaternion state for later use in calculating the amount of reset change
-	Quatf quat_before_reset = _state.quat_nominal;
-	Quatf quat_after_reset = _state.quat_nominal;
+	// don't allow reet using the EKF-GSF estimate until the filter has started fusing velocity
+	// data and the yaw estimate has converged
+	if (_ekf_gsf_vel_fuse_started && _ekf_gsf_yaw_variance < sq(_params.EKFGSF_yaw_err_max)) {
+		// save a copy of the quaternion state for later use in calculating the amount of reset change
+		Quatf quat_before_reset = _state.quat_nominal;
+		Quatf quat_after_reset = _state.quat_nominal;
 
-	// update transformation matrix from body to world frame using the current estimate
-	_R_to_earth = Dcmf(_state.quat_nominal);
+		// update transformation matrix from body to world frame using the current estimate
+		_R_to_earth = Dcmf(_state.quat_nominal);
 
-	// calculate the initial quaternion
-	// determine if a 321 or 312 Euler sequence is best
-	if (fabsf(_R_to_earth(2, 0)) < fabsf(_R_to_earth(2, 1))) {
-		// use a 321 sequence
+		// calculate the initial quaternion
+		// determine if a 321 or 312 Euler sequence is best
+		if (fabsf(_R_to_earth(2, 0)) < fabsf(_R_to_earth(2, 1))) {
+			// use a 321 sequence
 
-		Eulerf euler321(_state.quat_nominal);
-		euler321(2) = X_GSF[2];
-		quat_after_reset = Quatf(euler321);
+			Eulerf euler321(_state.quat_nominal);
+			euler321(2) = X_GSF[2];
+			quat_after_reset = Quatf(euler321);
 
-	} else {
-		// Calculate the 312 Tait-Bryan rotation sequence that rotates from earth to body frame
-		// We use a 312 sequence as an alternate when there is more pitch tilt than roll tilt
-		// to avoid gimbal lock
-		Vector3f rot312;
-		rot312(0) = X_GSF[2]; // first rotation about Z is taken from EKF-GSF
-		rot312(1) = asinf(_R_to_earth(2, 1)); // second rotation about X is taken from main EKF
-		rot312(2) = atan2f(-_R_to_earth(2, 0), _R_to_earth(2, 2));  // third rotation about Y is taken from main EKF
+		} else {
+			// Calculate the 312 Tait-Bryan rotation sequence that rotates from earth to body frame
+			// We use a 312 sequence as an alternate when there is more pitch tilt than roll tilt
+			// to avoid gimbal lock
+			Vector3f rot312;
+			rot312(0) = X_GSF[2]; // first rotation about Z is taken from EKF-GSF
+			rot312(1) = asinf(_R_to_earth(2, 1)); // second rotation about X is taken from main EKF
+			rot312(2) = atan2f(-_R_to_earth(2, 0), _R_to_earth(2, 2));  // third rotation about Y is taken from main EKF
 
-		// Calculate the body to earth frame rotation matrix
-		const Dcmf R = taitBryan312ToRotMat(rot312);
+			// Calculate the body to earth frame rotation matrix
+			const Dcmf R = taitBryan312ToRotMat(rot312);
 
-		// calculate initial quaternion states for the main EKF
-		// we don't change the output attitude to avoid jumps
-		quat_after_reset = Quatf(R);
+			// calculate initial quaternion states for the main EKF
+			// we don't change the output attitude to avoid jumps
+			quat_after_reset = Quatf(R);
+		}
+
+		// record the time for the magnetic field alignment event
+		_flt_mag_align_start_time = _imu_sample_delayed.time_us;
+
+		// calculate the amount that the quaternion has changed by
+		Quatf q_error =  quat_after_reset * quat_before_reset.inversed();
+		q_error.normalize();
+
+		// update quaternion states
+		_state.quat_nominal = quat_after_reset;
+		uncorrelateQuatFromOtherStates();
+
+		// record the state change
+		_state_reset_status.quat_change = q_error;
+
+		// update transformation matrix from body to world frame using the current estimate
+		_R_to_earth = Dcmf(_state.quat_nominal);
+
+		// reset the rotation from the EV to EKF frame of reference if it is being used
+		if ((_params.fusion_mode & MASK_ROTATE_EV) && !_control_status.flags.ev_yaw) {
+			calcExtVisRotMat();
+		}
+
+		// update the yaw angle variance using half the nominal yaw separation between models
+		increaseQuatYawErrVariance(sq(fmaxf(M_PI_F / (float)N_MODELS_EKFGSF, 1.0e-2f)));
+
+		// add the reset amount to the output observer buffered data
+		for (uint8_t i = 0; i < _output_buffer.get_length(); i++) {
+			_output_buffer[i].quat_nominal = _state_reset_status.quat_change * _output_buffer[i].quat_nominal;
+		}
+
+		// apply the change in attitude quaternion to our newest quaternion estimate
+		// which was already taken out from the output buffer
+		_output_new.quat_nominal = _state_reset_status.quat_change * _output_new.quat_nominal;
+
+		// capture the reset event
+		_state_reset_status.quat_counter++;
+
+		// reset velocity and position states to GPS - if yaw is fixed then the filter should start to operate correctly
+		resetVelocity();
+		resetPosition();
+
+		// stop using the magnetometer in the main EKF otherwise it's fusion could drag the yaw around
+		// and cause another navigation failure
+		_control_status.flags.mag_fault = true;
+
+		ECL_INFO_TIMESTAMPED("Emergency yaw reset - magnetometer use stopped");
+
+		return true;
 	}
 
-	// record the time for the magnetic field alignment event
-	_flt_mag_align_start_time = _imu_sample_delayed.time_us;
-
-	// calculate the amount that the quaternion has changed by
-	Quatf q_error =  quat_after_reset * quat_before_reset.inversed();
-	q_error.normalize();
-
-	// update quaternion states
-	_state.quat_nominal = quat_after_reset;
-	uncorrelateQuatFromOtherStates();
-
-	// record the state change
-	_state_reset_status.quat_change = q_error;
-
-	// update transformation matrix from body to world frame using the current estimate
-	_R_to_earth = Dcmf(_state.quat_nominal);
-
-	// reset the rotation from the EV to EKF frame of reference if it is being used
-	if ((_params.fusion_mode & MASK_ROTATE_EV) && !_control_status.flags.ev_yaw) {
-		calcExtVisRotMat();
-	}
-
-	// update the yaw angle variance using half the nominal yaw separation between models
-	increaseQuatYawErrVariance(sq(fmaxf(M_PI_F / (float)N_MODELS_EKFGSF, 1.0e-2f)));
-
-	// add the reset amount to the output observer buffered data
-	for (uint8_t i = 0; i < _output_buffer.get_length(); i++) {
-		_output_buffer[i].quat_nominal = _state_reset_status.quat_change * _output_buffer[i].quat_nominal;
-	}
-
-	// apply the change in attitude quaternion to our newest quaternion estimate
-	// which was already taken out from the output buffer
-	_output_new.quat_nominal = _state_reset_status.quat_change * _output_new.quat_nominal;
-
-	// capture the reset event
-	_state_reset_status.quat_counter++;
-
-	// reset velocity and position states to GPS - if yaw is fixed then the filter should start to operate correctly
-	resetVelocity();
-	resetPosition();
-
-	ECL_INFO_TIMESTAMPED("EKF emergency yaw reset");
-
-	// stop using the magnetometer in the main EKF otherwise it's fusion could drag the yaw around
-	// and cause another navigation failure
-	_control_status.flags.mag_fault = true;
-	ECL_WARN_TIMESTAMPED("EKF stopping magnetometer use");
+	return false;
 
 }
 
