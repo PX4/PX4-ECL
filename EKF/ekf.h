@@ -268,9 +268,12 @@ public:
 	// return false if estimator is not running
 	bool getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]) const;
 
-	// request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
-	// argment should be incremented only when a new reset is required
-	void request_ekfgsf_yaw_reset(uint8_t counter);
+	// Request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
+	// and reset the velocity and position states to the GPS. This will cause the EKF
+	// to ignore the magnetomer for the remainder of flight.
+	// This should only be used as a last resort before activating a loss of navigation failsafe
+	// The counter must be incremented for each new reset request
+	void requestEmergencyNavReset(uint8_t counter);
 
 private:
 

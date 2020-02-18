@@ -744,9 +744,7 @@ bool Ekf::resetYawToEKFGSF()
 
 }
 
-// request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
-// argument should be incremented only when a new reset is required
-void Ekf::request_ekfgsf_yaw_reset(uint8_t counter)
+void Ekf::requestEmergencyNavReset(uint8_t counter)
 {
 	if (counter > _yaw_extreset_counter) {
 		_yaw_extreset_counter = counter;

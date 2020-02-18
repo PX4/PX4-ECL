@@ -403,7 +403,7 @@ public:
 
 	// request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
 	// argment should be incremented only when a new reset is required
-	virtual void request_ekfgsf_yaw_reset(uint8_t counter) = 0;
+	virtual void requestEmergencyNavReset(uint8_t counter) = 0;
 
 	// get solution data for the EKF-GSF emergency yaw esitmator
 	// return false if estimator is not running
