@@ -772,6 +772,7 @@ private:
 	uint64_t _time_last_on_ground_us{0};	///< last tine we were on the ground (uSec)
 	uint8_t _yaw_extreset_counter{0};	// number of external emergency yaw reset requests
 	bool _do_emergency_yaw_reset{false};	// true when an emergency yaw reset has been requested
+	float _ekf_gsf_yaw_variance{0.0f};	// varince of composite yaw estimate (rad^2)
 
 	void runEKFGSF();
 	void initialiseEKFGSF();
@@ -782,6 +783,6 @@ private:
 	void stateUpdateEKFGSF(const uint8_t model_index);
 	float gaussianDensityEKFGSF(const uint8_t model_index) const;
 	void makeCovSymEKFGSF(const uint8_t model_index);
-	void resetYawToEKFGSF();
+	bool resetYawToEKFGSF();
 	Dcmf taitBryan312ToRotMat(Vector3f &rot312);
 };

@@ -370,6 +370,7 @@ struct parameters {
 	float EKFGSF_weight_min{0.0f};		///< minimum value of an individual model weighting
 	float EKFGSF_tas_default{15.0f};	///< default airspeed value assumed during fixed wing flight if no airspeed measurement available (m/s)
 	unsigned EKFGSF_reset_delay{1000000};	///< Number of uSec of bad innovations on main filter inpost takeoff phase before yaw is reset to EKF-GSF value
+	float EKFGSF_yaw_err_max{0.2f}; 	///< Composite yaw 1-sigma uncertainty threshold used to check for convergence (rad)
 };
 
 struct stateSample {
