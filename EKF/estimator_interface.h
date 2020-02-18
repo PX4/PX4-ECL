@@ -419,18 +419,7 @@ public:
 	virtual void request_ekfgsf_yaw_reset(uint8_t counter) = 0;
 
 	// get ekf-gsf debug data
-	virtual void getDataEKFGSF(float *yaw_composite, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]) = 0;
-
-	// gets data which will be logged and used for algorithm development work
-	// returns false when no data avialable
-	virtual bool get_algo_test_data(float delAng[3],
-				float *delAngDt,
-				float delVel[3],
-				float *delVelDt,
-				float vel[3],
-				float *velErr,
-				bool *fuse_vel,
-				float quat[4]) = 0;
+	virtual bool getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]) = 0;
 
 protected:
 

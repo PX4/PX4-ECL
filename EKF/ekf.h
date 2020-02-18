@@ -285,18 +285,8 @@ public:
 	void set_min_required_gps_health_time(uint32_t time_us) { _min_gps_health_time_us = time_us; }
 
 	// get solution data for the EKF-GSF emergency yaw esitmator
-	void getDataEKFGSF(float *yaw_composite, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]) override;
-
-	// gets data which to be logged and used for EKF-GSF development replay
-	// returns false when no data available
-	bool get_algo_test_data(float delAng[3], // delta angle from IMU (rad)
-				float *delAngDt, // delta angle integration time (sec)
-				float delVel[3], // delta velocity from IMU (m/s)
-				float *delVelDt, // delta velocity integration time (sec)
-				float vel[3], // NED velocity measurement (m/s)
-				float *velErr, // 1-sigma velocity measurement uncertainty (m/s)
-				bool *fuse_vel, // true when velociy measurement has been updated
-				float quat[4]) override; // reference quaternion from EKF
+	// return false if estimator is not running
+	bool getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]) override;
 
 	// request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
 	// argment should be incremented only when a new reset is required

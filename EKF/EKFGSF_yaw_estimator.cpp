@@ -625,15 +625,20 @@ float Ekf::gaussianDensityEKFGSF(const uint8_t model_index) const
 	return normDist;
 }
 
-void Ekf::getDataEKFGSF(float *yaw_composite, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF])
+bool Ekf::getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF])
 {
-	memcpy(yaw_composite, &X_GSF[2], sizeof(X_GSF[2]));
-	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
-		yaw[model_index] = _ekf_gsf[model_index].X[2];
-		innov_VN[model_index] = _ekf_gsf[model_index].innov[0];
-		innov_VE[model_index] = _ekf_gsf[model_index].innov[1];
-		weight[model_index] = _ekf_gsf[model_index].W;
+	if (_ekf_gsf_vel_fuse_started) {
+		memcpy(yaw_composite, &X_GSF[2], sizeof(X_GSF[2]));
+		memcpy(yaw_variance, &_ekf_gsf_yaw_variance, sizeof(_ekf_gsf_yaw_variance));
+		for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
+			yaw[model_index] = _ekf_gsf[model_index].X[2];
+			innov_VN[model_index] = _ekf_gsf[model_index].innov[0];
+			innov_VE[model_index] = _ekf_gsf[model_index].innov[1];
+			weight[model_index] = _ekf_gsf[model_index].W;
+		}
+		return true;
 	}
+	return false;
 }
 
 void Ekf::makeCovSymEKFGSF(const uint8_t model_index)
@@ -737,47 +742,6 @@ bool Ekf::resetYawToEKFGSF()
 
 	return false;
 
-}
-
-// gets simple AHRS derived data which will be logged and used for algorithm development work
-// returns false when no data available
-bool Ekf::get_algo_test_data(float delAng[3],
-		float *delAngDt,
-		float delVel[3],
-		float *delVelDt,
-		float vel[3],
-		float *velErr,
-		bool *fuse_vel,
-		float quat[4])
-{
-	const bool vel_updated = _control_status.flags.gps && _gps_data_ready;
-
-	delAng[0] = _imu_sample_delayed.delta_ang(0);
-	delAng[1] = _imu_sample_delayed.delta_ang(1);
-	delAng[2] = _imu_sample_delayed.delta_ang(2);
-
-	memcpy(delAngDt, &_imu_sample_delayed.delta_vel_dt, sizeof(float));
-
-	delVel[0] = _imu_sample_delayed.delta_vel(0);
-	delVel[1] = _imu_sample_delayed.delta_vel(1);
-	delVel[2] = _imu_sample_delayed.delta_vel(2);
-
-	memcpy(delVelDt, &_imu_sample_delayed.delta_vel_dt, sizeof(float));
-
-	vel[0] = _gps_sample_delayed.vel(0);
-	vel[1] = _gps_sample_delayed.vel(1);
-	vel[2] = _gps_sample_delayed.vel(2);
-
-	memcpy(velErr, &_gps_sample_delayed.sacc, sizeof(float));
-
-	memcpy(fuse_vel, &vel_updated, sizeof(bool));
-
-	quat[0] =  _state.quat_nominal(0);
-	quat[1] =  _state.quat_nominal(1);
-	quat[2] =  _state.quat_nominal(2);
-	quat[3] =  _state.quat_nominal(3);
-
-	return _filter_initialised;
 }
 
 // request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
