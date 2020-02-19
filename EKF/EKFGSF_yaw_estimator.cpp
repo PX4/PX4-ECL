@@ -1,17 +1,57 @@
 /****************************************************************************
  *
- *   Copyright (c) 2019 Paul Riseborough
+ *   Copyright (c) 2020 Estimation and Control Library (ECL). All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name ECL nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
 /*
  * @file EKFGSF_yaw_estimator.cpp
- * Definition of functions used to provide a backup estimate of yaw angle
- * that doesn't use a magnetometer.
- * Uses a bank of 3-state EKF's organised as a Guassian sum filter
- * where states are velocity N,E (m/s) and yaw angle (rad)
  *
- * @author Paul Riseborough <p_riseborough@live.com.au>
+ * Functions used to provide a backup estimate of yaw angle that doesn't use a
+ * magnetometer. A bank of AHRS solutions, each starting from a different initial
+ * yaw hoypothesis are used to provide an atitude reference using only IMU and
+ * optional true airspeed data. Each AHRS output is then usd to convert IMU data
+ * into a front acceleration, right acceleration and yaw rate as control inputs
+ * used by a bank of 3-state EKF's whose states are velocity N,E (m/s) and yaw
+ * angle (rad). The EKF's use the GPS horizontal NE velocity vector as observations
+ * which enables the yaw angle to be estimated provided there is a change in
+ * horizontal velocity vector. The output from each EKF is combined using a
+ * Gaussian Sum Filter.
+ *
+ * This code has been developed from previous work by Paul Riseborough and
+ * Rudaba Khan which includes the following Matlab code:
+ *
+ * https://github.com/priseborough/3_state_filter
+ *
+ * @author Paul Riseborough <gncsolns@gmail.com>
+ *
  */
 
 #include "ekf.h"
@@ -303,7 +343,7 @@ void Ekf::stateUpdateEKFGSF(const uint8_t model_index)
 		return;
 	}
 
-	// calculate Kalman gain K  and covariance matrix P
+	// calculate Kalman gain K  nd covariance matrix P
 	// autocode from https://github.com/priseborough/3_state_filter/blob/flightLogReplay-wip/calcK.txt
 	// and https://github.com/priseborough/3_state_filter/blob/flightLogReplay-wip/calcPmat.txt
 	const float t2 = P00*velObsVar;
@@ -439,13 +479,13 @@ void Ekf::initialiseEKFGSF()
 		// All filter models start with the same weight
 		_ekf_gsf[model_index].W = 1.0f / (float)N_MODELS_EKFGSF;
 
-		// Assume velocity within 0.5 m/s of zero at alignment
 		if (_control_status.flags.gps) {
 			_ekf_gsf[model_index].X[0] = _gps_sample_delayed.vel(0);
 			_ekf_gsf[model_index].X[1] = _gps_sample_delayed.vel(1);
 			_ekf_gsf[model_index].P[0][0] = sq(_gps_sample_delayed.sacc);
 			_ekf_gsf[model_index].P[1][1] = _ekf_gsf[model_index].P[0][0];
 		} else {
+			// no GPS so assume we are in a semi-static condition and moving no more that 0.5 m/s
 			_ekf_gsf[model_index].P[0][0] = sq(0.5f);
 			_ekf_gsf[model_index].P[1][1] = sq(0.5f);
 		}
@@ -460,7 +500,8 @@ void Ekf::runEKFGSF()
 	// Iniitialise states first time
 	_ahrs_accel = _imu_sample_delayed.delta_vel / fmaxf(_imu_sample_delayed.delta_vel_dt, FILTER_UPDATE_PERIOD_S / 4);
 	if (!_ahrs_ekf_gsf_tilt_aligned) {
-		// check for excessive acceleration.
+		// check for excessive acceleration to reduce likelihood of large inital roll/pitch errors
+		// due to vehicle movement
 		const float accel_norm_sq = _ahrs_accel.norm_squared();
 		const float upper_accel_limit = CONSTANTS_ONE_G * 1.1f;
 		const float lower_accel_limit = CONSTANTS_ONE_G * 0.9f;
@@ -487,8 +528,7 @@ void Ekf::runEKFGSF()
 		_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f + 2.0f * (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
 	}
 
-	// AHRS prediction cycle for each model
-	// This always runs
+	// AHRS prediction cycle for each model - this always runs
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 		statePredictEKFGSF(model_index);
 	}
@@ -529,27 +569,27 @@ void Ekf::runEKFGSF()
 			// subsequently, so this block of code and the corresponding EKFGSF_weight_min can be removed if we get
 			// through testing without any weighting function issues.
 			if (_params.EKFGSF_weight_min > FLT_EPSILON) {
-			float correction_sum = 0.0f; // amount the sum of weights has been increased by application of the limit
-			bool change_mask[N_MODELS_EKFGSF] = {}; // true when the weighting for that model has been increased
-			float unmodified_weights_sum = 0.0f; // sum of unmodified weights
-			for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-				if (_ekf_gsf[model_index].W < _params.EKFGSF_weight_min) {
-					correction_sum += _params.EKFGSF_weight_min - _ekf_gsf[model_index].W;
-					_ekf_gsf[model_index].W = _params.EKFGSF_weight_min;
-					change_mask[model_index] = true;
-				} else {
-					unmodified_weights_sum += _ekf_gsf[model_index].W;
+				float correction_sum = 0.0f; // amount the sum of weights has been increased by application of the limit
+				bool change_mask[N_MODELS_EKFGSF] = {}; // true when the weighting for that model has been increased
+				float unmodified_weights_sum = 0.0f; // sum of unmodified weights
+				for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
+					if (_ekf_gsf[model_index].W < _params.EKFGSF_weight_min) {
+						correction_sum += _params.EKFGSF_weight_min - _ekf_gsf[model_index].W;
+						_ekf_gsf[model_index].W = _params.EKFGSF_weight_min;
+						change_mask[model_index] = true;
+					} else {
+						unmodified_weights_sum += _ekf_gsf[model_index].W;
+					}
 				}
-			}
 
-			// rescale the unmodified weights to make the total sum unity
-			const float scale_factor = (unmodified_weights_sum - correction_sum - _params.EKFGSF_weight_min) / (unmodified_weights_sum - _params.EKFGSF_weight_min);
-			for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-				if (!change_mask[model_index]) {
-					_ekf_gsf[model_index].W = _params.EKFGSF_weight_min + scale_factor * (_ekf_gsf[model_index].W - _params.EKFGSF_weight_min);
+				// rescale the unmodified weights to make the total sum unity
+				const float scale_factor = (unmodified_weights_sum - correction_sum - _params.EKFGSF_weight_min) / (unmodified_weights_sum - _params.EKFGSF_weight_min);
+				for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
+					if (!change_mask[model_index]) {
+						_ekf_gsf[model_index].W = _params.EKFGSF_weight_min + scale_factor * (_ekf_gsf[model_index].W - _params.EKFGSF_weight_min);
+					}
 				}
 			}
-		}
 		}
 	} else if (_ekf_gsf_vel_fuse_started && !_control_status.flags.in_air) {
 		// reset EKF states and wait to fly again
