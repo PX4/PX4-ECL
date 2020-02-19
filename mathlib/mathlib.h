@@ -44,11 +44,15 @@
 #ifdef ECL_STANDALONE
 
 #ifndef M_PI_F
-#define M_PI_F 3.14159265358979323846f
+#define M_PI_F 3.14159265f
 #endif
 
 #ifndef M_PI_2_F
-#define M_PI_2_F (M_PI / 2.0f)
+#define M_PI_2_F 1.57079632f
+#endif
+
+#ifndef M_TWOPI_F
+#define M_TWOPI_F 6.28318531f
 #endif
 
 namespace math
