@@ -525,7 +525,10 @@ void Ekf::runEKFGSF()
 				}
 			}
 
-			// enforce a minimum weighting value
+			// Enforce a minimum weighting value. This was added during initial development but has not been needed
+			// subsequently, so this block of code and the corresponding EKFGSF_weight_min can be removed if we get
+			// through testing without any weighting function issues.
+			if (_params.EKFGSF_weight_min > FLT_EPSILON) {
 			float correction_sum = 0.0f; // amount the sum of weights has been increased by application of the limit
 			bool change_mask[N_MODELS_EKFGSF] = {}; // true when the weighting for that model has been increased
 			float unmodified_weights_sum = 0.0f; // sum of unmodified weights
@@ -546,6 +549,7 @@ void Ekf::runEKFGSF()
 					_ekf_gsf[model_index].W = _params.EKFGSF_weight_min + scale_factor * (_ekf_gsf[model_index].W - _params.EKFGSF_weight_min);
 				}
 			}
+		}
 		}
 	} else if (_ekf_gsf_vel_fuse_started && !_control_status.flags.in_air) {
 		// reset EKF states and wait to fly again
