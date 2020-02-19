@@ -502,8 +502,8 @@ void Ekf::runEKFGSF()
 				_ekf_gsf[model_index].X[1] = _gps_sample_delayed.vel(1);
 				_ekf_gsf[model_index].P[0][0] = sq(_gps_sample_delayed.sacc);
 				_ekf_gsf[model_index].P[1][1] = _ekf_gsf[model_index].P[0][0];
-				alignQuatYawEKFGSF();
 			}
+			alignQuatYawEKFGSF();
 			_ekf_gsf_vel_fuse_started = true;
 		} else {
 			float total_w = 0.0f;
