@@ -515,20 +515,8 @@ void Ekf::runEKFGSF()
 		return;
 	}
 
-	// calculate common values used by the AHRS prediction models
-	_ahrs_accel_norm = _ahrs_accel.norm();
-	_ahrs_turn_comp_enabled = _control_status.flags.fixed_wing && _params.EKFGSF_tas_default > FLT_EPSILON;
-	if (_ahrs_accel_norm > CONSTANTS_ONE_G) {
-		if (_ahrs_turn_comp_enabled && _ahrs_accel_norm <= 2.0f * CONSTANTS_ONE_G) {
-			_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f - (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
-		} else if (_ahrs_accel_norm <= 1.5f * CONSTANTS_ONE_G) {
-			_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f - 2.0f * (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
-		}
-	} else if (_ahrs_accel_norm > 0.5f * CONSTANTS_ONE_G) {
-		_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f + 2.0f * (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
-	}
-
 	// AHRS prediction cycle for each model - this always runs
+	calcAccelGainEKFGSF();
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 		statePredictEKFGSF(model_index);
 	}
@@ -824,4 +812,22 @@ Dcmf Ekf::taitBryan312ToRotMat(Vector3f &rot312)
 		R(2, 1) = s1;
 
 		return R;
+}
+
+void Ekf::calcAccelGainEKFGSF()
+{
+	// calculate acceleration fusion  gain and other common values used by the AHRS complementary filter models
+	_ahrs_accel_norm = _ahrs_accel.norm();
+	_ahrs_turn_comp_enabled = _control_status.flags.fixed_wing && _params.EKFGSF_tas_default > FLT_EPSILON;
+	if (_ahrs_accel_norm > CONSTANTS_ONE_G) {
+		if (_ahrs_turn_comp_enabled && _ahrs_accel_norm <= 2.0f * CONSTANTS_ONE_G) {
+			_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f - (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
+		} else if (_ahrs_accel_norm <= 1.5f * CONSTANTS_ONE_G) {
+			_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f - 2.0f * (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
+		}
+	} else if (_ahrs_accel_norm > 0.5f * CONSTANTS_ONE_G) {
+		_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f + 2.0f * (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
+	} else {
+		_ahrs_accel_fusion_gain = 0.0f;
+	}
 }

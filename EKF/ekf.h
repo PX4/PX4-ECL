@@ -778,4 +778,5 @@ private:
 	void makeCovSymEKFGSF(const uint8_t model_index);
 	bool resetYawToEKFGSF();
 	Dcmf taitBryan312ToRotMat(Vector3f &rot312);
+	void calcAccelGainEKFGSF();
 };
