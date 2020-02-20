@@ -680,7 +680,7 @@ void Ekf::controlGpsFusion()
 			// allow the EKF-GSF time to improve its estimate if the first reset was not successful.
 			const bool stopped_following_gps_velocity = _time_last_imu > (_params.EKFGSF_reset_delay + _time_last_vel_fuse) &&
 							   (_time_last_vel_fuse > _time_last_on_ground_us);
-			const bool recent_takeoff = (_control_status.flags.in_air && (_imu_sample_delayed.time_us - _time_last_on_ground_us) < 30000000);
+			const bool recent_takeoff = _control_status.flags.in_air && _imu_sample_delayed.time_us < (30000000 + _time_last_on_ground_us);
 			const bool reset_yaw_to_EKFGSF = (do_reset || _do_emergency_yaw_reset || stopped_following_gps_velocity) &&
 								recent_takeoff &&
 								_time_last_imu > (5000000 + _emergency_yaw_reset_time);
