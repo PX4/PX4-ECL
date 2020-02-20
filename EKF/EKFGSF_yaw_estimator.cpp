@@ -816,17 +816,25 @@ Dcmf Ekf::taitBryan312ToRotMat(Vector3f &rot312)
 
 void Ekf::calcAccelGainEKFGSF()
 {
-	// calculate acceleration fusion  gain and other common values used by the AHRS complementary filter models
+	// calculate common values used by the AHRS complementary filter models
 	_ahrs_accel_norm = _ahrs_accel.norm();
 	_ahrs_turn_comp_enabled = _control_status.flags.fixed_wing && _params.EKFGSF_tas_default > FLT_EPSILON;
-	if (_ahrs_accel_norm > CONSTANTS_ONE_G) {
-		if (_ahrs_turn_comp_enabled && _ahrs_accel_norm <= 2.0f * CONSTANTS_ONE_G) {
-			_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f - (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
-		} else if (_ahrs_accel_norm <= 1.5f * CONSTANTS_ONE_G) {
-			_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f - 2.0f * (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
+
+	// Calculate the acceleration fusion gain using a continuous function that is unity at 1g and zero
+	// at the min and mas g value. Allow for more acceleration when flying as a fixed wing vehicle using centripetal
+	// acceleration correction as higher and more sustained g will be experienced.
+	// Use a quadratic finstead of linear unction to prevent vibration around 1g reducing the tilt correction effectiveness.
+	float accel_g = _ahrs_accel_norm / CONSTANTS_ONE_G;
+	if (accel_g > 1.0f) {
+		if (_ahrs_turn_comp_enabled && accel_g < 2.0f) {
+			_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(2.0f - accel_g);
+		} else if (accel_g < 1.5f) {
+			_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(3.0f - 2.0f * accel_g);
+		} else {
+			_ahrs_accel_fusion_gain = 0.0f;
 		}
-	} else if (_ahrs_accel_norm > 0.5f * CONSTANTS_ONE_G) {
-		_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(1.0f + 2.0f * (_ahrs_accel_norm - CONSTANTS_ONE_G)/CONSTANTS_ONE_G);
+	} else if (accel_g > 0.5f) {
+		_ahrs_accel_fusion_gain = _params.EKFGSF_tilt_gain * sq(2.0f * accel_g - 1.0f);
 	} else {
 		_ahrs_accel_fusion_gain = 0.0f;
 	}
