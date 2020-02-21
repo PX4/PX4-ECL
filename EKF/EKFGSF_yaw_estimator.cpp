@@ -76,8 +76,10 @@ void Ekf::quatPredictEKFGSF(const uint8_t model_index)
 	// Perform angular rate correction using accel data and reduce correction as accel magnitude moves away from 1 g (reduces drift when vehicle picked up and moved).
 	// During fixed wing flight, compensate for centripetal acceleration assuming coordinated turns and X axis forward
 	Vector3f correction = {};
-	Vector3f accel = _ahrs_accel;
-	if (_ahrs_accel_norm > 0.5f * CONSTANTS_ONE_G && (_ahrs_accel_norm < 1.5f * CONSTANTS_ONE_G || _ahrs_turn_comp_enabled)) {
+	if (_ahrs_accel_fusion_gain > 0.0f) {
+
+		Vector3f accel = _ahrs_accel;
+
 		if (_ahrs_turn_comp_enabled) {
 			// turn rate is component of gyro rate about vertical (down) axis
 			const float turn_rate = _ahrs_ekf_gsf[model_index].R(2,0) * _ang_rate_delayed_raw(0)
