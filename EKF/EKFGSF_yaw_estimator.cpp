@@ -67,11 +67,7 @@ void Ekf::quatPredictEKFGSF(const uint8_t model_index)
 	// Project 'k' unit vector of earth frame to body frame
 	// Vector3f k = quaterion.conjugate_inversed(Vector3f(0.0f, 0.0f, 1.0f));
 	// Optimized version with dropped zeros
-	const Vector3f k(
-		2.0f * (_ahrs_ekf_gsf[model_index].quat(1) * _ahrs_ekf_gsf[model_index].quat(3) - _ahrs_ekf_gsf[model_index].quat(0) * _ahrs_ekf_gsf[model_index].quat(2)),
-		2.0f * (_ahrs_ekf_gsf[model_index].quat(2) * _ahrs_ekf_gsf[model_index].quat(3) + _ahrs_ekf_gsf[model_index].quat(0) * _ahrs_ekf_gsf[model_index].quat(1)),
-		(_ahrs_ekf_gsf[model_index].quat(0) * _ahrs_ekf_gsf[model_index].quat(0) - _ahrs_ekf_gsf[model_index].quat(1) * _ahrs_ekf_gsf[model_index].quat(1) - _ahrs_ekf_gsf[model_index].quat(2) * _ahrs_ekf_gsf[model_index].quat(2) + _ahrs_ekf_gsf[model_index].quat(3) * _ahrs_ekf_gsf[model_index].quat(3))
-	);
+	const Vector3f k(_ahrs_ekf_gsf[model_index].R(2,0), _ahrs_ekf_gsf[model_index].R(2,1), _ahrs_ekf_gsf[model_index].R(2,2));
 
 	// Perform angular rate correction using accel data and reduce correction as accel magnitude moves away from 1 g (reduces drift when vehicle picked up and moved).
 	// During fixed wing flight, compensate for centripetal acceleration assuming coordinated turns and X axis forward
@@ -129,17 +125,11 @@ void Ekf::quatPredictEKFGSF(const uint8_t model_index)
 
 	const Vector3f rates = _ang_rate_delayed_raw - _ahrs_ekf_gsf[model_index].gyro_bias;
 
-	// Feed forward gyro
-	correction += rates;
+	// delta angle from previous to current frame
+	Vector3f delta_angle = (correction + rates) * _imu_sample_delayed.delta_ang_dt;
 
-	// Apply correction to state
-	_ahrs_ekf_gsf[model_index].quat += _ahrs_ekf_gsf[model_index].quat.derivative1(correction) * _imu_sample_delayed.delta_ang_dt;
-
-	// Normalize quaternion
-	_ahrs_ekf_gsf[model_index].quat.normalize();
-
-	// uodate body to earth frame rotation matrix
-	_ahrs_ekf_gsf[model_index].R = Dcmf(_ahrs_ekf_gsf[model_index].quat);
+	// Apply delta angle to rotation matrix
+	_ahrs_ekf_gsf[model_index].R = updateRotMatEKFGSF(_ahrs_ekf_gsf[model_index].R, delta_angle);
 
 }
 
@@ -173,12 +163,6 @@ void Ekf::alignQuatEKFGSF()
 	R.setRow(1, east_in_bf);
 	R.setRow(2, down_in_bf);
 
-	// Convert to quaternion
-	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
-		_ahrs_ekf_gsf[model_index].quat = R;
-		_ahrs_ekf_gsf[model_index].quat.normalize();
-		_ahrs_ekf_gsf[model_index].quat_initialised = true;
-	}
 }
 
 void Ekf::alignQuatYawEKFGSF()
@@ -187,14 +171,13 @@ void Ekf::alignQuatYawEKFGSF()
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
 		if (fabsf(_ahrs_ekf_gsf[model_index].R(2, 0)) < fabsf(_ahrs_ekf_gsf[model_index].R(2, 1))) {
 			// get the roll, pitch, yaw estimates from the rotation matrix using a  321 Tait-Bryan rotation sequence
-			Eulerf euler_init(_ahrs_ekf_gsf[model_index].quat);
+			Eulerf euler_init(_ahrs_ekf_gsf[model_index].R);
 
 			// set the yaw angle
 			euler_init(2) = wrap_pi(_ekf_gsf[model_index].X[2]);
 
-			// update the quaternions and rotation matrix
-			_ahrs_ekf_gsf[model_index].quat = Quatf(euler_init);
-			_ahrs_ekf_gsf[model_index].R = Dcmf(_ahrs_ekf_gsf[model_index].quat);
+			// update the rotation matrix
+			_ahrs_ekf_gsf[model_index].R = Dcmf(euler_init);
 
 		} else {
 			// Calculate the 312 Tait-Bryan rotation sequence that rotates from earth to body frame
@@ -206,9 +189,6 @@ void Ekf::alignQuatYawEKFGSF()
 			// Calculate the body to earth frame rotation matrix
 			_ahrs_ekf_gsf[model_index].R = taitBryan312ToRotMat(rot312);
 
-			// update the quaternion
-			_ahrs_ekf_gsf[model_index].quat = Quatf(_ahrs_ekf_gsf[model_index].R);
-			_ahrs_ekf_gsf[model_index].quat.normalize();
 		}
 		_ahrs_ekf_gsf[model_index].quat_initialised = true;
 	}
@@ -444,10 +424,7 @@ void Ekf::stateUpdateEKFGSF(const uint8_t model_index)
 		rot312(2) = atan2f(-_ahrs_ekf_gsf[model_index].R(2, 0), _ahrs_ekf_gsf[model_index].R(2, 2));  // third rotation is about Y and is taken from AHRS
 
 		// Calculate the body to earth frame rotation matrix
-		const Dcmf R = taitBryan312ToRotMat(rot312);
-
-		// update the quaternion used by the AHRS prediction algorithm
-		_ahrs_ekf_gsf[model_index].quat = Quatf(R);
+		_ahrs_ekf_gsf[model_index].R = taitBryan312ToRotMat(rot312);
 
 	} else {
 		// using a 321 Tait-Bryan rotation to define yaw state
@@ -457,8 +434,8 @@ void Ekf::stateUpdateEKFGSF(const uint8_t model_index)
 		// replace the yaw angle using the EKF state estimate
 		euler321(2) = _ekf_gsf[model_index].X[2];
 
-		// update the quaternion used by the AHRS prediction algorithm
-		_ahrs_ekf_gsf[model_index].quat = Quatf(euler321);
+		// update the rotation matrix used by the AHRS prediction algorithm
+		_ahrs_ekf_gsf[model_index].R = euler321;
 
 	}
 }
@@ -840,4 +817,33 @@ void Ekf::calcAccelGainEKFGSF()
 	} else {
 		_ahrs_accel_fusion_gain = 0.0f;
 	}
+}
+
+// Efficient propagation of a delta angle in body frame applied to the body to earth frame rotation matrix
+Matrix3f Ekf::updateRotMatEKFGSF(Matrix3f &R, Vector3f &g)
+{
+	Matrix3f ret = R;
+	ret(0,0) += R(0,1) * g(2) - R(0,2) * g(1);
+	ret(0,1) += R(0,2) * g(0) - R(0,0) * g(2);
+	ret(0,2) += R(0,0) * g(1) - R(0,1) * g(0);
+	ret(1,0) += R(1,1) * g(2) - R(1,2) * g(1);
+	ret(1,1) += R(1,2) * g(0) - R(1,0) * g(2);
+	ret(1,2) += R(1,0) * g(1) - R(1,1) * g(0),
+        ret(2,0) += R(2,1) * g(2) - R(2,2) * g(1);
+	ret(2,1) += R(2,2) * g(0) - R(2,0) * g(2);
+	ret(2,2) += R(2,0) * g(1) - R(2,1) * g(0);
+
+	// Renormalise rows - Use sqrt approximation which is valid for small deviations that accumulate
+	float rowLengthSq;
+	for (uint8_t r = 0; r < 3; r++) {
+		rowLengthSq = ret(r,0) * ret(r,0) + ret(r,1) * ret(r,1) + ret(r,2) * ret(r,2);
+		if (rowLengthSq > FLT_EPSILON) {
+			float rowLengthInv = 0.5f / rowLengthSq;
+			ret(r,0) *= rowLengthInv;
+			ret(r,1) *= rowLengthInv;
+			ret(r,2) *= rowLengthInv;
+		}
+        }
+
+	return ret;
 }
