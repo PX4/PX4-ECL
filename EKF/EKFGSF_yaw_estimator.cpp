@@ -833,12 +833,12 @@ Matrix3f Ekf::updateRotMatEKFGSF(Matrix3f &R, Vector3f &g)
 	ret(2,1) += R(2,2) * g(0) - R(2,0) * g(2);
 	ret(2,2) += R(2,0) * g(1) - R(2,1) * g(0);
 
-	// Renormalise rows - Use sqrt approximation which is valid for small deviations that accumulate
+	// Renormalise rows
 	float rowLengthSq;
 	for (uint8_t r = 0; r < 3; r++) {
 		rowLengthSq = ret(r,0) * ret(r,0) + ret(r,1) * ret(r,1) + ret(r,2) * ret(r,2);
 		if (rowLengthSq > FLT_EPSILON) {
-			float rowLengthInv = 0.5f / rowLengthSq;
+			const float rowLengthInv = 1.0f / sqrtf(rowLengthSq);
 			ret(r,0) *= rowLengthInv;
 			ret(r,1) *= rowLengthInv;
 			ret(r,2) *= rowLengthInv;
