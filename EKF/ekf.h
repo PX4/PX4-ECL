@@ -734,8 +734,7 @@ private:
 
 	// Declarations for a EKF-GSF estimator used to provide a backup estimate of vehicle yaw
 	struct _ahrs_ekf_gsf_struct{
-		Quatf quat;			///< quaternion describing rotation from body to earth frame and calculated using only IMU data.
-		Dcmf R;				///< matrix that rotates avector from body to earth frame
+		Dcmf R;				///< matrix that rotates a vector from body to earth frame
 		Vector3f gyro_bias;		///< gyro bias learned and used by the quaternion calculation
 		bool quat_initialised{false};	///< true when calibrator quaternion has been aligned
 		float accel_FR[2] {};		///< front-right acceleration vector in a horizontal plane (m/s/s)
@@ -779,4 +778,5 @@ private:
 	bool resetYawToEKFGSF();
 	Dcmf taitBryan312ToRotMat(Vector3f &rot312);
 	void calcAccelGainEKFGSF();
+	Matrix3f updateRotMatEKFGSF(Matrix3f &R, Vector3f &g);
 };
