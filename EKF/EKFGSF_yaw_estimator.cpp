@@ -427,10 +427,12 @@ void Ekf::stateUpdateEKFGSF(const uint8_t model_index)
 
 	} else {
 		// using a 321 Tait-Bryan rotation to define yaw state
-		// take roll pitch yaw from AHRS prediction
-		Eulerf euler321(_ahrs_ekf_gsf[model_index].R);
+		// take roll and pitch from AHRS prediction
+		Eulerf euler321;
+		euler321(0) = atan2f(_ahrs_ekf_gsf[model_index].R(2,1), _ahrs_ekf_gsf[model_index].R(2,2));
+		euler321(1) = -asinf(_ahrs_ekf_gsf[model_index].R(2,0));
 
-		// replace the yaw angle using the EKF state estimate
+		// take yaw angle from the 3-state EKF updated state estimate
 		euler321(2) = _ekf_gsf[model_index].X[2];
 
 		// update the rotation matrix used by the AHRS prediction algorithm
@@ -630,9 +632,7 @@ float Ekf::gaussianDensityEKFGSF(const uint8_t model_index) const
 	// transpose(innovation) * inv(S) * innovation
 	float normDist = tempVec[0] * _ekf_gsf[model_index].innov[0] + tempVec[1] * _ekf_gsf[model_index].innov[1];
 
-	normDist = expf(-0.5f * normDist);
-	normDist *= sqrtf(t4)/ M_TWOPI_F;
-	return normDist;
+	return M_TWOPI_INV * sqrtf(t4) * expf(-0.5f * normDist);
 }
 
 bool Ekf::getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]) const
