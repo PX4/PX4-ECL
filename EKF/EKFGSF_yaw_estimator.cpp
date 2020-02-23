@@ -409,23 +409,18 @@ void Ekf::stateUpdateEKFGSF(const uint8_t model_index)
 	}
 	float yawDelta = _ekf_gsf[model_index].X[2] - oldYaw;
 
-	// calculate the delta yaw rotation matrix
-	Matrix3f yawRotMat;
+	// apply the change in yaw angle to the AHRS
+	// take advantage of sparseness in the yaw rotation matrix
 	const float cosYaw = cosf(yawDelta);
 	const float sinYaw = sinf(yawDelta);
-	yawRotMat(0,0) = cosYaw;
-	yawRotMat(0,1) = -sinYaw;
-	yawRotMat(0,2) = 0.0f;
-	yawRotMat(1,0) = sinYaw;
-	yawRotMat(1,1) = cosYaw;
-	yawRotMat(1,2) = 0.0f;
-	yawRotMat(2,0) = 0.0f;
-	yawRotMat(2,1) = 0.0f;
-	yawRotMat(2,2) = 1.0f;
+	Matrix3f  R = _ahrs_ekf_gsf[model_index].R;
+	_ahrs_ekf_gsf[model_index].R(0,0) = R(0,0) * cosYaw - R(1,0) * sinYaw;
+	_ahrs_ekf_gsf[model_index].R(0,1) = R(0,1) * cosYaw - R(1,1) * sinYaw;
+	_ahrs_ekf_gsf[model_index].R(0,2) = R(0,2) * cosYaw - R(1,2) * sinYaw;
+	_ahrs_ekf_gsf[model_index].R(1,0) = R(0,0) * sinYaw + R(1,0) * cosYaw;
+	_ahrs_ekf_gsf[model_index].R(1,1) = R(0,1) * sinYaw + R(1,1) * cosYaw;
+	_ahrs_ekf_gsf[model_index].R(1,2) = R(0,2) * sinYaw + R(1,2) * cosYaw;
 
-	// apply to the AHRS
-	// TODO take advantage of sparseness in yawRotMat
-	_ahrs_ekf_gsf[model_index].R = yawRotMat * _ahrs_ekf_gsf[model_index].R;
 }
 
 void Ekf::initialiseEKFGSF()
