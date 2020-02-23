@@ -854,7 +854,6 @@ private:
 		float W = 0.0f; // weighting
 		float S[2][2]; // innovation variance
 		float innov[2]; // Velocity N,E innovation (m/s)
-		bool use_312; // true if a 312 Tait-Bryan rotation sequence should be used when converting between the AHRS quaternion and EKF yaw state
 	};
 	_ekf_gsf_struct _ekf_gsf[N_MODELS_EKFGSF];
 	float X_GSF[3] {};
