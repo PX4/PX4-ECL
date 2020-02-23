@@ -835,7 +835,7 @@ private:
 	struct _ahrs_ekf_gsf_struct{
 		Dcmf R;				///< matrix that rotates a vector from body to earth frame
 		Vector3f gyro_bias;		///< gyro bias learned and used by the quaternion calculation
-		bool quat_initialised{false};	///< true when calibrator quaternion has been aligned
+		bool aligned{false};		///< true when AHRS has been aligned
 		float accel_FR[2] {};		///< front-right acceleration vector in a horizontal plane (m/s/s)
 		float vel_NE[2] {};		///< NE velocity vector from last GPS measurement (m/s)
 		bool fuse_gps = false;		///< true when GPS should be fused on that frame
@@ -867,9 +867,9 @@ private:
 
 	void runEKFGSF();
 	void initialiseEKFGSF();
-	void quatPredictEKFGSF(const uint8_t model_index);
-	void alignQuatEKFGSF();
-	void alignQuatYawEKFGSF();
+	void ahrsPredictEKFGSF(const uint8_t model_index);
+	void ahrsAlignTiltEKFGSF();
+	void ahrsAlignYawEKFGSF();
 	void statePredictEKFGSF(const uint8_t model_index);
 	void stateUpdateEKFGSF(const uint8_t model_index);
 	float gaussianDensityEKFGSF(const uint8_t model_index) const;

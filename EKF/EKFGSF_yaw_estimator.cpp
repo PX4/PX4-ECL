@@ -59,7 +59,7 @@
 #include <mathlib/mathlib.h>
 #include <cstdlib>
 
-void Ekf::quatPredictEKFGSF(const uint8_t model_index)
+void Ekf::ahrsPredictEKFGSF(const uint8_t model_index)
 {
 	// generate attitude solution using simple complementary filter for the selected model
 
@@ -133,7 +133,7 @@ void Ekf::quatPredictEKFGSF(const uint8_t model_index)
 
 }
 
-void Ekf::alignQuatEKFGSF()
+void Ekf::ahrsAlignTiltEKFGSF()
 {
 	// Rotation matrix is constructed directly from acceleration measurement and will be the same for
 	// all models so only need to calculate it once. Assumptions are:
@@ -165,7 +165,7 @@ void Ekf::alignQuatEKFGSF()
 
 }
 
-void Ekf::alignQuatYawEKFGSF()
+void Ekf::ahrsAlignYawEKFGSF()
 {
 	// Align yaw angle for each model
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
@@ -190,7 +190,7 @@ void Ekf::alignQuatYawEKFGSF()
 			_ahrs_ekf_gsf[model_index].R = taitBryan312ToRotMat(rot312);
 
 		}
-		_ahrs_ekf_gsf[model_index].quat_initialised = true;
+		_ahrs_ekf_gsf[model_index].aligned = true;
 	}
 }
 
@@ -198,7 +198,7 @@ void Ekf::alignQuatYawEKFGSF()
 void Ekf::statePredictEKFGSF(const uint8_t model_index)
 {
 	// generate an attitude reference using IMU data
-	quatPredictEKFGSF(model_index);
+	ahrsPredictEKFGSF(model_index);
 
 	// we don't start running the EKF part of the algorithm until there are regular velocity observations
 	if (!_ekf_gsf_vel_fuse_started) {
@@ -409,11 +409,10 @@ void Ekf::stateUpdateEKFGSF(const uint8_t model_index)
 		}
 	}
 
-	// Apply yaw correction to AHRS quaternion sing the same rotation sequence as was used by the prediction step
+	// Apply yaw correction to AHRS using the same rotation sequence as was used by the prediction step
 	// TODO - This is an  expensive process due to the number of trig operations so a method of doing it more efficiently,
 	// eg storing rotation matrix from the state prediction that doesn't include the yaw rotation should be investigated.
-	// This matrix could then be multiplied with the yaw rotation to obtain the updated R matrix from which the updated
-	// quaternion is calculated
+	// This matrix could then be multiplied with the yaw rotation to obtain the updated R matrix
 	if (_ekf_gsf[model_index].use_312) {
 		// Calculate the 312 Tait-Bryan rotation sequence that rotates from earth to body frame
 		// We use a 312 sequence as an alternate when there is more pitch tilt than roll tilt
@@ -488,7 +487,7 @@ void Ekf::runEKFGSF()
 			  accel_norm_sq < upper_accel_limit * upper_accel_limit));
 		if (ok_to_align) {
 			initialiseEKFGSF();
-			alignQuatEKFGSF();
+			ahrsAlignTiltEKFGSF();
 			_ahrs_ekf_gsf_tilt_aligned = true;
 		}
 		return;
@@ -510,7 +509,7 @@ void Ekf::runEKFGSF()
 				_ekf_gsf[model_index].P[0][0] = sq(_gps_sample_delayed.sacc);
 				_ekf_gsf[model_index].P[1][1] = _ekf_gsf[model_index].P[0][0];
 			}
-			alignQuatYawEKFGSF();
+			ahrsAlignYawEKFGSF();
 			_ekf_gsf_vel_fuse_started = true;
 		} else {
 			float total_w = 0.0f;
@@ -662,7 +661,7 @@ void Ekf::makeCovSymEKFGSF(const uint8_t model_index)
 	_ekf_gsf[model_index].P[1][2] = _ekf_gsf[model_index].P[2][1] = P12;
 }
 
-// Reset heading and magnetic field states
+// Reset main nav filter yaw to value from EKF-GSF and reset velocity and position to GPS
 bool Ekf::resetYawToEKFGSF()
 {
 	// don't allow reet using the EKF-GSF estimate until the filter has started fusing velocity
