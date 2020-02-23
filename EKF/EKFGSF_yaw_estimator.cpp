@@ -838,7 +838,8 @@ Matrix3f Ekf::updateRotMatEKFGSF(Matrix3f &R, Vector3f &g)
 	for (uint8_t r = 0; r < 3; r++) {
 		rowLengthSq = ret(r,0) * ret(r,0) + ret(r,1) * ret(r,1) + ret(r,2) * ret(r,2);
 		if (rowLengthSq > FLT_EPSILON) {
-			const float rowLengthInv = 1.0f / sqrtf(rowLengthSq);
+			// Use linear approximation for inverse sqrt taking advantage of the row length being close to 1.0
+			const float rowLengthInv = 1.5f - 0.5f * rowLengthSq;
 			ret(r,0) *= rowLengthInv;
 			ret(r,1) *= rowLengthInv;
 			ret(r,2) *= rowLengthInv;
