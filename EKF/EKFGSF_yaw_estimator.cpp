@@ -209,11 +209,9 @@ void Ekf::statePredictEKFGSF(const uint8_t model_index)
 	if (fabsf(_ahrs_ekf_gsf[model_index].R(2, 0)) < fabsf(_ahrs_ekf_gsf[model_index].R(2, 1))) {
 		// use 321 Tait-Bryan rotation to define yaw state
 		_ekf_gsf[model_index].X[2] = atan2f(_ahrs_ekf_gsf[model_index].R(1, 0), _ahrs_ekf_gsf[model_index].R(0, 0));
-		_ekf_gsf[model_index].use_312 = false;
 	} else {
 		// use 312 Tait-Bryan rotation to define yaw state
 		_ekf_gsf[model_index].X[2] = atan2f(-_ahrs_ekf_gsf[model_index].R(0, 1), _ahrs_ekf_gsf[model_index].R(1, 1)); // first rotation (yaw)
-		_ekf_gsf[model_index].use_312 = true;
 	}
 
 	// calculate delta velocity in a horizontal front-right frame
@@ -402,43 +400,32 @@ void Ekf::stateUpdateEKFGSF(const uint8_t model_index)
 	// force symmetry
 	makeCovSymEKFGSF(model_index);
 
+	float oldYaw = _ekf_gsf[model_index].X[2];
 	for (uint8_t obs_index = 0; obs_index < 2; obs_index++) {
 		// apply the state corrections including the compression scale factor
 		for (unsigned row = 0; row < 3; row++) {
 			_ekf_gsf[model_index].X[row] -= K[row][obs_index] * _ekf_gsf[model_index].innov[obs_index] * innov_comp_scale_factor;
 		}
 	}
+	float yawDelta = _ekf_gsf[model_index].X[2] - oldYaw;
 
-	// Apply yaw correction to AHRS using the same rotation sequence as was used by the prediction step
-	// TODO - This is an  expensive process due to the number of trig operations so a method of doing it more efficiently,
-	// eg storing rotation matrix from the state prediction that doesn't include the yaw rotation should be investigated.
-	// This matrix could then be multiplied with the yaw rotation to obtain the updated R matrix
-	if (_ekf_gsf[model_index].use_312) {
-		// Calculate the 312 Tait-Bryan rotation sequence that rotates from earth to body frame
-		// We use a 312 sequence as an alternate when there is more pitch tilt than roll tilt
-		// to avoid gimbal lock
-		Vector3f rot312;
-		rot312(0) = _ekf_gsf[model_index].X[2]; // first rotation is about Z and is taken from 3-state EKF
-		rot312(1) = asinf(_ahrs_ekf_gsf[model_index].R(2, 1)); // second rotation is about X and is taken from AHRS
-		rot312(2) = atan2f(-_ahrs_ekf_gsf[model_index].R(2, 0), _ahrs_ekf_gsf[model_index].R(2, 2));  // third rotation is about Y and is taken from AHRS
+	// calculate the delta yaw rotation matrix
+	Matrix3f yawRotMat;
+	const float cosYaw = cosf(yawDelta);
+	const float sinYaw = sinf(yawDelta);
+	yawRotMat(0,0) = cosYaw;
+	yawRotMat(0,1) = -sinYaw;
+	yawRotMat(0,2) = 0.0f;
+	yawRotMat(1,0) = sinYaw;
+	yawRotMat(1,1) = cosYaw;
+	yawRotMat(1,2) = 0.0f;
+	yawRotMat(2,0) = 0.0f;
+	yawRotMat(2,1) = 0.0f;
+	yawRotMat(2,2) = 1.0f;
 
-		// Calculate the body to earth frame rotation matrix
-		_ahrs_ekf_gsf[model_index].R = taitBryan312ToRotMat(rot312);
-
-	} else {
-		// using a 321 Tait-Bryan rotation to define yaw state
-		// take roll and pitch from AHRS prediction
-		Eulerf euler321;
-		euler321(0) = atan2f(_ahrs_ekf_gsf[model_index].R(2,1), _ahrs_ekf_gsf[model_index].R(2,2));
-		euler321(1) = -asinf(_ahrs_ekf_gsf[model_index].R(2,0));
-
-		// take yaw angle from the 3-state EKF updated state estimate
-		euler321(2) = _ekf_gsf[model_index].X[2];
-
-		// update the rotation matrix used by the AHRS prediction algorithm
-		_ahrs_ekf_gsf[model_index].R = euler321;
-
-	}
+	// apply to the AHRS
+	// TODO take advantage of sparseness in yawRotMat
+	_ahrs_ekf_gsf[model_index].R = yawRotMat * _ahrs_ekf_gsf[model_index].R;
 }
 
 void Ekf::initialiseEKFGSF()
