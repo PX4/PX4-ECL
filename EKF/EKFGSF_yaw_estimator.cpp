@@ -583,7 +583,7 @@ void Ekf::runEKFGSF()
 	// models with larger innovations are weighted less
 	_ekf_gsf_yaw_variance = 0.0f;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-		float yaw_delta = _ekf_gsf[model_index].X[2] - X_GSF[2];
+		float yaw_delta = wrap_pi(_ekf_gsf[model_index].X[2] - X_GSF[2]);
 		_ekf_gsf_yaw_variance += _ekf_gsf[model_index].W * (_ekf_gsf[model_index].P[2][2] + sq(yaw_delta));
 	}
 }
