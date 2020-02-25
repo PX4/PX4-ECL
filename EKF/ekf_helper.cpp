@@ -45,7 +45,7 @@
 #include <mathlib/mathlib.h>
 #include <cstdlib>
 
-// Reset the velocity states. If we have a recent and valid
+// Reset the velocity states. If we have a recent
 // gps measurement then use for velocity initialisation
 bool Ekf::resetVelocity()
 {
@@ -53,7 +53,7 @@ bool Ekf::resetVelocity()
 	Vector3f vel_before_reset = _state.vel;
 
 	// reset EKF states
-	if (_control_status.flags.gps && _gps_check_fail_status.value==0) {
+	if (_control_status.flags.gps) {
 		ECL_INFO_TIMESTAMPED("reset velocity to GPS");
 		// this reset is only called if we have new gps data at the fusion time horizon
 		_state.vel = _gps_sample_delayed.vel;
