@@ -10,7 +10,7 @@ EKFGSF_yaw::EKFGSF_yaw()
 	memset(&_ahrs_ekf_gsf, 0, sizeof(_ahrs_ekf_gsf));
 	memset(&_ekf_gsf, 0, sizeof(_ekf_gsf));
 	_gsf_yaw = 0.0f;
-};
+}
 
 void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vector meassured in body frame (rad)
                 	const Vector3f del_vel, // IMU delta velocity vector meassured in body frame (m/s)
