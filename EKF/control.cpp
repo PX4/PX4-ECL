@@ -657,7 +657,34 @@ void Ekf::controlGpsFusion()
 			// We haven't had an absolute position fix for a longer time so need to do something
 			do_reset = do_reset || isTimedOut(_time_last_hor_pos_fuse, 2 * _params.reset_timeout_max);
 
-			if (do_reset) {
+			// A reset to the EKF-GSF estimate can be performed after a recent takeoff which will enable
+			// recovery from a bad magnetometer or field estimate.
+			// This special case reset can also be requested externally.
+			// The minimum time interval between resets to the EKF-GSF estimate must be limited to
+			// allow the EKF-GSF time to improve its estimate if the first reset was not successful.
+			const bool stopped_following_gps_velocity = isTimedOut(_time_last_hor_vel_fuse, _params.EKFGSF_reset_delay) &&
+							   (_time_last_hor_vel_fuse > _time_last_on_ground_us);
+			if (!_control_status.flags.in_air) {
+				_time_last_on_ground_us = _time_last_imu;
+			}
+			const bool recent_takeoff = _control_status.flags.in_air && !isTimedOut(_time_last_on_ground_us, 30000000);
+			const bool reset_yaw_to_EKFGSF = (do_reset || _do_emergency_yaw_reset || stopped_following_gps_velocity) &&
+								recent_takeoff &&
+								isTimedOut(_emergency_yaw_reset_time, 5000000);
+
+			if (reset_yaw_to_EKFGSF) {
+				if (resetYawToEKFGSF()) {
+					_emergency_yaw_reset_time = _time_last_imu;
+					_do_emergency_yaw_reset = false;
+
+					// Reset the timeout counters
+					_time_last_hor_pos_fuse = _time_last_imu;
+					_time_last_delpos_fuse = _time_last_imu;
+					_time_last_hor_vel_fuse = _time_last_imu;
+					_time_last_of_fuse = _time_last_imu;
+
+				}
+			} else if (do_reset) {
 				// use GPS velocity data to check and correct yaw angle if a FW vehicle
 				if (_control_status.flags.fixed_wing && _control_status.flags.in_air) {
 					// if flying a fixed wing aircraft, do a complete reset that includes yaw
