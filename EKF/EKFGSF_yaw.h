@@ -15,10 +15,21 @@ using matrix::wrap_pi;
 
 #define N_MODELS_EKFGSF 5
 
-#define M_PI_F		3.14159265f
-#define M_PI_2_F	1.57079632f
-#define M_TWOPI_F   	6.28318531f
-#define M_TWOPI_INV 	0.159154943f
+#ifndef M_PI_F
+#define M_PI_F 3.14159265f
+#endif
+
+#ifndef M_PI_2_F
+#define M_PI_2_F 1.57079632f
+#endif
+
+#ifndef M_TWOPI_INV
+#define M_TWOPI_INV 0.159154943f
+#endif
+
+#ifndef CONSTANTS_ONE_G
+#define CONSTANTS_ONE_G 9.80665f
+#endif
 
 class EKFGSF_yaw
 {
