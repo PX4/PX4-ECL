@@ -831,6 +831,14 @@ private:
 
 	void setVelPosFaultStatus(const int index, const bool status);
 
+	// converts Tait-Bryan 312 sequence of rotations from frame 1 to frame 2
+	// to the corresponding rotation matrix that rotates from frame 2 to frame 1
+	// rot312(0) - First rotation is a RH rotation about the Z axis (rad)
+	// rot312(1) - Second rotation is a RH rotation about the X axis (rad)
+	// rot312(2) - Third rotation is a RH rotation about the Y axis (rad)
+	// See http://www.atacolorado.com/eulersequences.doc
+	Dcmf taitBryan312ToRotMat(Vector3f &rot312);
+
 	// Declarations used to control use of the EKF-GSF yaw estimator
 
 	int64_t _emergency_yaw_reset_time{0};	///< timestamp of last emergency yaw reset (uSec)
