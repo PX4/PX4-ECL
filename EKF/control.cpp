@@ -358,9 +358,8 @@ void Ekf::controlExternalVisionFusion()
 			}
 
 			// correct velocity for offset relative to IMU
-			const Vector3f ang_rate = _imu_sample_delayed.delta_ang * (1.0f / _imu_sample_delayed.delta_ang_dt);
 			const Vector3f pos_offset_body = _params.ev_pos_body - _params.imu_pos_body;
-			const Vector3f vel_offset_body = ang_rate % pos_offset_body;
+			const Vector3f vel_offset_body = _ang_rate_delayed_raw % pos_offset_body;
 			const Vector3f vel_offset_earth = _R_to_earth * vel_offset_body;
 			vel_aligned -= vel_offset_earth;
 
@@ -687,9 +686,8 @@ void Ekf::controlGpsFusion()
 			Vector3f gps_pos_obs_var;
 
 			// correct velocity for offset relative to IMU
-			const Vector3f ang_rate = _imu_sample_delayed.delta_ang * (1.0f / _imu_sample_delayed.delta_ang_dt);
 			const Vector3f pos_offset_body = _params.gps_pos_body - _params.imu_pos_body;
-			const Vector3f vel_offset_body = ang_rate % pos_offset_body;
+			const Vector3f vel_offset_body = _ang_rate_delayed_raw % pos_offset_body;
 			const Vector3f vel_offset_earth = _R_to_earth * vel_offset_body;
 			_gps_sample_delayed.vel -= vel_offset_earth;
 
