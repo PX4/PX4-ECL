@@ -1840,11 +1840,6 @@ bool Ekf::resetYawToEKFGSF()
 		// update transformation matrix from body to world frame using the current estimate
 		_R_to_earth = Dcmf(_state.quat_nominal);
 
-		// reset the rotation from the EV to EKF frame of reference if it is being used
-		if ((_params.fusion_mode & MASK_ROTATE_EV) && !_control_status.flags.ev_yaw) {
-			calcExtVisRotMat();
-		}
-
 		// update the yaw angle variance using half the nominal yaw separation between models
 		increaseQuatYawErrVariance(sq(fmaxf(M_PI_F / (float)N_MODELS_EKFGSF, 1.0e-2f)));
 
