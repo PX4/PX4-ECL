@@ -284,6 +284,17 @@ public:
 	// set minimum continuous period without GPS fail required to mark a healthy GPS status
 	void set_min_required_gps_health_time(uint32_t time_us) { _min_gps_health_time_us = time_us; }
 
+	// get solution data from the EKF-GSF emergency yaw estimator
+	// returns false when data is not available
+	bool getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]) override;
+
+	// Request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
+	// and reset the velocity and position states to the GPS. This will cause the EKF
+	// to ignore the magnetomer for the remainder of flight.
+	// This should only be used as a last resort before activating a loss of navigation failsafe
+	// The counter must be incremented for each new reset request
+	void requestEmergencyNavReset(uint8_t counter) override;
+
 private:
 
 	static constexpr uint8_t _k_num_states{24};		///< number of EKF states
@@ -820,4 +831,25 @@ private:
 
 	void setVelPosFaultStatus(const int index, const bool status);
 
+	// converts Tait-Bryan 312 sequence of rotations from frame 1 to frame 2
+	// to the corresponding rotation matrix that rotates from frame 2 to frame 1
+	// rot312(0) - First rotation is a RH rotation about the Z axis (rad)
+	// rot312(1) - Second rotation is a RH rotation about the X axis (rad)
+	// rot312(2) - Third rotation is a RH rotation about the Y axis (rad)
+	// See http://www.atacolorado.com/eulersequences.doc
+	Dcmf taitBryan312ToRotMat(Vector3f &rot312);
+
+	// Declarations used to control use of the EKF-GSF yaw estimator
+
+	int64_t _emergency_yaw_reset_time{0};	///< timestamp of last emergency yaw reset (uSec)
+	uint64_t _time_last_on_ground_us{0};	///< last tine we were on the ground (uSec)
+	uint8_t _yaw_extreset_counter{0};	// number of external emergency yaw reset requests
+	bool _do_emergency_yaw_reset{false};	// true when an emergency yaw reset has been requested
+
+	// Call once per _imu_sample_delayed update after all main EKF data fusion oeprations have been completed
+	void runYawEKFGSF();
+
+	// Resets the main Nav EKf yaw to the esitmator from the EKF-GSF yaw estimator
+	// Returns true if the reset was successful
+	bool resetYawToEKFGSF();
 };

@@ -1816,3 +1816,161 @@ void Ekf::stopFlowFusion()
 	memset(_flow_innov_var,0.0f,sizeof(_flow_innov_var));
 	memset(&_optflow_test_ratio,0.0f,sizeof(_optflow_test_ratio));
 }
+
+// Reset main nav filter yaw to value from EKF-GSF and reset velocity and position to GPS
+bool Ekf::resetYawToEKFGSF()
+{
+	// don't allow reet using the EKF-GSF estimate until the filter has started fusing velocity
+	// data and the yaw estimate has converged
+	float new_yaw, new_yaw_variance;
+	if (yawEstimator.getYawData(&new_yaw, &new_yaw_variance) && new_yaw_variance < sq(_params.EKFGSF_yaw_err_max)) {
+		// save a copy of the quaternion state for later use in calculating the amount of reset change
+		Quatf quat_before_reset = _state.quat_nominal;
+
+		// update transformation matrix from body to world frame using the current estimate
+		_R_to_earth = Dcmf(_state.quat_nominal);
+
+		// update the rotation matrix using the new yaw value
+		// determine if a 321 or 312 Euler sequence is best
+		if (fabsf(_R_to_earth(2, 0)) < fabsf(_R_to_earth(2, 1))) {
+			// use a 321 sequence
+			Eulerf euler321(_state.quat_nominal);
+			euler321(2) = new_yaw;
+			_R_to_earth = euler321;
+
+		} else {
+			// Calculate the 312 Tait-Bryan rotation sequence that rotates from earth to body frame
+			// We use a 312 sequence as an alternate when there is more pitch tilt than roll tilt
+			// to avoid gimbal lock
+			Vector3f rot312;
+			rot312(0) = new_yaw;
+			rot312(1) = asinf(_R_to_earth(2, 1));
+			rot312(2) = atan2f(-_R_to_earth(2, 0), _R_to_earth(2, 2));
+
+			float c2 = cosf(rot312(2));
+			float s2 = sinf(rot312(2));
+			float s1 = sinf(rot312(1));
+			float c1 = cosf(rot312(1));
+			float s0 = sinf(rot312(0));
+			float c0 = cosf(rot312(0));
+
+			_R_to_earth(0, 0) = c0 * c2 - s0 * s1 * s2;
+			_R_to_earth(1, 1) = c0 * c1;
+			_R_to_earth(2, 2) = c2 * c1;
+			_R_to_earth(0, 1) = -c1 * s0;
+			_R_to_earth(0, 2) = s2 * c0 + c2 * s1 * s0;
+			_R_to_earth(1, 0) = c2 * s0 + s2 * s1 * c0;
+			_R_to_earth(1, 2) = s0 * s2 - s1 * c0 * c2;
+			_R_to_earth(2, 0) = -s2 * c1;
+			_R_to_earth(2, 1) = s1;
+
+		}
+
+		// calculate the amount that the quaternion has changed by
+		Quatf quat_after_reset = _R_to_earth;
+		Quatf q_error =  quat_after_reset * quat_before_reset.inversed();
+		q_error.normalize();
+
+		// update quaternion states
+		_state.quat_nominal = quat_after_reset;
+		uncorrelateQuatFromOtherStates();
+
+		// record the state change
+		_state_reset_status.quat_change = q_error;
+
+		// update transformation matrix from body to world frame using the current estimate
+		_R_to_earth = Dcmf(_state.quat_nominal);
+
+		// reset the rotation from the EV to EKF frame of reference if it is being used
+		if ((_params.fusion_mode & MASK_ROTATE_EV) && !_control_status.flags.ev_yaw) {
+			calcExtVisRotMat();
+		}
+
+		// update the yaw angle variance using half the nominal yaw separation between models
+		increaseQuatYawErrVariance(sq(fmaxf(M_PI_F / (float)N_MODELS_EKFGSF, 1.0e-2f)));
+
+		// add the reset amount to the output observer buffered data
+		for (uint8_t i = 0; i < _output_buffer.get_length(); i++) {
+			_output_buffer[i].quat_nominal = _state_reset_status.quat_change * _output_buffer[i].quat_nominal;
+		}
+
+		// apply the change in attitude quaternion to our newest quaternion estimate
+		// which was already taken out from the output buffer
+		_output_new.quat_nominal = _state_reset_status.quat_change * _output_new.quat_nominal;
+
+		// capture the reset event
+		_state_reset_status.quat_counter++;
+
+		// reset velocity and position states to GPS - if yaw is fixed then the filter should start to operate correctly
+		resetVelocity();
+		resetPosition();
+
+		// stop using the magnetometer in the main EKF otherwise it's fusion could drag the yaw around
+		// and cause another navigation failure
+		_control_status.flags.mag_fault = true;
+
+		// record a magnetic field alignment event to prevent possibility of the EKF trying to reset the yaw to the mag later in flight
+		_flt_mag_align_start_time = _imu_sample_delayed.time_us;
+
+		ECL_INFO_TIMESTAMPED("Emergency yaw reset - magnetometer use stopped");
+
+		return true;
+	}
+
+	return false;
+
+}
+
+void Ekf::requestEmergencyNavReset(uint8_t counter)
+{
+	if (counter > _yaw_extreset_counter) {
+		_yaw_extreset_counter = counter;
+		_do_emergency_yaw_reset = true;
+	}
+}
+
+bool Ekf::getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF])
+{
+	return yawEstimator.getLogData(yaw_composite,yaw_variance,yaw,innov_VN,innov_VE,weight);
+}
+
+Dcmf Ekf::taitBryan312ToRotMat(Vector3f &rot312)
+{
+		// Calculate the frame2 to frame 1 rotation matrix from a 312 rotation sequence
+		const float c2 = cosf(rot312(2));
+		const float s2 = sinf(rot312(2));
+		const float s1 = sinf(rot312(1));
+		const float c1 = cosf(rot312(1));
+		const float s0 = sinf(rot312(0));
+		const float c0 = cosf(rot312(0));
+
+		Dcmf R;
+		R(0, 0) = c0 * c2 - s0 * s1 * s2;
+		R(1, 1) = c0 * c1;
+		R(2, 2) = c2 * c1;
+		R(0, 1) = -c1 * s0;
+		R(0, 2) = s2 * c0 + c2 * s1 * s0;
+		R(1, 0) = c2 * s0 + s2 * s1 * c0;
+		R(1, 2) = s0 * s2 - s1 * c0 * c2;
+		R(2, 0) = -s2 * c1;
+		R(2, 1) = s1;
+
+		return R;
+}
+
+void Ekf::runYawEKFGSF()
+{
+	float TAS;
+	if (isTimedOut(_airspeed_sample_delayed.time_us, 1000000) && _control_status.flags.fixed_wing) {
+		TAS = _params.EKFGSF_tas_default;
+	} else {
+		TAS = _airspeed_sample_delayed.true_airspeed;
+	}
+	yawEstimator.update(_imu_sample_delayed.delta_ang, _imu_sample_delayed.delta_vel, _imu_sample_delayed.delta_ang_dt, _imu_sample_delayed.delta_vel_dt, _control_status.flags.in_air, TAS);
+
+	// basic sanity check on GPS velocity data
+	if (_gps_data_ready && _gps_sample_delayed.vacc > FLT_EPSILON && isfinite(_gps_sample_delayed.vel(0)) && isfinite(_gps_sample_delayed.vel(1))) {
+		Vector2f vel_NE = Vector2f(_gps_sample_delayed.vel(0),_gps_sample_delayed.vel(1));
+		yawEstimator.pushVelData(vel_NE, _gps_sample_delayed.vacc);
+	}
+}
