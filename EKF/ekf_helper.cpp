@@ -571,13 +571,15 @@ bool Ekf::resetMagHeading(const Vector3f &mag_init, bool increase_yaw_var, bool 
 		if (_control_status.flags.ev_yaw) {
 			// convert the observed quaternion to a rotation matrix
 			const Dcmf R_to_earth_ev(_ev_sample_delayed.quat);	// transformation matrix from body to world frame
+
 			// calculate the yaw angle for a 312 sequence
 			euler321(2) = atan2f(R_to_earth_ev(1, 0), R_to_earth_ev(0, 0));
 
 		} else if (_params.mag_fusion_type <= MAG_FUSE_TYPE_3D) {
-			const Dcmf R_to_earth(euler321);
 			// rotate the magnetometer measurements into earth frame using a zero yaw angle
-			const Vector3f mag_earth_pred = R_to_earth * mag_init;
+			_R_to_earth = euler321;
+			const Vector3f mag_earth_pred = _R_to_earth * mag_init;
+
 			// the angle of the projection onto the horizontal gives the yaw angle
 			euler321(2) = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + getMagDeclination();
 
@@ -590,54 +592,35 @@ bool Ekf::resetMagHeading(const Vector3f &mag_init, bool increase_yaw_var, bool 
 			return false;
 		}
 
-		// calculate initial quaternion states for the ekf
-		// we don't change the output attitude to avoid jumps
-		quat_after_reset = Quatf(euler321);
+		// update rotation matrix
+		_R_to_earth = euler321;
 
 	} else {
 		// use a 312 sequence
 
 		// Calculate the 312 sequence euler angles that rotate from earth to body frame
 		// See http://www.atacolorado.com/eulersequences.doc
-		Vector3f euler312;
-		euler312(0) = atan2f(-_R_to_earth(0, 1), _R_to_earth(1, 1));  // first rotation (yaw)
-		euler312(1) = asinf(_R_to_earth(2, 1)); // second rotation (roll)
-		euler312(2) = atan2f(-_R_to_earth(2, 0), _R_to_earth(2, 2));  // third rotation (pitch)
-
 		// Set the first rotation (yaw) to zero and calculate the rotation matrix from body to earth frame
-		euler312(0) = 0.0f;
-
-		// Calculate the body to earth frame rotation matrix from the euler angles using a 312 rotation sequence
-		float c2 = cosf(euler312(2));
-		float s2 = sinf(euler312(2));
-		float s1 = sinf(euler312(1));
-		float c1 = cosf(euler312(1));
-		float s0 = sinf(euler312(0));
-		float c0 = cosf(euler312(0));
-
-		Dcmf R_to_earth;
-		R_to_earth(0, 0) = c0 * c2 - s0 * s1 * s2;
-		R_to_earth(1, 1) = c0 * c1;
-		R_to_earth(2, 2) = c2 * c1;
-		R_to_earth(0, 1) = -c1 * s0;
-		R_to_earth(0, 2) = s2 * c0 + c2 * s1 * s0;
-		R_to_earth(1, 0) = c2 * s0 + s2 * s1 * c0;
-		R_to_earth(1, 2) = s0 * s2 - s1 * c0 * c2;
-		R_to_earth(2, 0) = -s2 * c1;
-		R_to_earth(2, 1) = s1;
+		Vector3f rotVec312;
+		rotVec312(0) = 0.0f;  // first rotation (yaw)
+		rotVec312(1) = asinf(_R_to_earth(2, 1)); // second rotation (roll)
+		rotVec312(2) = atan2f(-_R_to_earth(2, 0), _R_to_earth(2, 2));  // third rotation (pitch)
 
 		// calculate the observed yaw angle
 		if (_control_status.flags.ev_yaw) {
 			// convert the observed quaternion to a rotation matrix
 			const Dcmf R_to_earth_ev(_ev_sample_delayed.quat);
+
 			// calculate the yaw angle for a 312 sequence
-			euler312(0) = atan2f(-R_to_earth_ev(0, 1), R_to_earth_ev(1, 1));
+			rotVec312(0) = atan2f(-R_to_earth_ev(0, 1), R_to_earth_ev(1, 1));
 
 		} else if (_params.mag_fusion_type <= MAG_FUSE_TYPE_3D) {
 			// rotate the magnetometer measurements into earth frame using a zero yaw angle
-			const Vector3f mag_earth_pred = R_to_earth * mag_init;
+			_R_to_earth = taitBryan312ToRotMat(rotVec312);
+			const Vector3f mag_earth_pred = _R_to_earth * mag_init;
+
 			// the angle of the projection onto the horizontal gives the yaw angle
-			euler312(0) = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + getMagDeclination();
+			rotVec312(0) = - atan2f(mag_earth_pred(1), mag_earth_pred(0)) + getMagDeclination();
 
 		} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR && _mag_use_inhibit) {
 			// we are operating without knowing the earth frame yaw angle
@@ -649,23 +632,14 @@ bool Ekf::resetMagHeading(const Vector3f &mag_init, bool increase_yaw_var, bool 
 		}
 
 		// update the rotation matrix
-		s0 = sinf(euler312(0));
-		c0 = cosf(euler312(0));
-		R_to_earth(0, 0) = c0 * c2 - s0 * s1 * s2;
-		R_to_earth(0, 1) = -c1 * s0;
-		R_to_earth(0, 2) = s2 * c0 + c2 * s1 * s0;
-		R_to_earth(1, 0) = c2 * s0 + s2 * s1 * c0;
-		R_to_earth(1, 1) = c0 * c1;
-		R_to_earth(1, 2) = s0 * s2 - s1 * c0 * c2;
+		_R_to_earth = taitBryan312ToRotMat(rotVec312);
 
-		// calculate initial quaternion states for the ekf
-		// we don't change the output attitude to avoid jumps
-		quat_after_reset = Quatf(R_to_earth);
 	}
 
+	quat_after_reset = _R_to_earth;
+
 	// set the earth magnetic field states using the updated rotation
-	const Dcmf R_to_earth_after(quat_after_reset);
-	_state.mag_I = R_to_earth_after * mag_init;
+	_state.mag_I = _R_to_earth * mag_init;
 
 	// reset the corresponding rows and columns in the covariance matrix and set the variances on the magnetic field states to the measurement variance
 	clearMagCov();
@@ -1367,8 +1341,8 @@ void Ekf::fuse(float *K, float innovation)
 
 void Ekf::uncorrelateQuatFromOtherStates()
 {
-	P.slice<_k_num_states - 4, 4>(4, 0) = 0.f;	
-	P.slice<4, _k_num_states - 4>(0, 4) = 0.f;	
+	P.slice<_k_num_states - 4, 4>(4, 0) = 0.f;
+	P.slice<4, _k_num_states - 4>(0, 4) = 0.f;
 }
 
 bool Ekf::global_position_is_valid()
@@ -1847,22 +1821,7 @@ bool Ekf::resetYawToEKFGSF()
 			rot312(1) = asinf(_R_to_earth(2, 1));
 			rot312(2) = atan2f(-_R_to_earth(2, 0), _R_to_earth(2, 2));
 
-			float c2 = cosf(rot312(2));
-			float s2 = sinf(rot312(2));
-			float s1 = sinf(rot312(1));
-			float c1 = cosf(rot312(1));
-			float s0 = sinf(rot312(0));
-			float c0 = cosf(rot312(0));
-
-			_R_to_earth(0, 0) = c0 * c2 - s0 * s1 * s2;
-			_R_to_earth(1, 1) = c0 * c1;
-			_R_to_earth(2, 2) = c2 * c1;
-			_R_to_earth(0, 1) = -c1 * s0;
-			_R_to_earth(0, 2) = s2 * c0 + c2 * s1 * s0;
-			_R_to_earth(1, 0) = c2 * s0 + s2 * s1 * c0;
-			_R_to_earth(1, 2) = s0 * s2 - s1 * c0 * c2;
-			_R_to_earth(2, 0) = -s2 * c1;
-			_R_to_earth(2, 1) = s1;
+			_R_to_earth = taitBryan312ToRotMat(rot312);
 
 		}
 
