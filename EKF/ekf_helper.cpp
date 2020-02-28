@@ -648,18 +648,15 @@ bool Ekf::resetMagHeading(const Vector3f &mag_init, bool increase_yaw_var, bool 
 			return false;
 		}
 
-		// re-calculate the rotation matrix using the updated yaw angle
+		// update the rotation matrix
 		s0 = sinf(euler312(0));
 		c0 = cosf(euler312(0));
 		R_to_earth(0, 0) = c0 * c2 - s0 * s1 * s2;
-		R_to_earth(1, 1) = c0 * c1;
-		R_to_earth(2, 2) = c2 * c1;
 		R_to_earth(0, 1) = -c1 * s0;
 		R_to_earth(0, 2) = s2 * c0 + c2 * s1 * s0;
 		R_to_earth(1, 0) = c2 * s0 + s2 * s1 * c0;
+		R_to_earth(1, 1) = c0 * c1;
 		R_to_earth(1, 2) = s0 * s2 - s1 * c0 * c2;
-		R_to_earth(2, 0) = -s2 * c1;
-		R_to_earth(2, 1) = s1;
 
 		// calculate initial quaternion states for the ekf
 		// we don't change the output attitude to avoid jumps
