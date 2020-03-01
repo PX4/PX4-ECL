@@ -1837,9 +1837,6 @@ bool Ekf::resetYawToEKFGSF()
 		// record the state change
 		_state_reset_status.quat_change = q_error;
 
-		// update transformation matrix from body to world frame using the current estimate
-		_R_to_earth = Dcmf(_state.quat_nominal);
-
 		// update the yaw angle variance using half the nominal yaw separation between models
 		increaseQuatYawErrVariance(sq(fmaxf(M_PI_F / (float)N_MODELS_EKFGSF, 1.0e-2f)));
 
