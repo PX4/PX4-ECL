@@ -1826,7 +1826,7 @@ bool Ekf::resetYawToEKFGSF()
 		}
 
 		// calculate the amount that the quaternion has changed by
-		Quatf quat_after_reset = _R_to_earth;
+		const Quatf quat_after_reset = _R_to_earth;
 		Quatf q_error =  quat_after_reset * quat_before_reset.inversed();
 		q_error.normalize();
 
