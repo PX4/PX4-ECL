@@ -1890,12 +1890,12 @@ bool Ekf::getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_M
 
 Dcmf Ekf::taitBryan312ToRotMat(const Vector3f &rot312)
 {
-		// Calculate the frame2 to frame 1 rotation matrix from a 312 rotation sequence
-		const float c2 = cosf(rot312(2));
+		// Calculate the frame2 to frame 1 rotation matrix from a 312 Tait-Bryan rotation sequence
+		const float c2 = cosf(rot312(2)); // third rotation is pitch
 		const float s2 = sinf(rot312(2));
-		const float s1 = sinf(rot312(1));
+		const float s1 = sinf(rot312(1)); // second rotation is roll
 		const float c1 = cosf(rot312(1));
-		const float s0 = sinf(rot312(0));
+		const float s0 = sinf(rot312(0)); // first rotation is yaw
 		const float c0 = cosf(rot312(0));
 
 		Dcmf R;
