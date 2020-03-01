@@ -837,7 +837,7 @@ private:
 	// rot312(1) - Second rotation is a RH rotation about the X axis (rad)
 	// rot312(2) - Third rotation is a RH rotation about the Y axis (rad)
 	// See http://www.atacolorado.com/eulersequences.doc
-	Dcmf taitBryan312ToRotMat(Vector3f &rot312);
+	Dcmf taitBryan312ToRotMat(const Vector3f &rot312);
 
 	// Declarations used to control use of the EKF-GSF yaw estimator
 
