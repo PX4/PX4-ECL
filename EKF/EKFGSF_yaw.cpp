@@ -572,7 +572,7 @@ void EKFGSF_yaw::makeCovSymEKF(const uint8_t model_index)
 	_ekf_gsf[model_index].P[1][2] = _ekf_gsf[model_index].P[2][1] = P12;
 }
 
-Dcmf EKFGSF_yaw::taitBryan312ToRotMat(Vector3f &rot312)
+Dcmf EKFGSF_yaw::taitBryan312ToRotMat(const Vector3f &rot312)
 {
 		// Calculate the frame2 to frame 1 rotation matrix from a 312 rotation sequence
 		const float c2 = cosf(rot312(2));
