@@ -577,8 +577,8 @@ bool Ekf::resetMagHeading(const Vector3f &mag_init, bool increase_yaw_var, bool 
 
 		} else if (_params.mag_fusion_type <= MAG_FUSE_TYPE_3D) {
 			// rotate the magnetometer measurements into earth frame using a zero yaw angle
-			_R_to_earth = euler321;
-			const Vector3f mag_earth_pred = _R_to_earth * mag_init;
+			const Dcmf R_to_earth = Dcmf(euler321);
+			const Vector3f mag_earth_pred = R_to_earth * mag_init;
 
 			// the angle of the projection onto the horizontal gives the yaw angle
 			euler321(2) = -atan2f(mag_earth_pred(1), mag_earth_pred(0)) + getMagDeclination();
@@ -616,8 +616,8 @@ bool Ekf::resetMagHeading(const Vector3f &mag_init, bool increase_yaw_var, bool 
 
 		} else if (_params.mag_fusion_type <= MAG_FUSE_TYPE_3D) {
 			// rotate the magnetometer measurements into earth frame using a zero yaw angle
-			_R_to_earth = taitBryan312ToRotMat(rotVec312);
-			const Vector3f mag_earth_pred = _R_to_earth * mag_init;
+			const Dcmf R_to_earth = taitBryan312ToRotMat(rotVec312);
+			const Vector3f mag_earth_pred = R_to_earth * mag_init;
 
 			// the angle of the projection onto the horizontal gives the yaw angle
 			rotVec312(0) = - atan2f(mag_earth_pred(1), mag_earth_pred(0)) + getMagDeclination();
