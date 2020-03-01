@@ -194,7 +194,7 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 	Vector3f delta_angle_corrected = _delta_ang + (tilt_correction - _ahrs_ekf_gsf[model_index].gyro_bias) * _delta_ang_dt;
 
 	// Apply delta angle to rotation matrix
-	_ahrs_ekf_gsf[model_index].R = updateRotMat(_ahrs_ekf_gsf[model_index].R, delta_angle_corrected);
+	_ahrs_ekf_gsf[model_index].R = ahrsPredictRotMat(_ahrs_ekf_gsf[model_index].R, delta_angle_corrected);
 
 }
 
@@ -621,7 +621,7 @@ void EKFGSF_yaw::ahrsCalcAccelGain()
 	}
 }
 
-Matrix3f EKFGSF_yaw::updateRotMat(Matrix3f &R, Vector3f &g)
+Matrix3f EKFGSF_yaw::ahrsPredictRotMat(Matrix3f &R, Vector3f &g)
 {
 	Matrix3f ret = R;
 	ret(0,0) += R(0,1) * g(2) - R(0,2) * g(1);
