@@ -103,7 +103,7 @@ private:
 	void ahrsAlignYaw();
 
 	// Efficient propagation of a delta angle in body frame applied to the body to earth frame rotation matrix
-	Matrix3f updateRotMat(Matrix3f &R, Vector3f &g);
+	Matrix3f ahrsPredictRotMat(Matrix3f &R, Vector3f &g);
 
 	// Declarations used by a bank of N_MODELS_EKFGSF EKFs
 
