@@ -1799,7 +1799,7 @@ bool Ekf::resetYawToEKFGSF()
 	float new_yaw, new_yaw_variance;
 	if (yawEstimator.getYawData(&new_yaw, &new_yaw_variance) && new_yaw_variance < sq(_params.EKFGSF_yaw_err_max)) {
 		// save a copy of the quaternion state for later use in calculating the amount of reset change
-		Quatf quat_before_reset = _state.quat_nominal;
+		const Quatf quat_before_reset = _state.quat_nominal;
 
 		// update transformation matrix from body to world frame using the current estimate
 		_R_to_earth = Dcmf(_state.quat_nominal);
@@ -1808,9 +1808,9 @@ bool Ekf::resetYawToEKFGSF()
 		// determine if a 321 or 312 Euler sequence is best
 		if (fabsf(_R_to_earth(2, 0)) < fabsf(_R_to_earth(2, 1))) {
 			// use a 321 sequence
-			Eulerf euler321(_state.quat_nominal);
+			Eulerf euler321(_R_to_earth);
 			euler321(2) = new_yaw;
-			_R_to_earth = euler321;
+			_R_to_earth = Dcmf(euler321);
 
 		} else {
 			// Calculate the 312 Tait-Bryan rotation sequence that rotates from earth to body frame
