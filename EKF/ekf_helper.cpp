@@ -1888,7 +1888,7 @@ bool Ekf::getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_M
 	return yawEstimator.getLogData(yaw_composite,yaw_variance,yaw,innov_VN,innov_VE,weight);
 }
 
-Dcmf Ekf::taitBryan312ToRotMat(Vector3f &rot312)
+Dcmf Ekf::taitBryan312ToRotMat(const Vector3f &rot312)
 {
 		// Calculate the frame2 to frame 1 rotation matrix from a 312 rotation sequence
 		const float c2 = cosf(rot312(2));

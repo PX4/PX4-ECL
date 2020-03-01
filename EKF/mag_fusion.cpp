@@ -637,7 +637,7 @@ void Ekf::fuseHeading()
 			// Calculate the body to earth frame rotation matrix from the euler angles using a 312 rotation sequence
 			// with yaw angle set to to zero
 
-			Dcmf R_to_earth = taitBryan312ToRotMat(rotVec312);
+			const Dcmf R_to_earth = taitBryan312ToRotMat(rotVec312);
 			// rotate the magnetometer measurements into earth frame using a zero yaw angle
 			if (_control_status.flags.mag_3D) {
 				// don't apply bias corrections if we are learning them
