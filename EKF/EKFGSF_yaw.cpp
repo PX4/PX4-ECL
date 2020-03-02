@@ -347,8 +347,8 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	velObsVar *= velObsVar;
 
 	// calculate velocity observation innovations
-	_ekf_gsf[model_index].innov[0] = _ekf_gsf[model_index].X[0] - _vel_NE(0);
-	_ekf_gsf[model_index].innov[1] = _ekf_gsf[model_index].X[1] - _vel_NE(1);
+	_ekf_gsf[model_index].innov(0) = _ekf_gsf[model_index].X[0] - _vel_NE(0);
+	_ekf_gsf[model_index].innov(1) = _ekf_gsf[model_index].X[1] - _vel_NE(1);
 
 	// copy covariance matrix to temporary variables
 	const float P00 = _ekf_gsf[model_index].P(0,0);
@@ -378,7 +378,7 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 		const float S_inv_NE = _ekf_gsf[model_index].S[0][1] * S_det_inv;
 
 		// The following expression was derived symbolically from test ratio = transpose(innovation) * inverse(innovation variance) * innovation = [1x2] * [2,2] * [2,1] = [1,1]
-		const float test_ratio = _ekf_gsf[model_index].innov[0]*(_ekf_gsf[model_index].innov[0]*S_inv_NN + _ekf_gsf[model_index].innov[1]*S_inv_NE) + _ekf_gsf[model_index].innov[1]*(_ekf_gsf[model_index].innov[0]*S_inv_NE + _ekf_gsf[model_index].innov[1]*S_inv_EE);
+		const float test_ratio = _ekf_gsf[model_index].innov(0)*(_ekf_gsf[model_index].innov(0)*S_inv_NN + _ekf_gsf[model_index].innov(1)*S_inv_NE) + _ekf_gsf[model_index].innov(1)*(_ekf_gsf[model_index].innov(0)*S_inv_NE + _ekf_gsf[model_index].innov(1)*S_inv_EE);
 
 		// If the test ratio is greater than 25 (5 Sigma) then reduce the length of the innovation vector to clip it at 5-Sigma
 		// This protects from large measurement spikes
@@ -471,7 +471,7 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	for (uint8_t obs_index = 0; obs_index < 2; obs_index++) {
 		// apply the state corrections including the compression scale factor
 		for (unsigned row = 0; row < 3; row++) {
-			_ekf_gsf[model_index].X[row] -= K[row][obs_index] * _ekf_gsf[model_index].innov[obs_index] * innov_comp_scale_factor;
+			_ekf_gsf[model_index].X[row] -= K[row][obs_index] * _ekf_gsf[model_index].innov(obs_index) * innov_comp_scale_factor;
 		}
 	}
 	float yawDelta = _ekf_gsf[model_index].X[2] - oldYaw;
@@ -532,20 +532,19 @@ float EKFGSF_yaw::gaussianDensity(const uint8_t model_index) const
 		t4 = 1.0f / fmaxf(t2 , 1e-6f);
 	}
 
-	// inv(S)
-	float invMat[2][2];
-	invMat[0][0] =   t4 * _ekf_gsf[model_index].S[1][1];
-	invMat[1][1] =   t4 * _ekf_gsf[model_index].S[0][0];
-	invMat[0][1] = - t4 * _ekf_gsf[model_index].S[0][1];
-	invMat[1][0] = - t4 * _ekf_gsf[model_index].S[1][0];
+	// calculate inv(S)
+	matrix::SquareMatrix<float, 2> invMat;
+	invMat(0,0) =   t4 * _ekf_gsf[model_index].S[1][1];
+	invMat(1,1) =   t4 * _ekf_gsf[model_index].S[0][0];
+	invMat(0,1) = - t4 * _ekf_gsf[model_index].S[0][1];
+	invMat(1,0) = - t4 * _ekf_gsf[model_index].S[1][0];
 
- 	// inv(S) * innovation
-	float tempVec[2];
-	tempVec[0] = invMat[0][0] * _ekf_gsf[model_index].innov[0] + invMat[0][1] * _ekf_gsf[model_index].innov[1];
-	tempVec[1] = invMat[1][0] * _ekf_gsf[model_index].innov[0] + invMat[1][1] * _ekf_gsf[model_index].innov[1];
+ 	// calculate inv(S) * innovation
+	matrix::Vector2f tempVec = invMat * _ekf_gsf[model_index].innov;
 
-	// transpose(innovation) * inv(S) * innovation
-	float normDist = tempVec[0] * _ekf_gsf[model_index].innov[0] + tempVec[1] * _ekf_gsf[model_index].innov[1];
+	// calculate transpose(innovation) * inv(S) * innovation
+	// * operator is overloaded to provide a dot product
+	float normDist = _ekf_gsf[model_index].innov * tempVec;
 
 	return M_TWOPI_INV * sqrtf(t4) * expf(-0.5f * normDist);
 }
@@ -557,8 +556,8 @@ bool EKFGSF_yaw::getLogData(float *yaw_composite, float *yaw_variance, float yaw
 		memcpy(yaw_variance, &_gsf_yaw_variance, sizeof(_gsf_yaw_variance));
 		for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
 			yaw[model_index] = _ekf_gsf[model_index].X[2];
-			innov_VN[model_index] = _ekf_gsf[model_index].innov[0];
-			innov_VE[model_index] = _ekf_gsf[model_index].innov[1];
+			innov_VN[model_index] = _ekf_gsf[model_index].innov(0);
+			innov_VE[model_index] = _ekf_gsf[model_index].innov(1);
 			weight[model_index] = _ekf_gsf[model_index].W;
 		}
 		return true;
