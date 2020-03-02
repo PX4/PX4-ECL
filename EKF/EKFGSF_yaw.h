@@ -109,7 +109,7 @@ private:
 
 	struct _ekf_gsf_struct{
 		float X[3]; // Vel North (m/s),  Vel East (m/s), yaw (rad)
-		float P[3][3]; // covariance matrix
+		matrix::SquareMatrix<float, 3> P; // covariance matrix
 		float W = 0.0f; // weighting
 		float S[2][2]; // innovation variance
 		float innov[2]; // Velocity N,E innovation (m/s)
@@ -129,9 +129,6 @@ private:
 
 	// update state and covariance for the specified EKF using a NE velocity measurement
 	void updateEKF(const uint8_t model_index);
-
-	// make the covaraince matrix for the specified EKF symmetric
-	void makeCovSymEKF(const uint8_t model_index);
 
 	inline float sq(float x) { return x * x; };
 
