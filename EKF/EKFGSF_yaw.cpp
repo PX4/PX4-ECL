@@ -518,14 +518,18 @@ void EKFGSF_yaw::initialiseEKFGSF()
 
 float EKFGSF_yaw::gaussianDensity(const uint8_t model_index) const
 {
+	// calculate determinant for innovation covariance matrix
 	const float t2 = _ekf_gsf[model_index].S[0][0] * _ekf_gsf[model_index].S[1][1];
 	const float t5 = _ekf_gsf[model_index].S[0][1] * _ekf_gsf[model_index].S[1][0];
-	const float t3 = t2 - t5; // determinant
-	float t4; // determinant inverse
+	const float t3 = t2 - t5;
+
+	// calculate determinant inverse and protect against badly conditioned matrix
+	float t4;
 	if (fabsf(t3) > 1e-6f) {
 		t4 = 1.0f/t3;
 	} else {
-		t4 = 1.0f/t2;
+		// bad conditioning is most likely to be caused be by off-diaognal terms so ignore and limit
+		t4 = 1.0f / fmaxf(t2 , 1e-6f);
 	}
 
 	// inv(S)
