@@ -112,7 +112,7 @@ private:
 		matrix::SquareMatrix<float, 3> P; // covariance matrix
 		float W = 0.0f; // weighting
 		float S[2][2]; // innovation variance
-		float innov[2]; // Velocity N,E innovation (m/s)
+		matrix::Vector2f innov; // Velocity N,E innovation (m/s)
 	};
 	_ekf_gsf_struct _ekf_gsf[N_MODELS_EKFGSF];
 	bool _vel_data_updated;  // true when velocity data has been updated
