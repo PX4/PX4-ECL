@@ -831,6 +831,11 @@ private:
 
 	void setVelPosFaultStatus(const int index, const bool status);
 
+	// reset the quaternion states and covariances to the new yaw value, preserving the roll and pitch
+	// yaw - Euler yaw angle (rad)
+	// yawVariance - yaw error variance (rad^2)
+	void resetQuatStateYaw(float yaw, float yawVariance);
+
 	// converts Tait-Bryan 312 sequence of rotations from frame 1 to frame 2
 	// to the corresponding rotation matrix that rotates from frame 2 to frame 1
 	// rot312(0) - First rotation is a RH rotation about the Z axis (rad)
@@ -852,4 +857,5 @@ private:
 	// Resets the main Nav EKf yaw to the esitmator from the EKF-GSF yaw estimator
 	// Returns true if the reset was successful
 	bool resetYawToEKFGSF();
+
 };

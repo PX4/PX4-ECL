@@ -1791,13 +1791,8 @@ void Ekf::stopFlowFusion()
 	memset(&_optflow_test_ratio,0.0f,sizeof(_optflow_test_ratio));
 }
 
-// Reset main nav filter yaw to value from EKF-GSF and reset velocity and position to GPS
-bool Ekf::resetYawToEKFGSF()
+void Ekf::resetQuatStateYaw(float yaw, float yawVariance)
 {
-	// don't allow reet using the EKF-GSF estimate until the filter has started fusing velocity
-	// data and the yaw estimate has converged
-	float new_yaw, new_yaw_variance;
-	if (yawEstimator.getYawData(&new_yaw, &new_yaw_variance) && new_yaw_variance < sq(_params.EKFGSF_yaw_err_max)) {
 		// save a copy of the quaternion state for later use in calculating the amount of reset change
 		const Quatf quat_before_reset = _state.quat_nominal;
 
@@ -1809,7 +1804,7 @@ bool Ekf::resetYawToEKFGSF()
 		if (fabsf(_R_to_earth(2, 0)) < fabsf(_R_to_earth(2, 1))) {
 			// use a 321 sequence
 			Eulerf euler321(_R_to_earth);
-			euler321(2) = new_yaw;
+			euler321(2) = yaw;
 			_R_to_earth = Dcmf(euler321);
 
 		} else {
@@ -1817,10 +1812,9 @@ bool Ekf::resetYawToEKFGSF()
 			// We use a 312 sequence as an alternate when there is more pitch tilt than roll tilt
 			// to avoid gimbal lock
 			Vector3f rot312;
-			rot312(0) = new_yaw;
+			rot312(0) = yaw;
 			rot312(1) = asinf(_R_to_earth(2, 1));
 			rot312(2) = atan2f(-_R_to_earth(2, 0), _R_to_earth(2, 2));
-
 			_R_to_earth = taitBryan312ToRotMat(rot312);
 
 		}
@@ -1838,7 +1832,7 @@ bool Ekf::resetYawToEKFGSF()
 		_state_reset_status.quat_change = q_error;
 
 		// update the yaw angle variance using half the nominal yaw separation between models
-		increaseQuatYawErrVariance(sq(fmaxf(M_PI_F / (float)N_MODELS_EKFGSF, 1.0e-2f)));
+		increaseQuatYawErrVariance(yawVariance);
 
 		// add the reset amount to the output observer buffered data
 		for (uint8_t i = 0; i < _output_buffer.get_length(); i++) {
@@ -1851,6 +1845,17 @@ bool Ekf::resetYawToEKFGSF()
 
 		// capture the reset event
 		_state_reset_status.quat_counter++;
+}
+
+// Reset main nav filter yaw to value from EKF-GSF and reset velocity and position to GPS
+bool Ekf::resetYawToEKFGSF()
+{
+	// don't allow reet using the EKF-GSF estimate until the filter has started fusing velocity
+	// data and the yaw estimate has converged
+	float new_yaw, new_yaw_variance;
+	if (yawEstimator.getYawData(&new_yaw, &new_yaw_variance) && new_yaw_variance < sq(_params.EKFGSF_yaw_err_max)) {
+
+		resetQuatStateYaw(new_yaw, new_yaw_variance);
 
 		// reset velocity and position states to GPS - if yaw is fixed then the filter should start to operate correctly
 		resetVelocity();
