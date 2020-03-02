@@ -552,8 +552,8 @@ float EKFGSF_yaw::gaussianDensity(const uint8_t model_index) const
 bool EKFGSF_yaw::getLogData(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF])
 {
 	if (_ekf_gsf_vel_fuse_started) {
-		memcpy(yaw_composite, &_gsf_yaw, sizeof(_gsf_yaw));
-		memcpy(yaw_variance, &_gsf_yaw_variance, sizeof(_gsf_yaw_variance));
+		*yaw_composite = _gsf_yaw;
+		*yaw_variance = _gsf_yaw_variance;
 		for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
 			yaw[model_index] = _ekf_gsf[model_index].X[2];
 			innov_VN[model_index] = _ekf_gsf[model_index].innov(0);
@@ -646,8 +646,8 @@ Matrix3f EKFGSF_yaw::ahrsPredictRotMat(Matrix3f &R, Vector3f &g)
 bool EKFGSF_yaw::getYawData(float *yaw, float *yaw_variance)
 {
 	if(_ekf_gsf_vel_fuse_started) {
-		memcpy(yaw, &_gsf_yaw, sizeof(_gsf_yaw));
-		memcpy(yaw_variance, &_gsf_yaw_variance, sizeof(_gsf_yaw_variance));
+		*yaw = _gsf_yaw;
+		*yaw_variance = _gsf_yaw_variance;
 		return true;
 	}
 	return false;
