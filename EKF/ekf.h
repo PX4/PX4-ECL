@@ -832,9 +832,10 @@ private:
 	void setVelPosFaultStatus(const int index, const bool status);
 
 	// reset the quaternion states and covariances to the new yaw value, preserving the roll and pitch
-	// yaw - Euler yaw angle (rad)
-	// yawVariance - yaw error variance (rad^2)
-	void resetQuatStateYaw(float yaw, float yawVariance);
+	// yaw : Euler yaw angle (rad)
+	// yaw_variance : yaw error variance (rad^2)
+	// update_buffer : true if the state change should be also applied to the output observer buffer
+	void resetQuatStateYaw(float yaw, float yaw_variance, bool update_buffer);
 
 	// converts Tait-Bryan 312 sequence of rotations from frame 1 to frame 2
 	// to the corresponding rotation matrix that rotates from frame 2 to frame 1
