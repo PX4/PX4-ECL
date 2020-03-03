@@ -649,7 +649,7 @@ bool EKFGSF_yaw::getYawData(float *yaw, float *yaw_variance)
 	return false;
 }
 
-void EKFGSF_yaw::pushVelData(Vector2f velocity, float accuracy)
+void EKFGSF_yaw::setVelocity(Vector2f velocity, float accuracy)
 {
 	_vel_NE = velocity;
 	_vel_accuracy = accuracy;

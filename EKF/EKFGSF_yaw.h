@@ -45,7 +45,7 @@ public:
                 	bool run_EKF,           // set to true when flying or movement is suitable for yaw estimation
                 	float airspeed);   	// true airspeed used for centripetal accel compensation - set to 0 when not required.
 
-	void pushVelData(Vector2f velocity,	// NE velocity measurement (m/s)
+	void setVelocity(Vector2f velocity,	// NE velocity measurement (m/s)
                      	float accuracy);	// 1-sigma accuracy of velocity measurement (m/s)
 
 	// get solution data for logging
