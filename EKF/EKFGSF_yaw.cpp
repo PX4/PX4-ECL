@@ -536,11 +536,11 @@ float EKFGSF_yaw::gaussianDensity(const uint8_t model_index) const
 	invMat(1,0) = - t4 * _ekf_gsf[model_index].S[1][0];
 
  	// calculate inv(S) * innovation
-	matrix::Vector2f tempVec = invMat * _ekf_gsf[model_index].innov;
+	const matrix::Vector2f tempVec = invMat * _ekf_gsf[model_index].innov;
 
 	// calculate transpose(innovation) * inv(S) * innovation
 	// * operator is overloaded to provide a dot product
-	float normDist = _ekf_gsf[model_index].innov * tempVec;
+	const float normDist = _ekf_gsf[model_index].innov * tempVec;
 
 	return M_TWOPI_INV * sqrtf(t4) * expf(-0.5f * normDist);
 }
