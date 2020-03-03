@@ -111,7 +111,9 @@ private:
 		matrix::Vector3f X; // Vel North (m/s),  Vel East (m/s), yaw (rad)s
 		matrix::SquareMatrix<float, 3> P; // covariance matrix
 		float W = 0.0f; // weighting
-		float S[2][2]; // innovation variance
+		matrix::SquareMatrix<float, 2> S; // innovation covariance matrix
+		matrix::SquareMatrix<float, 2> S_inverse;  // inverse of the innovation covariance matrix
+		float S_det_inverse; // inverse of the innovation covariance matrix determinant
 		matrix::Vector2f innov; // Velocity N,E innovation (m/s)
 	};
 	_ekf_gsf_struct _ekf_gsf[N_MODELS_EKFGSF];
@@ -147,5 +149,8 @@ private:
 
 	// return the probability of the state estimate for the specified EKF assuming a gaussian error distribution
 	float gaussianDensity(const uint8_t model_index) const;
+
+	// update the inverse of the innovation covariance matrix
+	void updateInnovCovMatInv(const uint8_t model_index);
 
 };
