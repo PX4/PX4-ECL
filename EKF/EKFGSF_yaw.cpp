@@ -347,7 +347,7 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	_ekf_gsf[model_index].innov(0) = _ekf_gsf[model_index].X(0) - _vel_NE(0);
 	_ekf_gsf[model_index].innov(1) = _ekf_gsf[model_index].X(1) - _vel_NE(1);
 
-	// Use temproary variables for covariance elements to reduce verbosity of auto-code expressions
+	// Use temporary variables for covariance elements to reduce verbosity of auto-code expressions
 	const float &P00 = _ekf_gsf[model_index].P(0,0);
 	const float &P01 = _ekf_gsf[model_index].P(0,1);
 	const float &P02 = _ekf_gsf[model_index].P(0,2);
@@ -359,32 +359,24 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	const float &P22 = _ekf_gsf[model_index].P(2,2);
 
 	// calculate innovation variance
-	_ekf_gsf[model_index].S[0][0] = P00 + velObsVar;
-	_ekf_gsf[model_index].S[1][1] = P11 + velObsVar;
-	_ekf_gsf[model_index].S[0][1] = P01;
-	_ekf_gsf[model_index].S[1][0] = P10;
+	_ekf_gsf[model_index].S(0,0) = P00 + velObsVar;
+	_ekf_gsf[model_index].S(1,1) = P11 + velObsVar;
+	_ekf_gsf[model_index].S(0,1) = P01;
+	_ekf_gsf[model_index].S(1,0) = P10;
+
+	// Update the inverse of the innovation covariance matrix S_inverse
+	updateInnovCovMatInv(model_index);
 
 	// Perform a chi-square innovation consistency test and calculate a compression scale factor that limits the magnitude of innovations to 5-sigma
-	float S_det_inv = (_ekf_gsf[model_index].S[0][0]*_ekf_gsf[model_index].S[1][1] - _ekf_gsf[model_index].S[0][1]*_ekf_gsf[model_index].S[1][0]);
 	float innov_comp_scale_factor = 1.0f;
-	if (fabsf(S_det_inv) > 1E-6f) {
-		// Calculate elements for innovation covariance inverse matrix assuming symmetry
-		S_det_inv = 1.0f / S_det_inv;
-		const float S_inv_NN = _ekf_gsf[model_index].S[1][1] * S_det_inv;
-		const float S_inv_EE = _ekf_gsf[model_index].S[0][0] * S_det_inv;
-		const float S_inv_NE = _ekf_gsf[model_index].S[0][1] * S_det_inv;
 
-		// The following expression was derived symbolically from test ratio = transpose(innovation) * inverse(innovation variance) * innovation = [1x2] * [2,2] * [2,1] = [1,1]
-		const float test_ratio = _ekf_gsf[model_index].innov(0)*(_ekf_gsf[model_index].innov(0)*S_inv_NN + _ekf_gsf[model_index].innov(1)*S_inv_NE) + _ekf_gsf[model_index].innov(1)*(_ekf_gsf[model_index].innov(0)*S_inv_NE + _ekf_gsf[model_index].innov(1)*S_inv_EE);
+	// test ratio = transpose(innovation) * inverse(innovation variance) * innovation = [1x2] * [2,2] * [2,1] = [1,1]
+	const float test_ratio = _ekf_gsf[model_index].innov * (_ekf_gsf[model_index].S_inverse * _ekf_gsf[model_index].innov);
 
-		// If the test ratio is greater than 25 (5 Sigma) then reduce the length of the innovation vector to clip it at 5-Sigma
-		// This protects from large measurement spikes
-		if (test_ratio > 25.0f) {
-			innov_comp_scale_factor = sqrtf(25.0f / test_ratio);
-		}
-	} else {
-		// skip this fusion step because calculation is badly conditioned
-		return;
+	// If the test ratio is greater than 25 (5 Sigma) then reduce the length of the innovation vector to clip it at 5-Sigma
+	// This protects from large measurement spikes
+	if (test_ratio > 25.0f) {
+		innov_comp_scale_factor = sqrtf(25.0f / test_ratio);
 	}
 
 	// calculate Kalman gain K  nd covariance matrix P
@@ -511,35 +503,37 @@ void EKFGSF_yaw::initialiseEKFGSF()
 
 float EKFGSF_yaw::gaussianDensity(const uint8_t model_index) const
 {
-	// calculate determinant for innovation covariance matrix
-	const float t2 = _ekf_gsf[model_index].S[0][0] * _ekf_gsf[model_index].S[1][1];
-	const float t5 = _ekf_gsf[model_index].S[0][1] * _ekf_gsf[model_index].S[1][0];
-	const float t3 = t2 - t5;
-
-	// calculate determinant inverse and protect against badly conditioned matrix
-	float t4;
-	if (fabsf(t3) > 1e-6f) {
-		t4 = 1.0f/t3;
-	} else {
-		// bad conditioning is most likely to be caused be by off-diaognal terms so ignore and limit
-		t4 = 1.0f / fmaxf(t2 , 1e-6f);
-	}
-
-	// calculate inv(S)
-	matrix::SquareMatrix<float, 2> invMat;
-	invMat(0,0) =   t4 * _ekf_gsf[model_index].S[1][1];
-	invMat(1,1) =   t4 * _ekf_gsf[model_index].S[0][0];
-	invMat(0,1) = - t4 * _ekf_gsf[model_index].S[0][1];
-	invMat(1,0) = - t4 * _ekf_gsf[model_index].S[1][0];
-
- 	// calculate inv(S) * innovation
-	const matrix::Vector2f tempVec = invMat * _ekf_gsf[model_index].innov;
+	// calculate inv(S) * innovation
+	const matrix::Vector2f tempVec = _ekf_gsf[model_index].S_inverse * _ekf_gsf[model_index].innov;
 
 	// calculate transpose(innovation) * inv(S) * innovation
 	// * operator is overloaded to provide a dot product
 	const float normDist = _ekf_gsf[model_index].innov * tempVec;
 
-	return M_TWOPI_INV * sqrtf(t4) * expf(-0.5f * normDist);
+	return M_TWOPI_INV * sqrtf(_ekf_gsf[model_index].S_det_inverse) * expf(-0.5f * normDist);
+}
+
+void EKFGSF_yaw::updateInnovCovMatInv(const uint8_t model_index)
+{
+	// calculate determinant for innovation covariance matrix
+	const float t2 = _ekf_gsf[model_index].S(0,0) * _ekf_gsf[model_index].S(1,1);
+	const float t5 = _ekf_gsf[model_index].S(0,1) * _ekf_gsf[model_index].S(1,0);
+	const float t3 = t2 - t5;
+
+	// calculate determinant inverse and protect against badly conditioned matrix
+	if (fabsf(t3) > 1e-6f) {
+		_ekf_gsf[model_index].S_det_inverse = 1.0f/t3;
+	} else {
+		// bad conditioning is most likely to be caused be by off-diaognal terms so ignore and limit
+		_ekf_gsf[model_index].S_det_inverse = 1.0f / fmaxf(t2 , 1e-6f);
+	}
+
+	// calculate inv(S)
+	_ekf_gsf[model_index].S_inverse(0,0) =   _ekf_gsf[model_index].S_det_inverse * _ekf_gsf[model_index].S(1,1);
+	_ekf_gsf[model_index].S_inverse(1,1) =   _ekf_gsf[model_index].S_det_inverse * _ekf_gsf[model_index].S(0,0);
+	_ekf_gsf[model_index].S_inverse(0,1) = - _ekf_gsf[model_index].S_det_inverse * _ekf_gsf[model_index].S(0,1);
+	_ekf_gsf[model_index].S_inverse(1,0) = - _ekf_gsf[model_index].S_det_inverse * _ekf_gsf[model_index].S(1,0);
+
 }
 
 bool EKFGSF_yaw::getLogData(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF])
