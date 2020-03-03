@@ -59,45 +59,52 @@ void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vect
 		} else {
 			float total_w = 0.0f;
 			float newWeight[N_MODELS_EKFGSF];
+			bool bad_update = false;
 			for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 				// subsequent measurements are fused as direct state observations
-				updateEKF(model_index);
-
-				// calculate weighting for each model assuming a normal distribution
-				newWeight[model_index]= fmaxf(gaussianDensity(model_index) * _ekf_gsf[model_index].W, 0.0f);
-				total_w += newWeight[model_index];
-			}
-
-			// normalise the weighting function
-			if (_ekf_gsf_vel_fuse_started && total_w > 0.0f) {
-				float total_w_inv = 1.0f / total_w;
-				for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-					_ekf_gsf[model_index].W  = newWeight[model_index] * total_w_inv;
+				if (!updateEKF(model_index)) {
+					bad_update = true;
 				}
 			}
 
-			// Enforce a minimum weighting value. This was added during initial development but has not been needed
-			// subsequently, so this block of code and the corresponding EKFGSF_weight_min can be removed if we get
-			// through testing without any weighting function issues.
-			if (_weight_min > FLT_EPSILON) {
-				float correction_sum = 0.0f; // amount the sum of weights has been increased by application of the limit
-				bool change_mask[N_MODELS_EKFGSF] = {}; // true when the weighting for that model has been increased
-				float unmodified_weights_sum = 0.0f; // sum of unmodified weights
+			if (!bad_update) {
+				// calculate weighting for each model assuming a normal distribution
 				for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-					if (_ekf_gsf[model_index].W < _weight_min) {
-						correction_sum += _weight_min - _ekf_gsf[model_index].W;
-						_ekf_gsf[model_index].W = _weight_min;
-						change_mask[model_index] = true;
-					} else {
-						unmodified_weights_sum += _ekf_gsf[model_index].W;
+					newWeight[model_index] = fmaxf(gaussianDensity(model_index) * _ekf_gsf[model_index].W, 0.0f);
+					total_w += newWeight[model_index];
+				}
+
+				// normalise the weighting function
+				if (_ekf_gsf_vel_fuse_started && total_w > 1e-15f && !bad_update) {
+					float total_w_inv = 1.0f / total_w;
+					for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
+						_ekf_gsf[model_index].W = newWeight[model_index] * total_w_inv;
 					}
 				}
 
-				// rescale the unmodified weights to make the total sum unity
-				const float scale_factor = (unmodified_weights_sum - correction_sum - _weight_min) / (unmodified_weights_sum - _weight_min);
-				for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-					if (!change_mask[model_index]) {
-						_ekf_gsf[model_index].W = _weight_min + scale_factor * (_ekf_gsf[model_index].W - _weight_min);
+				// Enforce a minimum weighting value. This was added during initial development but has not been needed
+				// subsequently, so this block of code and the corresponding _weight_min can be removed if we get
+				// through testing without any weighting function issues.
+				if (_weight_min > FLT_EPSILON) {
+					float correction_sum = 0.0f; // amount the sum of weights has been increased by application of the limit
+					bool change_mask[N_MODELS_EKFGSF] = {}; // true when the weighting for that model has been increased
+					float unmodified_weights_sum = 0.0f; // sum of unmodified weights
+					for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
+						if (_ekf_gsf[model_index].W < _weight_min) {
+							correction_sum += _weight_min - _ekf_gsf[model_index].W;
+							_ekf_gsf[model_index].W = _weight_min;
+							change_mask[model_index] = true;
+						} else {
+							unmodified_weights_sum += _ekf_gsf[model_index].W;
+						}
+					}
+
+					// rescale the unmodified weights to make the total sum unity
+					const float scale_factor = (unmodified_weights_sum - correction_sum - _weight_min) / (unmodified_weights_sum - _weight_min);
+					for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
+						if (!change_mask[model_index]) {
+							_ekf_gsf[model_index].W = _weight_min + scale_factor * (_ekf_gsf[model_index].W - _weight_min);
+						}
 					}
 				}
 			}
@@ -338,7 +345,7 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 }
 
 // Update EKF states and covariance for specified model index using velocity measurement
-void EKFGSF_yaw::updateEKF(const uint8_t model_index)
+bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 {
 	// set observation variance from accuracy estimate supplied by GPS and apply a sanity check minimum
 	const float velObsVar = sq(fmaxf(_vel_accuracy, 0.5f));
@@ -393,7 +400,7 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 		t7 = 1.0f/t6;
 	} else {
 		// skip this fusion step
-		return;
+		return false;
 	}
 	const float t8 = P11+velObsVar;
 	const float t10 = P00+velObsVar;
@@ -474,6 +481,7 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	_ahrs_ekf_gsf[model_index].R(1,1) = R_prev[0][1] * sinYaw + R_prev[1][1] * cosYaw;
 	_ahrs_ekf_gsf[model_index].R(1,2) = R_prev[0][2] * sinYaw + R_prev[1][2] * cosYaw;
 
+	return true;
 }
 
 void EKFGSF_yaw::initialiseEKFGSF()
@@ -521,12 +529,7 @@ void EKFGSF_yaw::updateInnovCovMatInv(const uint8_t model_index)
 	const float t3 = t2 - t5;
 
 	// calculate determinant inverse and protect against badly conditioned matrix
-	if (fabsf(t3) > 1e-6f) {
-		_ekf_gsf[model_index].S_det_inverse = 1.0f/t3;
-	} else {
-		// bad conditioning is most likely to be caused be by off-diaognal terms so ignore and limit
-		_ekf_gsf[model_index].S_det_inverse = 1.0f / fmaxf(t2 , 1e-6f);
-	}
+	_ekf_gsf[model_index].S_det_inverse = 1.0f / fmaxf(t3 , 1e-12f);
 
 	// calculate inv(S)
 	_ekf_gsf[model_index].S_inverse(0,0) =   _ekf_gsf[model_index].S_det_inverse * _ekf_gsf[model_index].S(1,1);
