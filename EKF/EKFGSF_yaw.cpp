@@ -291,15 +291,15 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 
 	// Local short variable name copies required for readability
 	// Compiler might be smart enough to optimise these out
-	const float P00 = _ekf_gsf[model_index].P(0,0);
-	const float P01 = _ekf_gsf[model_index].P(0,1);
-	const float P02 = _ekf_gsf[model_index].P(0,2);
-	const float P10 = _ekf_gsf[model_index].P(1,0);
-	const float P11 = _ekf_gsf[model_index].P(1,1);
-	const float P12 = _ekf_gsf[model_index].P(1,2);
-	const float P20 = _ekf_gsf[model_index].P(2,0);
-	const float P21 = _ekf_gsf[model_index].P(2,1);
-	const float P22 = _ekf_gsf[model_index].P(2,2);
+	const float &P00 = _ekf_gsf[model_index].P(0,0);
+	const float &P01 = _ekf_gsf[model_index].P(0,1);
+	const float &P02 = _ekf_gsf[model_index].P(0,2);
+	const float &P10 = _ekf_gsf[model_index].P(1,0);
+	const float &P11 = _ekf_gsf[model_index].P(1,1);
+	const float &P12 = _ekf_gsf[model_index].P(1,2);
+	const float &P20 = _ekf_gsf[model_index].P(2,0);
+	const float &P21 = _ekf_gsf[model_index].P(2,1);
+	const float &P22 = _ekf_gsf[model_index].P(2,2);
 
 	// Use fixed values for delta velocity and delta angle process noise variances
 	const float dvxVar = sq(_accel_noise * _delta_vel_dt); // variance of forward delta velocity - (m/s)^2
