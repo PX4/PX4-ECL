@@ -59,20 +59,36 @@ void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vect
 		} else {
 			float total_w = 0.0f;
 			float newWeight[N_MODELS_EKFGSF];
+			bool bad_update = false;
 			for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 				// subsequent measurements are fused as direct state observations
-				updateEKF(model_index);
+				if (!updateEKF(model_index)) {
+					bad_update = true;
+				}
+			}
 
-				// calculate weighting for each model assuming a normal distribution
-				newWeight[model_index]= fmaxf(gaussianDensity(model_index) * _ekf_gsf[model_index].W, 0.0f);
-				total_w += newWeight[model_index];
+			for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
+				if (bad_update) {
+					// keep previous weight
+					newWeight[model_index] = _ekf_gsf[model_index].W;
+				} else {
+					// calculate weighting for each model assuming a normal distribution
+					newWeight[model_index] = fmaxf(gaussianDensity(model_index) * _ekf_gsf[model_index].W, 0.0f);
+					total_w += newWeight[model_index];
+				}
 			}
 
 			// normalise the weighting function
-			if (_ekf_gsf_vel_fuse_started && total_w > 0.0f) {
+			if (_ekf_gsf_vel_fuse_started && total_w > 1e-6f) {
 				float total_w_inv = 1.0f / total_w;
 				for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-					_ekf_gsf[model_index].W  = newWeight[model_index] * total_w_inv;
+					_ekf_gsf[model_index].W = newWeight[model_index] * total_w_inv;
+				}
+			} else {
+				// assign even weights
+				float default_weight = 1.0f / (float)N_MODELS_EKFGSF;
+				for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
+					_ekf_gsf[model_index].W = default_weight;
 				}
 			}
 
@@ -338,7 +354,7 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 }
 
 // Update EKF states and covariance for specified model index using velocity measurement
-void EKFGSF_yaw::updateEKF(const uint8_t model_index)
+bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 {
 	// set observation variance from accuracy estimate supplied by GPS and apply a sanity check minimum
 	const float velObsVar = sq(fmaxf(_vel_accuracy, 0.5f));
@@ -393,7 +409,7 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 		t7 = 1.0f/t6;
 	} else {
 		// skip this fusion step
-		return;
+		return false;
 	}
 	const float t8 = P11+velObsVar;
 	const float t10 = P00+velObsVar;
@@ -474,6 +490,7 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	_ahrs_ekf_gsf[model_index].R(1,1) = R_prev[0][1] * sinYaw + R_prev[1][1] * cosYaw;
 	_ahrs_ekf_gsf[model_index].R(1,2) = R_prev[0][2] * sinYaw + R_prev[1][2] * cosYaw;
 
+	return true;
 }
 
 void EKFGSF_yaw::initialiseEKFGSF()

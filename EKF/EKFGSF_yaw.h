@@ -126,7 +126,8 @@ private:
 	void predictEKF(const uint8_t model_index);
 
 	// update state and covariance for the specified EKF using a NE velocity measurement
-	void updateEKF(const uint8_t model_index);
+	// return false if update failed
+	bool updateEKF(const uint8_t model_index);
 
 	inline float sq(float x) { return x * x; };
 
