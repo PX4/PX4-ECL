@@ -27,10 +27,6 @@ using matrix::wrap_pi;
 #define M_TWOPI_INV 0.159154943f
 #endif
 
-#ifndef CONSTANTS_ONE_G
-#define CONSTANTS_ONE_G 9.80665f
-#endif
-
 class EKFGSF_yaw
 {
 public:
