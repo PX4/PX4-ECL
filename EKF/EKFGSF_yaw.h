@@ -108,7 +108,7 @@ private:
 	// Declarations used by a bank of N_MODELS_EKFGSF EKFs
 
 	struct _ekf_gsf_struct{
-		float X[3]; // Vel North (m/s),  Vel East (m/s), yaw (rad)
+		matrix::Vector3f X; // Vel North (m/s),  Vel East (m/s), yaw (rad)s
 		matrix::SquareMatrix<float, 3> P; // covariance matrix
 		float W = 0.0f; // weighting
 		float S[2][2]; // innovation variance

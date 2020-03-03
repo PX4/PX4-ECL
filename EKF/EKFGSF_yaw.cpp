@@ -112,8 +112,8 @@ void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vect
 	// equal to the weighting value before it is summed.
 	Vector2f yaw_vector = {};
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-		yaw_vector(0) += _ekf_gsf[model_index].W * cosf(_ekf_gsf[model_index].X[2]);
-		yaw_vector(1) += _ekf_gsf[model_index].W * sinf(_ekf_gsf[model_index].X[2]);
+		yaw_vector(0) += _ekf_gsf[model_index].W * cosf(_ekf_gsf[model_index].X(2));
+		yaw_vector(1) += _ekf_gsf[model_index].W * sinf(_ekf_gsf[model_index].X(2));
 	}
 	_gsf_yaw = atan2f(yaw_vector(1),yaw_vector(0));
 
@@ -121,7 +121,7 @@ void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vect
 	// models with larger innovations are weighted less
 	_gsf_yaw_variance = 0.0f;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-		float yaw_delta = wrap_pi(_ekf_gsf[model_index].X[2] - _gsf_yaw);
+		float yaw_delta = wrap_pi(_ekf_gsf[model_index].X(2) - _gsf_yaw);
 		_gsf_yaw_variance += _ekf_gsf[model_index].W * (_ekf_gsf[model_index].P(2,2) + yaw_delta * yaw_delta);
 	}
 
@@ -239,7 +239,7 @@ void EKFGSF_yaw::ahrsAlignYaw()
 			Eulerf euler_init(_ahrs_ekf_gsf[model_index].R);
 
 			// set the yaw angle
-			euler_init(2) = wrap_pi(_ekf_gsf[model_index].X[2]);
+			euler_init(2) = wrap_pi(_ekf_gsf[model_index].X(2));
 
 			// update the rotation matrix
 			_ahrs_ekf_gsf[model_index].R = Dcmf(euler_init);
@@ -247,7 +247,7 @@ void EKFGSF_yaw::ahrsAlignYaw()
 		} else {
 			// Calculate the 312 Tait-Bryan rotation sequence that rotates from earth to body frame
 			Vector3f rot312;
-			rot312(0) = wrap_pi(_ekf_gsf[model_index].X[2]); // first rotation (yaw) taken from EKF model state
+			rot312(0) = wrap_pi(_ekf_gsf[model_index].X(2)); // first rotation (yaw) taken from EKF model state
 			rot312(1) = asinf(_ahrs_ekf_gsf[model_index].R(2, 1)); // second rotation (roll)
 			rot312(2) = atan2f(-_ahrs_ekf_gsf[model_index].R(2, 0), _ahrs_ekf_gsf[model_index].R(2, 2));  // third rotation (pitch)
 
@@ -272,20 +272,20 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 	// Calculate the yaw state using a projection onto the horizontal that avoids gimbal lock
 	if (fabsf(_ahrs_ekf_gsf[model_index].R(2, 0)) < fabsf(_ahrs_ekf_gsf[model_index].R(2, 1))) {
 		// use 321 Tait-Bryan rotation to define yaw state
-		_ekf_gsf[model_index].X[2] = atan2f(_ahrs_ekf_gsf[model_index].R(1, 0), _ahrs_ekf_gsf[model_index].R(0, 0));
+		_ekf_gsf[model_index].X(2) = atan2f(_ahrs_ekf_gsf[model_index].R(1, 0), _ahrs_ekf_gsf[model_index].R(0, 0));
 	} else {
 		// use 312 Tait-Bryan rotation to define yaw state
-		_ekf_gsf[model_index].X[2] = atan2f(-_ahrs_ekf_gsf[model_index].R(0, 1), _ahrs_ekf_gsf[model_index].R(1, 1)); // first rotation (yaw)
+		_ekf_gsf[model_index].X(2) = atan2f(-_ahrs_ekf_gsf[model_index].R(0, 1), _ahrs_ekf_gsf[model_index].R(1, 1)); // first rotation (yaw)
 	}
 
 	// calculate delta velocity in a horizontal front-right frame
 	const Vector3f del_vel_NED = _ahrs_ekf_gsf[model_index].R * _delta_vel;
-	const float dvx =   del_vel_NED(0) * cosf(_ekf_gsf[model_index].X[2]) + del_vel_NED(1) * sinf(_ekf_gsf[model_index].X[2]);
-	const float dvy = - del_vel_NED(0) * sinf(_ekf_gsf[model_index].X[2]) + del_vel_NED(1) * cosf(_ekf_gsf[model_index].X[2]);
+	const float dvx =   del_vel_NED(0) * cosf(_ekf_gsf[model_index].X(2)) + del_vel_NED(1) * sinf(_ekf_gsf[model_index].X(2));
+	const float dvy = - del_vel_NED(0) * sinf(_ekf_gsf[model_index].X(2)) + del_vel_NED(1) * cosf(_ekf_gsf[model_index].X(2));
 
 	// sum delta velocities in earth frame:
-	_ekf_gsf[model_index].X[0] += del_vel_NED(0);
-	_ekf_gsf[model_index].X[1] += del_vel_NED(1);
+	_ekf_gsf[model_index].X(0) += del_vel_NED(0);
+	_ekf_gsf[model_index].X(1) += del_vel_NED(1);
 
 	// predict covariance - autocode from https://github.com/priseborough/3_state_filter/blob/flightLogReplay-wip/calcPupdate.txt
 
@@ -308,8 +308,8 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 	float dazVar = _gyro_noise * _delta_ang_dt; // variance of yaw delta angle - rad^2
 	dazVar *= dazVar;
 
-	const float t2 = sinf(_ekf_gsf[model_index].X[2]);
-	const float t3 = cosf(_ekf_gsf[model_index].X[2]);
+	const float t2 = sinf(_ekf_gsf[model_index].X(2));
+	const float t3 = cosf(_ekf_gsf[model_index].X(2));
 	const float t4 = dvy*t3;
 	const float t5 = dvx*t2;
 	const float t6 = t4+t5;
@@ -347,8 +347,8 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	velObsVar *= velObsVar;
 
 	// calculate velocity observation innovations
-	_ekf_gsf[model_index].innov(0) = _ekf_gsf[model_index].X[0] - _vel_NE(0);
-	_ekf_gsf[model_index].innov(1) = _ekf_gsf[model_index].X[1] - _vel_NE(1);
+	_ekf_gsf[model_index].innov(0) = _ekf_gsf[model_index].X(0) - _vel_NE(0);
+	_ekf_gsf[model_index].innov(1) = _ekf_gsf[model_index].X(1) - _vel_NE(1);
 
 	// copy covariance matrix to temporary variables
 	const float P00 = _ekf_gsf[model_index].P(0,0);
@@ -408,14 +408,14 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	}
 	const float t8 = P11+velObsVar;
 	const float t10 = P00+velObsVar;
-	float K[3][2];
 
- 	K[0][0] = -P01*P10*t7+P00*t7*t8;
-	K[0][1] = -P00*P01*t7+P01*t7*t10;
-	K[1][0] = -P10*P11*t7+P10*t7*t8;
-	K[1][1] = -P01*P10*t7+P11*t7*t10;
-	K[2][0] = -P10*P21*t7+P20*t7*t8;
-	K[2][1] = -P01*P20*t7+P21*t7*t10;
+	matrix::Matrix<float, 3, 2> K;
+ 	K(0,0) = -P01*P10*t7+P00*t7*t8;
+	K(0,1) = -P00*P01*t7+P01*t7*t10;
+	K(1,0) = -P10*P11*t7+P10*t7*t8;
+	K(1,1) = -P01*P10*t7+P11*t7*t10;
+	K(2,0) = -P10*P21*t7+P20*t7*t8;
+	K(2,1) = -P01*P20*t7+P21*t7*t10;
 
 	const float t11 = P00*P01*t7;
 	const float t15 = P01*t7*t10;
@@ -467,14 +467,10 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	// force symmetry
 	_ekf_gsf[model_index].P.makeBlockSymmetric<3>(0);
 
-	float oldYaw = _ekf_gsf[model_index].X[2];
-	for (uint8_t obs_index = 0; obs_index < 2; obs_index++) {
-		// apply the state corrections including the compression scale factor
-		for (unsigned row = 0; row < 3; row++) {
-			_ekf_gsf[model_index].X[row] -= K[row][obs_index] * _ekf_gsf[model_index].innov(obs_index) * innov_comp_scale_factor;
-		}
-	}
-	float yawDelta = _ekf_gsf[model_index].X[2] - oldYaw;
+	// Correct the state vector and capture the change in yaw angle
+	float oldYaw = _ekf_gsf[model_index].X(2);
+	_ekf_gsf[model_index].X -= (K * _ekf_gsf[model_index].innov) * innov_comp_scale_factor;
+	float yawDelta = _ekf_gsf[model_index].X(2) - oldYaw;
 
 	// apply the change in yaw angle to the AHRS
 	// take advantage of sparseness in the yaw rotation matrix
@@ -500,14 +496,14 @@ void EKFGSF_yaw::initialiseEKFGSF()
 	const float yaw_increment = 2.0f * M_PI_F / (float)N_MODELS_EKFGSF;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
 		// evenly space initial yaw estimates in the region between +-Pi
-		_ekf_gsf[model_index].X[2] = -M_PI_F + (0.5f * yaw_increment) + ((float)model_index * yaw_increment);
+		_ekf_gsf[model_index].X(2) = -M_PI_F + (0.5f * yaw_increment) + ((float)model_index * yaw_increment);
 
 		// All filter models start with the same weight
 		_ekf_gsf[model_index].W = 1.0f / (float)N_MODELS_EKFGSF;
 
 		// take velocity states and corresponding variance from last meaurement
-		_ekf_gsf[model_index].X[0] = _vel_NE(0);
-		_ekf_gsf[model_index].X[1] = _vel_NE(1);
+		_ekf_gsf[model_index].X(0) = _vel_NE(0);
+		_ekf_gsf[model_index].X(1) = _vel_NE(1);
 		_ekf_gsf[model_index].P(0,0) = sq(_vel_accuracy);
 		_ekf_gsf[model_index].P(1,1) = _ekf_gsf[model_index].P(0,0);
 
@@ -555,7 +551,7 @@ bool EKFGSF_yaw::getLogData(float *yaw_composite, float *yaw_variance, float yaw
 		*yaw_composite = _gsf_yaw;
 		*yaw_variance = _gsf_yaw_variance;
 		for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
-			yaw[model_index] = _ekf_gsf[model_index].X[2];
+			yaw[model_index] = _ekf_gsf[model_index].X(2);
 			innov_VN[model_index] = _ekf_gsf[model_index].innov(0);
 			innov_VE[model_index] = _ekf_gsf[model_index].innov(1);
 			weight[model_index] = _ekf_gsf[model_index].W;
