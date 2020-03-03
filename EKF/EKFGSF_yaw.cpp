@@ -302,11 +302,9 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 	const float P22 = _ekf_gsf[model_index].P(2,2);
 
 	// Use fixed values for delta velocity and delta angle process noise variances
-	float dvxVar = _accel_noise * _delta_vel_dt; // variance of forward delta velocity - (m/s)^2
-	dvxVar *= dvxVar;
-	float dvyVar = dvxVar; // variance of right delta velocity - (m/s)^2
-	float dazVar = _gyro_noise * _delta_ang_dt; // variance of yaw delta angle - rad^2
-	dazVar *= dazVar;
+	const float dvxVar = sq(_accel_noise * _delta_vel_dt); // variance of forward delta velocity - (m/s)^2
+	const float dvyVar = dvxVar; // variance of right delta velocity - (m/s)^2
+	const float dazVar = sq(_gyro_noise * _delta_ang_dt); // variance of yaw delta angle - rad^2
 
 	const float t2 = sinf(_ekf_gsf[model_index].X(2));
 	const float t3 = cosf(_ekf_gsf[model_index].X(2));
@@ -343,8 +341,7 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 {
 	// set observation variance from accuracy estimate supplied by GPS and apply a sanity check minimum
-	float velObsVar = fmaxf(_vel_accuracy, 0.5f);
-	velObsVar *= velObsVar;
+	const float velObsVar = sq(fmaxf(_vel_accuracy, 0.5f));
 
 	// calculate velocity observation innovations
 	_ekf_gsf[model_index].innov(0) = _ekf_gsf[model_index].X(0) - _vel_NE(0);
@@ -468,7 +465,7 @@ void EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	_ekf_gsf[model_index].P.makeBlockSymmetric<3>(0);
 
 	// Correct the state vector and capture the change in yaw angle
-	float oldYaw = _ekf_gsf[model_index].X(2);
+	const float oldYaw = _ekf_gsf[model_index].X(2);
 	_ekf_gsf[model_index].X -= (K * _ekf_gsf[model_index].innov) * innov_comp_scale_factor;
 	float yawDelta = _ekf_gsf[model_index].X(2) - oldYaw;
 
