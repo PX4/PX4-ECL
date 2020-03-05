@@ -119,7 +119,7 @@ void EKFGSF_yaw::update(const imuSample& imu_sample,
 	// Calculate a composite yaw vector as a weighted average of the states for each model.
 	// To avoid issues with angle wrapping, the yaw state is converted to a vector with legnth
 	// equal to the weighting value before it is summed.
-	Vector2f yaw_vector = {};
+	Vector2f yaw_vector;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 		yaw_vector(0) += _ekf_gsf[model_index].W * cosf(_ekf_gsf[model_index].X(2));
 		yaw_vector(1) += _ekf_gsf[model_index].W * sinf(_ekf_gsf[model_index].X(2));
@@ -144,31 +144,26 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 
 	const Vector3f ang_rate = _delta_ang / fmaxf(_delta_ang_dt, 0.001f) - _ahrs_ekf_gsf[model_index].gyro_bias;
 
-	// Accelerometer correction
-	// Project 'k' unit vector of earth frame to body frame
-	// Vector3f k = quaterion.conjugate_inversed(Vector3f(0.0f, 0.0f, 1.0f));
-	// Optimized version with dropped zeros
-	const Vector3f k(_ahrs_ekf_gsf[model_index].R(2,0), _ahrs_ekf_gsf[model_index].R(2,1), _ahrs_ekf_gsf[model_index].R(2,2));
+	const Dcmf R_to_body = _ahrs_ekf_gsf[model_index].R.transpose();
+	const Vector3f gravity_direction_bf = R_to_body.col(2);
 
 	// Perform angular rate correction using accel data and reduce correction as accel magnitude moves away from 1 g (reduces drift when vehicle picked up and moved).
 	// During fixed wing flight, compensate for centripetal acceleration assuming coordinated turns and X axis forward
-	Vector3f tilt_correction = {};
+	Vector3f tilt_correction;
 	if (_ahrs_accel_fusion_gain > 0.0f) {
 
 		Vector3f accel = _ahrs_accel;
 
 		if (_true_airspeed > FLT_EPSILON) {
 			// turn rate is component of gyro rate about vertical (down) axis
-			const float turn_rate = _ahrs_ekf_gsf[model_index].R(2,0) * ang_rate(0)
-					  + _ahrs_ekf_gsf[model_index].R(2,1) * ang_rate(1)
-					  + _ahrs_ekf_gsf[model_index].R(2,2) * ang_rate(2);
+			const float turn_rate = gravity_direction_bf.dot(ang_rate);
 
 			// use measured airspeed to calculate centripetal acceleration if available
 			const float centripetal_accel = _true_airspeed * turn_rate;
 
 			// project Y body axis onto horizontal and multiply by centripetal acceleration to give estimated
 			// centripetal acceleration vector in earth frame due to coordinated turn
-			Vector3f centripetal_accel_vec_ef = {_ahrs_ekf_gsf[model_index].R(0,1), _ahrs_ekf_gsf[model_index].R(1,1), 0.0f};
+			Vector3f centripetal_accel_vec_ef(_ahrs_ekf_gsf[model_index].R(0,1), _ahrs_ekf_gsf[model_index].R(1,1), 0.0f);
 			if (_ahrs_ekf_gsf[model_index].R(2,2) > 0.0f) {
 				// vehicle is upright
 				centripetal_accel_vec_ef *= centripetal_accel;
@@ -178,13 +173,13 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 			}
 
 			// rotate into body frame
-			Vector3f centripetal_accel_vec_bf = _ahrs_ekf_gsf[model_index].R.transpose() * centripetal_accel_vec_ef;
+			Vector3f centripetal_accel_vec_bf = R_to_body * centripetal_accel_vec_ef;
 
 			// correct measured accel for centripetal acceleration
 			accel -= centripetal_accel_vec_bf;
 		}
 
-		tilt_correction = (k % accel) * _ahrs_accel_fusion_gain / _ahrs_accel_norm;
+		tilt_correction = (gravity_direction_bf % accel) * _ahrs_accel_fusion_gain / _ahrs_accel_norm;
 
 	}
 
@@ -193,10 +188,7 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 	const float spinRate = ang_rate.length();
 	if (spinRate < 0.175f) {
 		_ahrs_ekf_gsf[model_index].gyro_bias -= tilt_correction * (_gyro_bias_gain * _delta_ang_dt);
-
-		for (int i = 0; i < 3; i++) {
-			_ahrs_ekf_gsf[model_index].gyro_bias(i) = math::constrain(_ahrs_ekf_gsf[model_index].gyro_bias(i), -gyro_bias_limit, gyro_bias_limit);
-		}
+		_ahrs_ekf_gsf[model_index].gyro_bias = matrix::constrain(_ahrs_ekf_gsf[model_index].gyro_bias, -gyro_bias_limit, gyro_bias_limit);
 	}
 
 	// delta angle from previous to current frame
@@ -218,13 +210,11 @@ void EKFGSF_yaw::ahrsAlignTilt()
 	const Vector3f down_in_bf = -_delta_vel.normalized();
 
 	// Calculate earth frame North axis unit vector rotated into body frame, orthogonal to 'down_in_bf'
-	// * operator is overloaded to provide a dot product
 	const Vector3f i_vec_bf(1.0f,0.0f,0.0f);
-	Vector3f north_in_bf = i_vec_bf - down_in_bf * (i_vec_bf * down_in_bf);
+	Vector3f north_in_bf = i_vec_bf - down_in_bf * (i_vec_bf.dot(down_in_bf));
 	north_in_bf.normalize();
 
 	// Calculate earth frame East axis unit vector rotated into body frame, orthogonal to 'down_in_bf' and 'north_in_bf'
-	// % operator is overloaded to provide a cross product
 	const Vector3f east_in_bf = down_in_bf % north_in_bf;
 
 	// Each column in a rotation matrix from earth frame to body frame represents the projection of the
@@ -514,12 +504,8 @@ void EKFGSF_yaw::initialiseEKFGSF()
 
 float EKFGSF_yaw::gaussianDensity(const uint8_t model_index) const
 {
-	// calculate inv(S) * innovation
-	const matrix::Vector2f tempVec = _ekf_gsf[model_index].S_inverse * _ekf_gsf[model_index].innov;
-
 	// calculate transpose(innovation) * inv(S) * innovation
-	// * operator is overloaded to provide a dot product
-	const float normDist = _ekf_gsf[model_index].innov * tempVec;
+	const float normDist = _ekf_gsf[model_index].innov.dot(_ekf_gsf[model_index].S_inverse * _ekf_gsf[model_index].innov);
 
 	return M_TWOPI_INV * sqrtf(_ekf_gsf[model_index].S_det_inverse) * expf(-0.5f * normDist);
 }
