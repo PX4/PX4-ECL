@@ -17,7 +17,7 @@ def quat2Rot(q):
 
 def create_cov_matrix(i, j):
     if j >= i:
-        return Symbol("P_" + str(i) + "_" + str(j) + "", real=True)
+        return Symbol("P[" + str(i) + "][" + str(j) + "]", real=True)
     else:
         return 0
     
@@ -40,49 +40,193 @@ def create_symmetric_cov_matrix():
 
     return P
 
-dt = Symbol("dt", real=True)  # dt
-g = Symbol("g", real=True) # gravity constant
+def generate_ccode(Input):
+    f_output = open(Input["save_location"], "a+")
+    
+    write_string = ""
+    
+    if Input["shape"][0] > 0 and Input["shape"][1] > 0:
+        # write a matrix
+        write_string = "float " + Input["array_identifier"] + "[" + str(Input["shape"][0]) + "][" + str(Input["shape"][1]) + "] = {};\n"
+        
+        for i in range(0, Input["shape"][0]):
+            for j in range(0, Input["shape"][1]):
+                if j >= i or not Input["symetric_matrix"]:
+                    write_string = write_string + Input["array_identifier"] + "[" + str(i) + "][" + str(j) + "] = " + ccode(Input["data"][i,j]) + ";\n"
+    elif  Input["shape"][0] == 0 and Input["shape"][1] == 0:
+        for item in Input["data"]:
+            write_string = write_string + "float " + str(item[0]) + " = " + ccode(item[1]) + ";\n"
+    
+    f_output.write(write_string)
+    f_output.close()
+            
 
-r_mag = Symbol("R_mag", real=True)  # magnetometer measurement noise variance
-r_baro = Symbol("R_baro", real=True)    # barometer noise variance
-r_hor_vel = Symbol("R_hor_vel", real=True) # horizontal velocity noise variance
-r_ver_vel = Symbol("R_vert_vel", real=True) # vertical velocity noise variance
-r_hor_pos = Symbol("R_hor_pos", real=True) # horizontal position noise variance
+def create_symbol(name, real=True):
+    symbol_name_list.append(name)
+    return Symbol(name, real=True)
+
+def set_values_for_cov_update(Input):
+    f_output = open(Input["save_location"], "a+")
+    
+    for index,item in enumerate(symbol_name_list):
+        write_string = "float " + item + " = " + str(symbol_value_list[item]) + ";\n"
+        f_output.write(write_string)
+    
+    f_output.close()
+    
+def set_values_for_cov_update_matlab(Input):
+    f_output = open(Input["save_location"], "a+")
+    
+    for item in symbol_values_matlab.keys():
+        write_string = "float " + item + " = " + str(symbol_values_matlab[item]) + ";\n"
+        f_output.write(write_string)
+    
+    f_output.close()
+    
+def set_symbol_values():
+    symbol_value_list = {
+           "dt" : 0.01,
+           "g"  : 9.81,
+           "R_mag" : 0.01,
+           "R_baro": 4.0,
+           "R_hor_vel" : 0.1**2,
+           "R_vert_vel" : 0.2**2,
+           "R_hor_pos" : 0.5**2,
+           "d_ang_x" : 0.1,
+           "d_ang_y" : 0.1,
+           "d_ang_z": 0.1,
+           "d_v_x"  : 0.1,
+           "d_v_y"  : 0.1,
+           "d_v_z"  :0.2,
+           "d_ang_x_var" : 0.01**2,
+           "d_ang_y_var" : 0.01**2,
+           "d_ang_z_var" : 0.01**2,
+           "d_v_x_var"  : 0.1**2,
+           "d_v_y_var"  : 0.1**2,
+           "d_v_z_var"  : 0.1**2,
+           "qw"     : 1,
+           "qx"     : 0,
+           "qy"     : 0,
+           "qz"     : 0,
+           "vx"     : 0.1,
+           "vy"     : 0.2,
+           "vz"     : 0.3,
+           "px"     : 0,
+           "py"     : 0,
+           "pz"     : 0,
+           "d_ang_bx" : 0.001,
+           "d_ang_by" : 0.002,
+           "d_ang_bz" : 0.003,
+           "d_vel_bx" : 0.001,
+           "d_vel_by" : 0.002,
+           "d_vel_bz" : 0.003,
+           "ix" : 0.2,
+           "iy" : 0,
+           "iz" : 0.5,
+           "ibx" : 0.01,
+           "iby" : 0.02,
+           "ibz" : 0.03,
+           "wx" : -1,
+           "wy" : 2
+            }
+    return symbol_value_list
+
+def set_symbol_values_matlab():
+    symbol_value_list = {
+           "dt" : 0.01,
+           "g"  : 9.81,
+           "R_mag" : 0.01,
+           "R_baro": 4.0,
+           "R_hor_vel" : 0.1**2,
+           "R_vert_vel" : 0.2**2,
+           "R_hor_pos" : 0.5**2,
+           "dax" : 0.1,
+           "day" : 0.1,
+           "daz": 0.1,
+           "dvx"  : 0.1,
+           "dvy"  : 0.1,
+           "dvz"  :0.2,
+           "daxVar" : 0.01**2,
+           "dayVar" : 0.01**2,
+           "dazVar" : 0.01**2,
+           "dvxVar"  : 0.1**2,
+           "dvyVar"  : 0.1**2,
+           "dvzVar"  : 0.1**2,
+           "q0"     : 1,
+           "q1"     : 0,
+           "q2"     : 0,
+           "q3"     : 0,
+           "vx"     : 0.1,
+           "vy"     : 0.2,
+           "vz"     : 0.3,
+           "px"     : 0,
+           "py"     : 0,
+           "pz"     : 0,
+           "dax_b" : 0.001,
+           "day_b" : 0.002,
+           "daz_b" : 0.003,
+           "dvx_b" : 0.001,
+           "dvy_b" : 0.002,
+           "dvz_b" : 0.003,
+           "ix" : 0.2,
+           "iy" : 0,
+           "iz" : 0.5,
+           "ibx" : 0.01,
+           "iby" : 0.02,
+           "ibz" : 0.03,
+           "wx" : -1,
+           "wy" : 2
+            }
+    return symbol_value_list
+        
+
+symbol_name_list = []
+symbol_value_list = set_symbol_values()
+symbol_values_matlab = set_symbol_values_matlab()
+
+dt = create_symbol("dt", real=True)  # dt
+g = create_symbol("g", real=True) # gravity constant
+
+r_mag = create_symbol("R_mag", real=True)  # magnetometer measurement noise variance
+r_baro = create_symbol("R_baro", real=True)    # barometer noise variance
+r_hor_vel = create_symbol("R_hor_vel", real=True) # horizontal velocity noise variance
+r_ver_vel = create_symbol("R_vert_vel", real=True) # vertical velocity noise variance
+r_hor_pos = create_symbol("R_hor_pos", real=True) # horizontal position noise variance
 
 # inputs, integrated gyro measurements
-d_ang_x = Symbol("d_ang_x", real=True)  # delta angle x
-d_ang_y = Symbol("d_ang_y", real=True)  # delta angle y
-d_ang_z = Symbol("d_ang_z", real=True)  # delta angle z
+d_ang_x = create_symbol("d_ang_x", real=True)  # delta angle x
+d_ang_y = create_symbol("d_ang_y", real=True)  # delta angle y
+d_ang_z = create_symbol("d_ang_z", real=True)  # delta angle z
 
 d_ang = Matrix([d_ang_x, d_ang_y, d_ang_z])
 
 # inputs, integrated accelerometer measurements
-d_v_x = Symbol("d_v_x", real=True)  # delta velocity x
-d_v_y = Symbol("d_v_y", real=True)  # delta velocity y
-d_v_z = Symbol("d_v_z", real=True)  # delta velocity z
+d_v_x = create_symbol("d_v_x", real=True)  # delta velocity x
+d_v_y = create_symbol("d_v_y", real=True)  # delta velocity y
+d_v_z = create_symbol("d_v_z", real=True)  # delta velocity z
 
 d_v = Matrix([d_v_x, d_v_y,d_v_z])
 
 u = Matrix([d_ang, d_v])
 
 # input noise
-d_ang_x_var = Symbol("d_ang_x_var", real=True)
-d_ang_y_var = Symbol("d_ang_y_var", real=True)
-d_ang_z_var = Symbol("d_ang_z_var", real=True)
+d_ang_x_var = create_symbol("d_ang_x_var", real=True)
+d_ang_y_var = create_symbol("d_ang_y_var", real=True)
+d_ang_z_var = create_symbol("d_ang_z_var", real=True)
 
-d_v_x_var = Symbol("d_v_x_var", real=True)
-d_v_y_var = Symbol("d_v_y_var", real=True)
-d_v_z_var = Symbol("d_v_z_var", real=True)
+d_v_x_var = create_symbol("d_v_x_var", real=True)
+d_v_y_var = create_symbol("d_v_y_var", real=True)
+d_v_z_var = create_symbol("d_v_z_var", real=True)
 
 var_u = Matrix.diag(d_ang_x_var, d_ang_y_var, d_ang_z_var, d_v_x_var, d_v_y_var, d_v_z_var)
 
 # define state vector
     
 # attitude quaternion
-qw = Symbol("qw", real=True)  # quaternion real part
-qx = Symbol("qx", real=True)  # quaternion x component
-qy = Symbol("qy", real=True)  # quaternion y component
-qz = Symbol("qz", real=True)  # quaternion z component
+qw = create_symbol("qw", real=True)  # quaternion real part
+qx = create_symbol("qx", real=True)  # quaternion x component
+qy = create_symbol("qy", real=True)  # quaternion y component
+qz = create_symbol("qz", real=True)  # quaternion z component
 
 q = Matrix([qw,qx,qy,qz])
 R_to_earth = quat2Rot(q)
@@ -90,54 +234,54 @@ R_to_body = R_to_earth.T
 
 
 # velocity in NED local frame
-vx = Symbol("vx", real=True)  # north velocity
-vy = Symbol("vy", real=True)  # east velocity
-vz = Symbol("vz", real=True)  # down velocity
+vx = create_symbol("vx", real=True)  # north velocity
+vy = create_symbol("vy", real=True)  # east velocity
+vz = create_symbol("vz", real=True)  # down velocity
 
 v = Matrix([vx,vy,vz])
 
 # position in NED local frame
-px = Symbol("px", real=True)  # north position
-py = Symbol("py", real=True)  # east position
-pz = Symbol("pz", real=True)  # down position
+px = create_symbol("px", real=True)  # north position
+py = create_symbol("py", real=True)  # east position
+pz = create_symbol("pz", real=True)  # down position
 
 p = Matrix([px,py,pz])
 
 # delta angle bias
-d_ang_bx = Symbol("d_ang_bx", real=True)  # delta angle bias x
-d_ang_by = Symbol("d_ang_by", real=True)  # delta angle bias y
-d_ang_bz = Symbol("d_ang_bz", real=True)  # delta angle bias z
+d_ang_bx = create_symbol("d_ang_bx", real=True)  # delta angle bias x
+d_ang_by = create_symbol("d_ang_by", real=True)  # delta angle bias y
+d_ang_bz = create_symbol("d_ang_bz", real=True)  # delta angle bias z
 
 d_ang_b = Matrix([d_ang_bx, d_ang_by, d_ang_bz])
 d_ang_true = d_ang - d_ang_b
 
 
 # delta velocity bias
-d_vel_bx = Symbol("d_vel_bx", real=True)  # delta velocity bias x
-d_vel_by = Symbol("d_vel_by", real=True)  # delta velocity bias y
-d_vel_bz = Symbol("d_vel_bz", real=True)  # delta velocity bias z
+d_vel_bx = create_symbol("d_vel_bx", real=True)  # delta velocity bias x
+d_vel_by = create_symbol("d_vel_by", real=True)  # delta velocity bias y
+d_vel_bz = create_symbol("d_vel_bz", real=True)  # delta velocity bias z
 
 d_vel_b = Matrix([d_vel_bx, d_vel_by, d_vel_bz])
 
 d_vel_true = d_v - d_vel_b
 
 # earth magnetic field vector
-ix = Symbol("ix", real=True)  # earth magnetic field x component
-iy = Symbol("iy", real=True)  # earth magnetic field y component
-iz = Symbol("iz", real=True)  # earth magnetic field z component
+ix = create_symbol("ix", real=True)  # earth magnetic field x component
+iy = create_symbol("iy", real=True)  # earth magnetic field y component
+iz = create_symbol("iz", real=True)  # earth magnetic field z component
 
 i = Matrix([ix,iy,iz])
 
 # magnetometer bias in body frame
-ibx = Symbol("ibx", real=True)  # earth magnetic field bias in body x
-iby = Symbol("iby", real=True)  # earth magnetic field bias in body y
-ibz = Symbol("ibz", real=True)  # earth magnetic field bias in body z
+ibx = create_symbol("ibx", real=True)  # earth magnetic field bias in body x
+iby = create_symbol("iby", real=True)  # earth magnetic field bias in body y
+ibz = create_symbol("ibz", real=True)  # earth magnetic field bias in body z
 
 ib = Matrix([ibx,iby,ibz])
 
 # wind in local NE frame
-wx = Symbol("wx", real=True)  # wind in north direction
-wy = Symbol("wy", real=True)  # wind in east direction
+wx = create_symbol("wx", real=True)  # wind in north direction
+wy = create_symbol("wy", real=True)  # wind in east direction
 
 w = Matrix([wx,wy])
 
@@ -178,6 +322,31 @@ for index in range(24):
 
 
 P_new_simple = cse(P_new, symbols("PS0:400"), optimizations='basic')
+Psimple = Matrix(P_new_simple[1])
+
+
+code_gen_data = {
+     "data" : P_new_simple[0],
+     "shape" : (0,0),
+     "save_location" : "./generated_python.cpp"
+     }
+
+generate_ccode(code_gen_data)
+
+            
+code_gen_data = {
+     "data" : Psimple,
+     "shape" : (24,24),
+     "array_identifier" : "nextP",
+     "symetric_matrix" : True,
+     "save_location" : "./generated_python.cpp"
+     }
+
+generate_ccode(code_gen_data)
+
+set_values_for_cov_update({"save_location" : "./generated_python.cpp"})
+
+set_values_for_cov_update_matlab({"save_location" : "./generated_matlab.cpp"})
 
 
 # magnetometer fusion
@@ -210,84 +379,84 @@ K_p_x = P * H_p[0,:].T / (H_p[0,:] * P * H_p[0,:].T + Matrix([r_hor_pos]))
 K_p_y = P * H_p[1,:].T / (H_p[1,:] * P * H_p[1,:].T + Matrix([r_hor_pos]))
 K_p_z = P * H_p[2,:].T / (H_p[2,:] * P * H_p[2,:].T + Matrix([r_baro]))
 
-#a= P_new.subs([(d_ang_x, 0.1), (d_ang_y, 0.2), (d_ang_z, 0.3), (d_ang_bx, 0.1), (d_ang_by, 0.2), (d_ang_bz, 0.3), (qw, 1), (qx, 0.3), (qy, 0.4), (qz, 0.5), (dt, 0.01), (d_v_x, 0.1), (d_v_y, 0.2), (d_v_z, 0.3), (d_vel_bx, 0.1), (d_vel_by, 0.2), (d_vel_bz, 0.3), (d_ang_x_var, 0.1), (d_ang_y_var, 0.2), (d_ang_z_var, 0.3), (d_v_x_var, 0.1), (d_v_y_var, 0.2), (d_v_z_var, 0.3)])
-#
-#
-#for index in range(24):
-#    for j in range(24):
-#        a = a.subs([(P[index,j], 0.1)])
-#       
-#        
-#sum_P = 0
-#for index in range(24):
-#    for j in range(24):
-#        sum_P = sum_P + a[index,j]
-#        
-#for index in range(24):
-#    sum_P = 0
-#    for j in range(24):
-#        sum_P = sum_P + a[index,j]
-#    
-#    print("sum %s %s") % (str(index), str(sum_P))
-#        
-#s = 0
-#for index in range(24):
-#        print(a[4,index])  
-#        
-## counter number of operations
-#mult = 0
-#sumations = 0
-#
-#for item in P_new_simple[0]:
-#    expression_string = str(item)
-#    
-#    for index,char in enumerate(expression_string):
-#        if char == "+" or char == "-":
-#            sumations = sumations + 1
-#            
-#        if char == "*":
-#            if index > 0 and expression_string[index-1] != "*":
-#                if index < len(expression_string) -1 and expression_string[index+1] != "*":
-#                    mult = mult +1
-#       
-#    
-#for item in P_new_simple[1][0]:
-#    expression_string = str(item)
-#    
-#    for index,char in enumerate(expression_string):
-#        if char == "+" or char == "-":
-#            sumations = sumations + 1
-#            
-#        if char == "*":
-#            if index > 0 and expression_string[index-1] != "*":
-#                if index < len(expression_string) -1 and expression_string[index+1] != "*":
-#                    mult = mult +1
-#
-#
-#f = open("./test.cpp", "r")
-#
-#sum_matlab = 0
-#mult_matlab = 0
-#
-#started = False
-#
-#for line in f.readlines():
-#    if "begin" in line:
-#        started = True
-#        
-#    if "end" in line:
-#         break
-#        
-#    if started:
-#        for index,char in enumerate(line):
-#            if char == "+" or char == "-":
-#                sum_matlab = sum_matlab + 1
-#        
-#            if char == "*":
-#                if index > 0 and line[index-1] != "*":
-#                    if index < len(line) -1 and line[index+1] != "*":
-#                        mult_matlab = mult_matlab +1
-#
-#
-#f.close()
+a= P_new.subs([(d_ang_x, 0.1), (d_ang_y, 0.2), (d_ang_z, 0.3), (d_ang_bx, 0.1), (d_ang_by, 0.2), (d_ang_bz, 0.3), (qw, 1), (qx, 0.3), (qy, 0.4), (qz, 0.5), (dt, 0.01), (d_v_x, 0.1), (d_v_y, 0.2), (d_v_z, 0.3), (d_vel_bx, 0.1), (d_vel_by, 0.2), (d_vel_bz, 0.3), (d_ang_x_var, 0.1), (d_ang_y_var, 0.2), (d_ang_z_var, 0.3), (d_v_x_var, 0.1), (d_v_y_var, 0.2), (d_v_z_var, 0.3)])
+
+
+for index in range(24):
+    for j in range(24):
+        a = a.subs([(P[index,j], 0.1)])
+       
+        
+sum_P = 0
+for index in range(24):
+    for j in range(24):
+        sum_P = sum_P + a[index,j]
+        
+for index in range(24):
+    sum_P = 0
+    for j in range(24):
+        sum_P = sum_P + a[index,j]
+    
+    print("sum %s %s") % (str(index), str(sum_P))
+        
+s = 0
+for index in range(24):
+        print(a[4,index])  
+        
+# counter number of operations
+mult = 0
+sumations = 0
+
+for item in P_new_simple[0]:
+    expression_string = str(item)
+    
+    for index,char in enumerate(expression_string):
+        if char == "+" or char == "-":
+            sumations = sumations + 1
+            
+        if char == "*":
+            if index > 0 and expression_string[index-1] != "*":
+                if index < len(expression_string) -1 and expression_string[index+1] != "*":
+                    mult = mult +1
+       
+    
+for item in P_new_simple[1][0]:
+    expression_string = str(item)
+    
+    for index,char in enumerate(expression_string):
+        if char == "+" or char == "-":
+            sumations = sumations + 1
+            
+        if char == "*":
+            if index > 0 and expression_string[index-1] != "*":
+                if index < len(expression_string) -1 and expression_string[index+1] != "*":
+                    mult = mult +1
+
+
+f = open("./test.cpp", "r")
+
+sum_matlab = 0
+mult_matlab = 0
+
+started = False
+
+for line in f.readlines():
+    if "begin" in line:
+        started = True
+        
+    if "end" in line:
+         break
+        
+    if started:
+        for index,char in enumerate(line):
+            if char == "+" or char == "-":
+                sum_matlab = sum_matlab + 1
+        
+            if char == "*":
+                if index > 0 and line[index-1] != "*":
+                    if index < len(line) -1 and line[index+1] != "*":
+                        mult_matlab = mult_matlab +1
+
+
+f.close()
 
