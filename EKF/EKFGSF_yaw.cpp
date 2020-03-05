@@ -357,13 +357,12 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	const float &P22 = _ekf_gsf[model_index].P(2,2);
 
 	// calculate innovation variance
-	_ekf_gsf[model_index].S(0,0) = P00 + velObsVar;
-	_ekf_gsf[model_index].S(1,1) = P11 + velObsVar;
-	_ekf_gsf[model_index].S(0,1) = P01;
-	_ekf_gsf[model_index].S(1,0) = P10;
+	matrix::SquareMatrix<float, 2> S = _ekf_gsf[model_index].P.slice<2, 2>(0, 0);
+	S(0, 0) += velObsVar;
+	S(1, 1) += velObsVar;
 
 	// Update the inverse of the innovation covariance matrix S_inverse
-	updateInnovCovMatInv(model_index);
+	updateInnovCovMatInv(model_index, S);
 
 	// Perform a chi-square innovation consistency test and calculate a compression scale factor that limits the magnitude of innovations to 5-sigma
 	float innov_comp_scale_factor = 1.0f;
@@ -510,21 +509,21 @@ float EKFGSF_yaw::gaussianDensity(const uint8_t model_index) const
 	return M_TWOPI_INV * sqrtf(_ekf_gsf[model_index].S_det_inverse) * expf(-0.5f * normDist);
 }
 
-void EKFGSF_yaw::updateInnovCovMatInv(const uint8_t model_index)
+void EKFGSF_yaw::updateInnovCovMatInv(const uint8_t model_index, const matrix::SquareMatrix<float, 2> &S)
 {
 	// calculate determinant for innovation covariance matrix
-	const float t2 = _ekf_gsf[model_index].S(0,0) * _ekf_gsf[model_index].S(1,1);
-	const float t5 = _ekf_gsf[model_index].S(0,1) * _ekf_gsf[model_index].S(1,0);
+	const float t2 = S(0,0) * S(1,1);
+	const float t5 = S(0,1) * S(1,0);
 	const float t3 = t2 - t5;
 
 	// calculate determinant inverse and protect against badly conditioned matrix
 	_ekf_gsf[model_index].S_det_inverse = 1.0f / fmaxf(t3 , 1e-12f);
 
 	// calculate inv(S)
-	_ekf_gsf[model_index].S_inverse(0,0) =   _ekf_gsf[model_index].S_det_inverse * _ekf_gsf[model_index].S(1,1);
-	_ekf_gsf[model_index].S_inverse(1,1) =   _ekf_gsf[model_index].S_det_inverse * _ekf_gsf[model_index].S(0,0);
-	_ekf_gsf[model_index].S_inverse(0,1) = - _ekf_gsf[model_index].S_det_inverse * _ekf_gsf[model_index].S(0,1);
-	_ekf_gsf[model_index].S_inverse(1,0) = - _ekf_gsf[model_index].S_det_inverse * _ekf_gsf[model_index].S(1,0);
+	_ekf_gsf[model_index].S_inverse(0,0) =   _ekf_gsf[model_index].S_det_inverse * S(1,1);
+	_ekf_gsf[model_index].S_inverse(1,1) =   _ekf_gsf[model_index].S_det_inverse * S(0,0);
+	_ekf_gsf[model_index].S_inverse(0,1) = - _ekf_gsf[model_index].S_det_inverse * S(0,1);
+	_ekf_gsf[model_index].S_inverse(1,0) = - _ekf_gsf[model_index].S_det_inverse * S(1,0);
 
 }
 
