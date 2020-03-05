@@ -59,8 +59,6 @@ void EKFGSF_yaw::update(const imuSample& imu_sample,
 			ahrsAlignYaw();
 			_ekf_gsf_vel_fuse_started = true;
 		} else {
-			float total_w = 0.0f;
-			float newWeight[N_MODELS_EKFGSF];
 			bool bad_update = false;
 			for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 				// subsequent measurements are fused as direct state observations
@@ -70,18 +68,16 @@ void EKFGSF_yaw::update(const imuSample& imu_sample,
 			}
 
 			if (!bad_update) {
+				float total_weight = 0.0f;
 				// calculate weighting for each model assuming a normal distribution
 				for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-					newWeight[model_index] = fmaxf(gaussianDensity(model_index) * _ekf_gsf[model_index].W, 0.0f);
-					total_w += newWeight[model_index];
+					_model_weights(model_index) = fmaxf(gaussianDensity(model_index) * _model_weights(model_index), 0.0f);
+					total_weight += _model_weights(model_index);
 				}
 
 				// normalise the weighting function
-				if (_ekf_gsf_vel_fuse_started && total_w > 1e-15f && !bad_update) {
-					const float total_w_inv = 1.0f / total_w;
-					for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-						_ekf_gsf[model_index].W = newWeight[model_index] * total_w_inv;
-					}
+				if (total_weight > 1e-15f) {
+					_model_weights /= total_weight;
 				}
 
 				// Enforce a minimum weighting value. This was added during initial development but has not been needed
@@ -92,12 +88,12 @@ void EKFGSF_yaw::update(const imuSample& imu_sample,
 					bool change_mask[N_MODELS_EKFGSF] = {}; // true when the weighting for that model has been increased
 					float unmodified_weights_sum = 0.0f; // sum of unmodified weights
 					for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-						if (_ekf_gsf[model_index].W < _weight_min) {
-							correction_sum += _weight_min - _ekf_gsf[model_index].W;
-							_ekf_gsf[model_index].W = _weight_min;
+						if (_model_weights(model_index) < _weight_min) {
+							correction_sum += _weight_min - _model_weights(model_index);
+							_model_weights(model_index) = _weight_min;
 							change_mask[model_index] = true;
 						} else {
-							unmodified_weights_sum += _ekf_gsf[model_index].W;
+							unmodified_weights_sum += _model_weights(model_index);
 						}
 					}
 
@@ -105,7 +101,7 @@ void EKFGSF_yaw::update(const imuSample& imu_sample,
 					const float scale_factor = (unmodified_weights_sum - correction_sum - _weight_min) / (unmodified_weights_sum - _weight_min);
 					for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 						if (!change_mask[model_index]) {
-							_ekf_gsf[model_index].W = _weight_min + scale_factor * (_ekf_gsf[model_index].W - _weight_min);
+							_model_weights(model_index) = _weight_min + scale_factor * (_model_weights(model_index) - _weight_min);
 						}
 					}
 				}
@@ -121,8 +117,8 @@ void EKFGSF_yaw::update(const imuSample& imu_sample,
 	// equal to the weighting value before it is summed.
 	Vector2f yaw_vector;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-		yaw_vector(0) += _ekf_gsf[model_index].W * cosf(_ekf_gsf[model_index].X(2));
-		yaw_vector(1) += _ekf_gsf[model_index].W * sinf(_ekf_gsf[model_index].X(2));
+		yaw_vector(0) += _model_weights(model_index) * cosf(_ekf_gsf[model_index].X(2));
+		yaw_vector(1) += _model_weights(model_index) * sinf(_ekf_gsf[model_index].X(2));
 	}
 	_gsf_yaw = atan2f(yaw_vector(1),yaw_vector(0));
 
@@ -131,7 +127,7 @@ void EKFGSF_yaw::update(const imuSample& imu_sample,
 	_gsf_yaw_variance = 0.0f;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 		const float yaw_delta = wrap_pi(_ekf_gsf[model_index].X(2) - _gsf_yaw);
-		_gsf_yaw_variance += _ekf_gsf[model_index].W * (_ekf_gsf[model_index].P(2,2) + yaw_delta * yaw_delta);
+		_gsf_yaw_variance += _model_weights(model_index) * (_ekf_gsf[model_index].P(2,2) + yaw_delta * yaw_delta);
 	}
 
 	// prevent the same velocity data being used more than once
@@ -481,14 +477,13 @@ void EKFGSF_yaw::initialiseEKFGSF()
 	_gsf_yaw = 0.0f;
 	_ekf_gsf_vel_fuse_started = false;
 	_gsf_yaw_variance = M_PI_2_F * M_PI_2_F;
+	_model_weights.setAll(1.0f / (float)N_MODELS_EKFGSF);  // All filter models start with the same weight
+
 	memset(&_ekf_gsf, 0, sizeof(_ekf_gsf));
 	const float yaw_increment = 2.0f * M_PI_F / (float)N_MODELS_EKFGSF;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
 		// evenly space initial yaw estimates in the region between +-Pi
 		_ekf_gsf[model_index].X(2) = -M_PI_F + (0.5f * yaw_increment) + ((float)model_index * yaw_increment);
-
-		// All filter models start with the same weight
-		_ekf_gsf[model_index].W = 1.0f / (float)N_MODELS_EKFGSF;
 
 		// take velocity states and corresponding variance from last meaurement
 		_ekf_gsf[model_index].X(0) = _vel_NE(0);
@@ -536,7 +531,7 @@ bool EKFGSF_yaw::getLogData(float *yaw_composite, float *yaw_variance, float yaw
 			yaw[model_index] = _ekf_gsf[model_index].X(2);
 			innov_VN[model_index] = _ekf_gsf[model_index].innov(0);
 			innov_VE[model_index] = _ekf_gsf[model_index].innov(1);
-			weight[model_index] = _ekf_gsf[model_index].W;
+			weight[model_index] = _model_weights(model_index);
 		}
 		return true;
 	}

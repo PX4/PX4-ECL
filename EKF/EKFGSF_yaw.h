@@ -95,7 +95,6 @@ private:
 	struct _ekf_gsf_struct{
 		matrix::Vector3f X; // Vel North (m/s),  Vel East (m/s), yaw (rad)s
 		matrix::SquareMatrix<float, 3> P; // covariance matrix
-		float W = 0.0f; // weighting
 		matrix::SquareMatrix<float, 2> S_inverse;  // inverse of the innovation covariance matrix
 		float S_det_inverse; // inverse of the innovation covariance matrix determinant
 		matrix::Vector2f innov; // Velocity N,E innovation (m/s)
@@ -106,6 +105,8 @@ private:
 	Vector2f _vel_NE;        // NE velocity observations (m/s)
 	float _vel_accuracy;     // 1-sigma accuracy of velocity observations (m/s)
 	bool _ekf_gsf_vel_fuse_started;	// true when the EKF's have started fusing velocity data and the prediction and update processing is active
+
+	matrix::Vector<float, N_MODELS_EKFGSF> _model_weights;
 
 	// initialise states and covariance data for the GSF and EKF filters
 	void initialiseEKFGSF();
