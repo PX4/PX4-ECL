@@ -4,6 +4,8 @@
 #include <matrix/math.hpp>
 #include <mathlib/mathlib.h>
 
+#include "common.h"
+
 using matrix::AxisAnglef;
 using matrix::Dcmf;
 using matrix::Eulerf;
@@ -24,10 +26,7 @@ public:
     	EKFGSF_yaw();
 
     	// Update Filter States - this should be called whenever new IMU data is available
-	void update(const Vector3f del_ang, // IMU delta angle rotation vector meassured in body frame (rad)
-                	const Vector3f del_vel, // IMU delta velocity vector meassured in body frame (m/s)
-                	const float del_ang_dt, // time interval that del_ang was integrated over (sec)
-                	const float del_vel_dt, // time interval that del_vel was integrated over (sec)
+	void update(const imuSample &imu_sample,
                 	bool run_EKF,           // set to true when flying or movement is suitable for yaw estimation
                 	float airspeed);   	// true airspeed used for centripetal accel compensation - set to 0 when not required.
 

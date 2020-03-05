@@ -1830,7 +1830,8 @@ void Ekf::runYawEKFGSF()
 	} else {
 		TAS = _airspeed_sample_delayed.true_airspeed;
 	}
-	yawEstimator.update(_imu_sample_delayed.delta_ang, _imu_sample_delayed.delta_vel, _imu_sample_delayed.delta_ang_dt, _imu_sample_delayed.delta_vel_dt, _control_status.flags.in_air, TAS);
+
+	yawEstimator.update(_imu_sample_delayed, _control_status.flags.in_air, TAS);
 
 	// basic sanity check on GPS velocity data
 	if (_gps_data_ready && _gps_sample_delayed.vacc > FLT_EPSILON && isfinite(_gps_sample_delayed.vel(0)) && isfinite(_gps_sample_delayed.vel(1))) {

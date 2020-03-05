@@ -13,18 +13,15 @@ EKFGSF_yaw::EKFGSF_yaw()
 	_ahrs_accel.zero();
 }
 
-void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vector meassured in body frame (rad)
-                	const Vector3f del_vel, // IMU delta velocity vector meassured in body frame (m/s)
-                	const float del_ang_dt, // time interval that del_ang was integrated over (sec)
-                	const float del_vel_dt, // time interval that del_vel was integrated over (sec)
+void EKFGSF_yaw::update(const imuSample& imu_sample,
                 	bool run_EKF,           // set to true when flying or movement is suitable for yaw estimation
                 	float airspeed)   	// true airspeed used for centripetal accel compensation - set to 0 when not required.
 {
 	// copy to class variables
-	_delta_ang = del_ang;
-	_delta_vel = del_vel;
-	_delta_ang_dt = del_ang_dt;
-	_delta_vel_dt = del_vel_dt;
+	_delta_ang = imu_sample.delta_ang;
+	_delta_vel = imu_sample.delta_vel;
+	_delta_ang_dt = imu_sample.delta_ang_dt;
+	_delta_vel_dt = imu_sample.delta_vel_dt;
 	_run_ekf_gsf = run_EKF;
 	_true_airspeed = airspeed;
 
