@@ -1785,12 +1785,9 @@ bool Ekf::resetYawToEKFGSF()
 
 }
 
-void Ekf::requestEmergencyNavReset(uint8_t counter)
+void Ekf::requestEmergencyNavReset()
 {
-	if (counter > _yaw_extreset_counter) {
-		_yaw_extreset_counter = counter;
-		_do_emergency_yaw_reset = true;
-	}
+	_do_emergency_yaw_reset = true;
 }
 
 bool Ekf::getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF])
