@@ -83,8 +83,8 @@ private:
 	_ahrs_ekf_gsf_struct _ahrs_ekf_gsf[N_MODELS_EKFGSF];
 	bool _ahrs_ekf_gsf_tilt_aligned = false;// true the initial tilt alignment has been calculated
 	float _ahrs_accel_fusion_gain;		// gain from accel vector tilt error to rate gyro correction used by AHRS calculation
-	Vector3f _ahrs_accel;			// measured body frame specific force vector used by AHRS calculation (m/s/s)
-	float _ahrs_accel_norm;			// length of body frame specific force vector used by AHRS calculation (m/s/s)
+	Vector3f _ahrs_accel;			// low pass filtered body frame specific force vector used by AHRS calculation (m/s/s)
+	float _ahrs_accel_norm;			// length of _ahrs_accel specific force vector used by AHRS calculation (m/s/s)
 
 	// calculate the gain from gravity vector misalingment to tilt correction to be used by all AHRS filters
 	void ahrsCalcAccelGain();

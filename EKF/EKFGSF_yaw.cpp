@@ -10,6 +10,7 @@ EKFGSF_yaw::EKFGSF_yaw()
 	memset(&_ahrs_ekf_gsf, 0, sizeof(_ahrs_ekf_gsf));
 	memset(&_ekf_gsf, 0, sizeof(_ekf_gsf));
 	_gsf_yaw = 0.0f;
+	_ahrs_accel.zero();
 }
 
 void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vector meassured in body frame (rad)
@@ -27,12 +28,16 @@ void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vect
 	_run_ekf_gsf = run_EKF;
 	_true_airspeed = airspeed;
 
-	// Iniitialise states first time
-	_ahrs_accel = _delta_vel / fmaxf(_delta_vel_dt, 0.001f);
+	// to reduce effect of vibration, filter using an LPF whose time constant is 1/10 of the AHRS tilt correction time constant
+	const float filter_coef = fminf(10.0f * _delta_vel_dt * _tilt_gain, 1.0f);
+	const Vector3f accel = _delta_vel / fmaxf(_delta_vel_dt, 0.001f);
+	_ahrs_accel = _ahrs_accel * (1.0f - filter_coef) + accel * filter_coef;
+
+	// Initialise states first time
 	if (!_ahrs_ekf_gsf_tilt_aligned) {
 		// check for excessive acceleration to reduce likelihood of large inital roll/pitch errors
 		// due to vehicle movement
-		const float accel_norm_sq = _ahrs_accel.norm_squared();
+		const float accel_norm_sq = accel.norm_squared();
 		const float upper_accel_limit = CONSTANTS_ONE_G * 1.1f;
 		const float lower_accel_limit = CONSTANTS_ONE_G * 0.9f;
 		const bool ok_to_align = (accel_norm_sq > sq(lower_accel_limit)) && (accel_norm_sq < sq(upper_accel_limit));
