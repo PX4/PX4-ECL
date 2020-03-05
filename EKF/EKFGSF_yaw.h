@@ -13,24 +13,14 @@ using matrix::Vector2f;
 using matrix::Vector3f;
 using matrix::wrap_pi;
 
-#define N_MODELS_EKFGSF 5
+static constexpr uint8_t N_MODELS_EKFGSF = 5;
+static constexpr float M_TWOPI_INV = 0.159154943f;
 
-#ifndef M_PI_F
-#define M_PI_F 3.14159265f
-#endif
-
-#ifndef M_PI_2_F
-#define M_PI_2_F 1.57079632f
-#endif
-
-#ifndef M_TWOPI_INV
-#define M_TWOPI_INV 0.159154943f
-#endif
+using namespace estimator;
 
 class EKFGSF_yaw
 {
 public:
-    	// Constructor
     	EKFGSF_yaw();
 
     	// Update Filter States - this should be called whenever new IMU data is available
@@ -41,7 +31,7 @@ public:
                 	bool run_EKF,           // set to true when flying or movement is suitable for yaw estimation
                 	float airspeed);   	// true airspeed used for centripetal accel compensation - set to 0 when not required.
 
-	void setVelocity(Vector2f velocity,	// NE velocity measurement (m/s)
+	void setVelocity(const Vector2f &velocity,	// NE velocity measurement (m/s)
                      	float accuracy);	// 1-sigma accuracy of velocity measurement (m/s)
 
 	// get solution data for logging
@@ -99,7 +89,7 @@ private:
 	void ahrsAlignYaw();
 
 	// Efficient propagation of a delta angle in body frame applied to the body to earth frame rotation matrix
-	Matrix3f ahrsPredictRotMat(Matrix3f &R, Vector3f &g);
+	Matrix3f ahrsPredictRotMat(const Matrix3f &R, const Vector3f &g);
 
 	// Declarations used by a bank of N_MODELS_EKFGSF EKFs
 

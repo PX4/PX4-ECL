@@ -81,7 +81,7 @@ void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vect
 
 				// normalise the weighting function
 				if (_ekf_gsf_vel_fuse_started && total_w > 1e-15f && !bad_update) {
-					float total_w_inv = 1.0f / total_w;
+					const float total_w_inv = 1.0f / total_w;
 					for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 						_ekf_gsf[model_index].W = newWeight[model_index] * total_w_inv;
 					}
@@ -133,7 +133,7 @@ void EKFGSF_yaw::update(const Vector3f del_ang, // IMU delta angle rotation vect
 	// models with larger innovations are weighted less
 	_gsf_yaw_variance = 0.0f;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
-		float yaw_delta = wrap_pi(_ekf_gsf[model_index].X(2) - _gsf_yaw);
+		const float yaw_delta = wrap_pi(_ekf_gsf[model_index].X(2) - _gsf_yaw);
 		_gsf_yaw_variance += _ekf_gsf[model_index].W * (_ekf_gsf[model_index].P(2,2) + yaw_delta * yaw_delta);
 	}
 
@@ -145,7 +145,7 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 {
 	// generate attitude solution using simple complementary filter for the selected model
 
-	Vector3f ang_rate = _delta_ang / fmaxf(_delta_ang_dt, 0.001f) - _ahrs_ekf_gsf[model_index].gyro_bias;
+	const Vector3f ang_rate = _delta_ang / fmaxf(_delta_ang_dt, 0.001f) - _ahrs_ekf_gsf[model_index].gyro_bias;
 
 	// Accelerometer correction
 	// Project 'k' unit vector of earth frame to body frame
@@ -167,7 +167,7 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 					  + _ahrs_ekf_gsf[model_index].R(2,2) * ang_rate(2);
 
 			// use measured airspeed to calculate centripetal acceleration if available
-			float centripetal_accel = _true_airspeed * turn_rate;
+			const float centripetal_accel = _true_airspeed * turn_rate;
 
 			// project Y body axis onto horizontal and multiply by centripetal acceleration to give estimated
 			// centripetal acceleration vector in earth frame due to coordinated turn
@@ -192,7 +192,7 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 	}
 
 	// Gyro bias estimation
-	const float gyro_bias_limit = 0.05f;
+	constexpr float gyro_bias_limit = 0.05f;
 	const float spinRate = ang_rate.length();
 	if (spinRate < 0.175f) {
 		_ahrs_ekf_gsf[model_index].gyro_bias -= tilt_correction * (_gyro_bias_gain * _delta_ang_dt);
@@ -203,7 +203,7 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 	}
 
 	// delta angle from previous to current frame
-	Vector3f delta_angle_corrected = _delta_ang + (tilt_correction - _ahrs_ekf_gsf[model_index].gyro_bias) * _delta_ang_dt;
+	const Vector3f delta_angle_corrected = _delta_ang + (tilt_correction - _ahrs_ekf_gsf[model_index].gyro_bias) * _delta_ang_dt;
 
 	// Apply delta angle to rotation matrix
 	_ahrs_ekf_gsf[model_index].R = ahrsPredictRotMat(_ahrs_ekf_gsf[model_index].R, delta_angle_corrected);
@@ -218,8 +218,7 @@ void EKFGSF_yaw::ahrsAlignTilt()
 	// 2) The vehicle is not accelerating so all of the measured acceleration is due to gravity.
 
 	// Calculate earth frame Down axis unit vector rotated into body frame
-	Vector3f down_in_bf = -_delta_vel;
-	down_in_bf.normalize();
+	const Vector3f down_in_bf = -_delta_vel.normalized();
 
 	// Calculate earth frame North axis unit vector rotated into body frame, orthogonal to 'down_in_bf'
 	// * operator is overloaded to provide a dot product
@@ -470,8 +469,10 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 
 	// Correct the state vector and capture the change in yaw angle
 	const float oldYaw = _ekf_gsf[model_index].X(2);
+
 	_ekf_gsf[model_index].X -= (K * _ekf_gsf[model_index].innov) * innov_comp_scale_factor;
-	float yawDelta = _ekf_gsf[model_index].X(2) - oldYaw;
+
+	const float yawDelta = _ekf_gsf[model_index].X(2) - oldYaw;
 
 	// apply the change in yaw angle to the AHRS
 	// take advantage of sparseness in the yaw rotation matrix
@@ -593,7 +594,7 @@ void EKFGSF_yaw::ahrsCalcAccelGain()
 	// at the min and mas g value. Allow for more acceleration when flying as a fixed wing vehicle using centripetal
 	// acceleration correction as higher and more sustained g will be experienced.
 	// Use a quadratic finstead of linear unction to prevent vibration around 1g reducing the tilt correction effectiveness.
-	float accel_g = _ahrs_accel_norm / CONSTANTS_ONE_G;
+	const float accel_g = _ahrs_accel_norm / CONSTANTS_ONE_G;
 	if (accel_g > 1.0f) {
 		if (_true_airspeed > FLT_EPSILON && accel_g < 2.0f) {
 			_ahrs_accel_fusion_gain = _tilt_gain * sq(2.0f - accel_g);
@@ -609,7 +610,7 @@ void EKFGSF_yaw::ahrsCalcAccelGain()
 	}
 }
 
-Matrix3f EKFGSF_yaw::ahrsPredictRotMat(Matrix3f &R, Vector3f &g)
+Matrix3f EKFGSF_yaw::ahrsPredictRotMat(const Matrix3f &R, const Vector3f &g)
 {
 	Matrix3f ret = R;
 	ret(0,0) += R(0,1) * g(2) - R(0,2) * g(1);
@@ -648,7 +649,7 @@ bool EKFGSF_yaw::getYawData(float *yaw, float *yaw_variance)
 	return false;
 }
 
-void EKFGSF_yaw::setVelocity(Vector2f velocity, float accuracy)
+void EKFGSF_yaw::setVelocity(const Vector2f &velocity, float accuracy)
 {
 	_vel_NE = velocity;
 	_vel_accuracy = accuracy;
