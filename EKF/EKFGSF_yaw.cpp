@@ -479,14 +479,14 @@ void EKFGSF_yaw::initialiseEKFGSF()
 {
 	_gsf_yaw = 0.0f;
 	_ekf_gsf_vel_fuse_started = false;
-	_gsf_yaw_variance = M_PI_2_F * M_PI_2_F;
+	_gsf_yaw_variance = _m_pi2 * _m_pi2;
 	_model_weights.setAll(1.0f / (float)N_MODELS_EKFGSF);  // All filter models start with the same weight
 
 	memset(&_ekf_gsf, 0, sizeof(_ekf_gsf));
-	const float yaw_increment = 2.0f * M_PI_F / (float)N_MODELS_EKFGSF;
+	const float yaw_increment = 2.0f * _m_pi / (float)N_MODELS_EKFGSF;
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index++) {
 		// evenly space initial yaw estimates in the region between +-Pi
-		_ekf_gsf[model_index].X(2) = -M_PI_F + (0.5f * yaw_increment) + ((float)model_index * yaw_increment);
+		_ekf_gsf[model_index].X(2) = -_m_pi + (0.5f * yaw_increment) + ((float)model_index * yaw_increment);
 
 		// take velocity states and corresponding variance from last meaurement
 		_ekf_gsf[model_index].X(0) = _vel_NE(0);
@@ -504,7 +504,7 @@ float EKFGSF_yaw::gaussianDensity(const uint8_t model_index) const
 	// calculate transpose(innovation) * inv(S) * innovation
 	const float normDist = _ekf_gsf[model_index].innov.dot(_ekf_gsf[model_index].S_inverse * _ekf_gsf[model_index].innov);
 
-	return M_TWOPI_INV * sqrtf(_ekf_gsf[model_index].S_det_inverse) * expf(-0.5f * normDist);
+	return _m_2pi_inv * sqrtf(_ekf_gsf[model_index].S_det_inverse) * expf(-0.5f * normDist);
 }
 
 void EKFGSF_yaw::updateInnovCovMatInv(const uint8_t model_index, const matrix::SquareMatrix<float, 2> &S)

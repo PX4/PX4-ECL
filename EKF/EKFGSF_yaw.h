@@ -16,7 +16,11 @@ using matrix::Vector3f;
 using matrix::wrap_pi;
 
 static constexpr uint8_t N_MODELS_EKFGSF = 5;
-static constexpr float M_TWOPI_INV = 0.159154943f;
+
+// Required math constants
+static constexpr float _m_2pi_inv = 0.159154943f;
+static constexpr float _m_pi = 3.14159265f;
+static constexpr float _m_pi2 = 1.57079632f;
 
 using namespace estimator;
 
@@ -46,6 +50,7 @@ public:
     	bool getYawData(float *yaw, float *yaw_variance);
 
 private:
+
 	// Parameters - these could be made tuneable
 	const float _gyro_noise{1.0e-1f}; 	// yaw rate noise used for covariance prediction (rad/sec)
 	const float _accel_noise{2.0f};		// horizontal accel noise used for covariance prediction (m/sec**2)
