@@ -111,8 +111,6 @@ private:
 	float _vel_accuracy;     // 1-sigma accuracy of velocity observations (m/s)
 	bool _ekf_gsf_vel_fuse_started;	// true when the EKF's have started fusing velocity data and the prediction and update processing is active
 
-	matrix::Vector<float, N_MODELS_EKFGSF> _model_weights;
-
 	// initialise states and covariance data for the GSF and EKF filters
 	void initialiseEKFGSF();
 
@@ -135,6 +133,7 @@ private:
 
 	// Declarations used by the Gaussian Sum Filter (GSF) that combines the individual EKF yaw estimates
 
+	matrix::Vector<float, N_MODELS_EKFGSF> _model_weights;
 	float _gsf_yaw; 		// yaw estimate (rad)
 	float _gsf_yaw_variance; 	// variance of yaw estimate (rad^2)
 
