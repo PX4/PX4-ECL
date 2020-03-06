@@ -290,9 +290,8 @@ public:
 
 	// Request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
 	// and reset the velocity and position states to the GPS. This will cause the EKF
-	// to ignore the magnetomer for the remainder of flight.
+	// to ignore the magnetometer for the remainder of flight.
 	// This should only be used as a last resort before activating a loss of navigation failsafe
-	// The counter must be incremented for each new reset request
 	void requestEmergencyNavReset() override;
 
 private:
