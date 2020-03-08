@@ -148,7 +148,7 @@ bool Ekf::isYawResetAuthorized() const
 
 bool Ekf::canResetMagHeading() const
 {
-	return !isStrongMagneticDisturbance();
+	return !isStrongMagneticDisturbance() && (_params.mag_fusion_type != MAG_FUSE_TYPE_NONE);
 }
 
 void Ekf::runInAirYawReset()
@@ -272,7 +272,8 @@ bool Ekf::shouldInhibitMag() const
 	// if a yaw angle relative to true North is required for navigation. If no GPS or other earth frame aiding
 	// is available, assume that we are operating indoors and the magnetometer should not be used.
 	// Also inhibit mag fusion when a strong magnetic field interference is detected
-	const bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR);
+	const bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR) ||
+				(_params.mag_fusion_type == MAG_FUSE_TYPE_NONE);
 
 	const bool heading_not_required_for_navigation = !_control_status.flags.gps
 							 && !_control_status.flags.ev_pos

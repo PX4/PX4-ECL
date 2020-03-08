@@ -644,6 +644,22 @@ void Ekf::controlGpsFusion()
 			ECL_WARN_TIMESTAMPED("GPS data quality poor - stopping use");
 		}
 
+		// handle case where we are not currently using GPS, but need to align yaw angle using EKF-GSF before
+		// we can start using GPS
+		if (!_control_status.flags.gps && _do_ekfgsf_yaw_reset && isTimedOut(_ekfgsf_yaw_reset_time, 5000000)) {
+			if (resetYawToEKFGSF()) {
+				_ekfgsf_yaw_reset_time = _time_last_imu;
+				_do_ekfgsf_yaw_reset = false;
+
+				// Reset the timeout counters
+				_time_last_hor_pos_fuse = _time_last_imu;
+				_time_last_delpos_fuse = _time_last_imu;
+				_time_last_hor_vel_fuse = _time_last_imu;
+				_time_last_of_fuse = _time_last_imu;
+
+			}
+		}
+
 		// handle the case when we now have GPS, but have not been using it for an extended period
 		if (_control_status.flags.gps) {
 			// We are relying on aiding to constrain drift so after a specified time
@@ -667,14 +683,14 @@ void Ekf::controlGpsFusion()
 				_time_last_on_ground_us = _time_last_imu;
 			}
 			const bool recent_takeoff = _control_status.flags.in_air && !isTimedOut(_time_last_on_ground_us, 30000000);
-			const bool reset_yaw_to_EKFGSF = (do_reset || _do_emergency_yaw_reset || stopped_following_gps_velocity) &&
+			const bool reset_yaw_to_EKFGSF = (do_reset || _do_ekfgsf_yaw_reset || stopped_following_gps_velocity) &&
 								recent_takeoff &&
-								isTimedOut(_emergency_yaw_reset_time, 5000000);
+								isTimedOut(_ekfgsf_yaw_reset_time, 5000000);
 
 			if (reset_yaw_to_EKFGSF) {
 				if (resetYawToEKFGSF()) {
-					_emergency_yaw_reset_time = _time_last_imu;
-					_do_emergency_yaw_reset = false;
+					_ekfgsf_yaw_reset_time = _time_last_imu;
+					_do_ekfgsf_yaw_reset = false;
 
 					// Reset the timeout counters
 					_time_last_hor_pos_fuse = _time_last_imu;
