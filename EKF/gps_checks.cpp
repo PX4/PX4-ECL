@@ -88,6 +88,7 @@ bool Ekf::collect_gps(const gps_message &gps)
 		if (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE) {
 			// try to reset the yaw using the EKF-GSF yaw esitimator
 			_do_ekfgsf_yaw_reset = true;
+			_ekfgsf_yaw_reset_time = 0;
 		} else {
 			_mag_yaw_reset_req = true;
 		}
