@@ -57,11 +57,7 @@ void Ekf::initialiseCovariance()
 
 	const float dt = FILTER_UPDATE_PERIOD_S;
 
-	// define the initial angle uncertainty as variances for a rotation vector
-	Vector3f rot_vec_var;
-	rot_vec_var.setAll(sq(_params.initial_tilt_err));
-
-	initialiseQuatCovariances(rot_vec_var);
+	resetQuatCov();
 
 	// velocity
 	P(4,4) = sq(fmaxf(_params.gps_vel_noise, 0.01f));
@@ -868,6 +864,12 @@ void Ekf::resetMagRelatedCovariances()
 
 void Ekf::resetQuatCov(){
 	zeroQuatCov();
+
+	// define the initial angle uncertainty as variances for a rotation vector
+	Vector3f rot_vec_var;
+	rot_vec_var.setAll(sq(_params.initial_tilt_err));
+
+	initialiseQuatCovariances(rot_vec_var);
 }
 
 void Ekf::zeroQuatCov()
