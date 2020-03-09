@@ -177,7 +177,7 @@ struct auxVelSample {
 #define MASK_USE_DRAG  (1<<5)		///< set to true to use the multi-rotor drag model to estimate wind
 #define MASK_ROTATE_EV  (1<<6)		///< set to true to if the EV observations are in a non NED reference frame and need to be rotated before being used
 #define MASK_USE_GPSYAW  (1<<7)		///< set to true to use GPS yaw data if available
-#define MASK_USE_EVVEL  (1<<8)		///< sset to true to use external vision velocity data
+#define MASK_USE_EVVEL  (1<<8)		///< set to true to use external vision velocity data
 
 enum TerrainFusionMask : int32_t {
 	TerrainFuseRangeFinder = (1 << 0),

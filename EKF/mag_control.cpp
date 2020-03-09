@@ -271,16 +271,17 @@ bool Ekf::shouldInhibitMag() const
 	// If the user has selected auto protection against indoor magnetic field errors, only use the magnetometer
 	// if a yaw angle relative to true North is required for navigation. If no GPS or other earth frame aiding
 	// is available, assume that we are operating indoors and the magnetometer should not be used.
-	// Also inhibit mag fusion when a strong magnetic field interference is detected
-	const bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR) ||
-				(_params.mag_fusion_type == MAG_FUSE_TYPE_NONE);
+	// Also inhibit mag fusion when a strong magnetic field interference is detected or the user
+	// has explicitly stopped magnetometer use.
+	const bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR);
 
 	const bool heading_not_required_for_navigation = !_control_status.flags.gps
 							 && !_control_status.flags.ev_pos
 							 && !_control_status.flags.ev_vel;
 
 	return (user_selected && heading_not_required_for_navigation)
-	       || isStrongMagneticDisturbance();
+	       || isStrongMagneticDisturbance()
+	       || (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE);
 }
 
 void Ekf::checkMagFieldStrength()
@@ -325,7 +326,6 @@ void Ekf::runMagAndMagDeclFusions()
 {
 	if (_control_status.flags.mag_3D) {
 		run3DMagAndDeclFusions();
-
 	} else if (_control_status.flags.mag_hdg) {
 		fuseHeading();
 	}
