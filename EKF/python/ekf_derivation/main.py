@@ -17,7 +17,7 @@ def quat2Rot(q):
 
 def create_cov_matrix(i, j):
     if j >= i:
-        return Symbol("P[" + str(i) + "][" + str(j) + "]", real=True)
+        return Symbol("P(" + str(i) + "," + str(j) + ")", real=True)
     else:
         return 0
     
@@ -49,10 +49,10 @@ def generate_ccode(Input):
         # write a matrix
         write_string = "float " + Input["array_identifier"] + "[" + str(Input["shape"][0]) + "][" + str(Input["shape"][1]) + "] = {};\n"
         
-        for i in range(0, Input["shape"][0]):
-            for j in range(0, Input["shape"][1]):
+        for j in range(0, Input["shape"][1]):
+            for i in range(0, Input["shape"][0]):
                 if j >= i or not Input["symetric_matrix"]:
-                    write_string = write_string + Input["array_identifier"] + "[" + str(i) + "][" + str(j) + "] = " + ccode(Input["data"][i,j]) + ";\n"
+                    write_string = write_string + Input["array_identifier"] + "(" + str(i) + "," + str(j) + ") = " + ccode(Input["data"][i,j]) + ";\n"
     elif  Input["shape"][0] == 0 and Input["shape"][1] == 0:
         for item in Input["data"]:
             write_string = write_string + "float " + str(item[0]) + " = " + ccode(item[1]) + ";\n"
