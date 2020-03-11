@@ -227,26 +227,25 @@ void Ekf::resetHeight()
 
 	// reset the vertical position
 	if (_control_status.flags.rng_hgt) {
+		float new_pos_down = _hgt_sensor_offset - _range_sample_delayed.rng * _R_rng_to_earth_2_2;
 
-			float new_pos_down = _hgt_sensor_offset - _range_sample_delayed.rng * _R_rng_to_earth_2_2;
+		// update the state and associated variance
+		_state.pos(2) = new_pos_down;
 
-			// update the state and associated variance
-			_state.pos(2) = new_pos_down;
+		// the state variance is the same as the observation
+		P.uncorrelateCovarianceSetVariance<1>(9, sq(_params.range_noise));
 
-			// the state variance is the same as the observation
-			P.uncorrelateCovarianceSetVariance<1>(9, sq(_params.range_noise));
+		vert_pos_reset = true;
 
-			vert_pos_reset = true;
-
-			// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
-			const baroSample &baro_newest = _baro_buffer.get_newest();
-			_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+		// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
+		const baroSample &baro_newest = _baro_buffer.get_newest();
+		_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
 
 	} else if (_control_status.flags.baro_hgt) {
 		// initialize vertical position with newest baro measurement
 		const baroSample &baro_newest = _baro_buffer.get_newest();
 
-		if (isRecent(baro_newest.time_us, 2 * BARO_MAX_INTERVAL)) {
+		if (!_baro_hgt_faulty) {
 			_state.pos(2) = _hgt_sensor_offset - baro_newest.hgt + _baro_hgt_offset;
 
 			// the state variance is the same as the observation
@@ -260,7 +259,7 @@ void Ekf::resetHeight()
 
 	} else if (_control_status.flags.gps_hgt) {
 		// initialize vertical position and velocity with newest gps measurement
-		if (isRecent(gps_newest.time_us, 2 * GPS_MAX_INTERVAL)) {
+		if (!_gps_hgt_intermittent) {
 			_state.pos(2) = _hgt_sensor_offset - gps_newest.hgt + _gps_alt_ref;
 
 			// the state variance is the same as the observation
@@ -296,7 +295,7 @@ void Ekf::resetHeight()
 	}
 
 	// reset the vertical velocity state
-	if (_control_status.flags.gps && isRecent(gps_newest.time_us, 2 * GPS_MAX_INTERVAL)) {
+	if (_control_status.flags.gps && !_gps_hgt_intermittent) {
 		// If we are using GPS, then use it to reset the vertical velocity
 		_state.vel(2) = gps_newest.vel(2);
 

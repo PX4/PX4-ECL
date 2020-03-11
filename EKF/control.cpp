@@ -558,7 +558,7 @@ void Ekf::controlGpsFusion()
 				&& ISFINITE(_gps_sample_delayed.yaw)
 				&& _control_status.flags.tilt_align
 				&& (!_control_status.flags.gps_yaw || !_control_status.flags.yaw_align)
-				&& isRecent(_time_last_gps, 2 * GPS_MAX_INTERVAL)) {
+				&& !_gps_hgt_intermittent) {
 
 			if (resetGpsAntYaw()) {
 				// flag the yaw as aligned
@@ -777,31 +777,7 @@ void Ekf::controlHeightSensorTimeouts()
 	 * source failed if we have switched.
 	*/
 
-	// Check for IMU accelerometer vibration induced clipping as evidenced by the vertical innovations being positive and not stale.
-	// Clipping causes the average accel reading to move towards zero which makes the INS think it is falling and produces positive vertical innovations
-	float var_product_lim = sq(_params.vert_innov_test_lim) * sq(_params.vert_innov_test_lim);
-	bool bad_vert_accel = (_control_status.flags.baro_hgt && // we can only run this check if vertical position and velocity observations are independent
-			(sq(_gps_pos_innov(2) * fmaxf(fabsf(_gps_vel_innov(2)),fabsf(_ev_vel_innov(2)))) > var_product_lim * (_gps_pos_innov_var(2) * fmaxf(fabsf(_gps_vel_innov_var(2)),fabsf(_ev_vel_innov_var(2))))) && // vertical position and velocity sensors are in agreement that we have a significant error
-			(_gps_vel_innov(2) > 0.0f || _ev_vel_innov(2) > 0.0f) && // positive innovation indicates that the inertial nav thinks it is falling
-			((_imu_sample_delayed.time_us - _baro_sample_delayed.time_us) < 2 * BARO_MAX_INTERVAL) && // vertical position data is fresh
-			((_imu_sample_delayed.time_us - _gps_sample_delayed.time_us) < 2 * GPS_MAX_INTERVAL)); // vertical velocity data is fresh
-
-	// record time of last bad vert accel
-	if (bad_vert_accel) {
-		_time_bad_vert_accel =  _time_last_imu;
-
-	} else {
-		_time_good_vert_accel = _time_last_imu;
-	}
-
-	// declare a bad vertical acceleration measurement and make the declaration persist
-	// for a minimum of 10 seconds
-	if (_bad_vert_accel_detected) {
-		_bad_vert_accel_detected = isRecent(_time_bad_vert_accel, BADACC_PROBATION);
-
-	} else {
-		_bad_vert_accel_detected = bad_vert_accel;
-	}
+	checkVerticalAccelerationHealth();
 
 	// check if height is continuously failing because of accel errors
 	bool continuous_bad_accel_hgt = isTimedOut(_time_good_vert_accel, (uint64_t)_params.bad_acc_reset_delay_us);
@@ -813,21 +789,17 @@ void Ekf::controlHeightSensorTimeouts()
 
 		bool request_height_reset = false;
 
-		// handle the case where we are using baro for height
 		if (_control_status.flags.baro_hgt) {
 			// check if GPS height is available
 			const gpsSample &gps_init = _gps_buffer.get_newest();
 			const bool gps_hgt_accurate = (gps_init.vacc < _params.req_vacc);
 
-			const baroSample &baro_init = _baro_buffer.get_newest();
-			const bool baro_data_available = isRecent(baro_init.time_us, 2 * BARO_MAX_INTERVAL);
-
-			// check for inertial sensing errors in the last 10 seconds
+			// check for inertial sensing errors in the last BADACC_PROBATION seconds
 			const bool prev_bad_vert_accel = isRecent(_time_bad_vert_accel, BADACC_PROBATION);
 
 			// reset to GPS if adequate GPS data is available and the timeout cannot be blamed on IMU data
 			const bool reset_to_gps = !_gps_hgt_intermittent &&
-					    ((gps_hgt_accurate && !prev_bad_vert_accel) || !baro_data_available);
+					    ((gps_hgt_accurate && !prev_bad_vert_accel) || _baro_hgt_faulty);
 
 			if (reset_to_gps) {
 				// set height sensor health
@@ -838,104 +810,64 @@ void Ekf::controlHeightSensorTimeouts()
 				request_height_reset = true;
 				ECL_WARN_TIMESTAMPED("baro hgt timeout - reset to GPS");
 
-			} else if (baro_data_available) {
-				// set height sensor health
-				_baro_hgt_faulty = false;
-
-				setControlBaroHeight();
-
+			} else if (!_baro_hgt_faulty) {
 				request_height_reset = true;
 				ECL_WARN_TIMESTAMPED("baro hgt timeout - reset to baro");
-
 			}
-		}
 
-		// handle the case we are using GPS for height
-		if (_control_status.flags.gps_hgt) {
+		} else if (_control_status.flags.gps_hgt) {
 			// check if GPS height is available
 			const gpsSample &gps_init = _gps_buffer.get_newest();
 			const bool gps_hgt_accurate = (gps_init.vacc < _params.req_vacc);
 
 			// check the baro height source for consistency and freshness
 			const baroSample &baro_init = _baro_buffer.get_newest();
-			const bool baro_data_fresh = isRecent(baro_init.time_us, 2 * BARO_MAX_INTERVAL);
 			const float baro_innov = _state.pos(2) - (_hgt_sensor_offset - baro_init.hgt + _baro_hgt_offset);
 			const bool baro_data_consistent = fabsf(baro_innov) < (sq(_params.baro_noise) + P(9,9)) * sq(_params.baro_innov_gate);
 
 			// if baro data is acceptable and GPS data is inaccurate, reset height to baro
-			const bool reset_to_baro = baro_data_fresh &&
-						   ((baro_data_consistent && !_baro_hgt_faulty && !gps_hgt_accurate) ||
+			const bool reset_to_baro = !_baro_hgt_faulty &&
+						   ((baro_data_consistent && !gps_hgt_accurate) ||
 						     _gps_hgt_intermittent);
 
 			if (reset_to_baro) {
-				// set height sensor health
-				_baro_hgt_faulty = false;
-
 				setControlBaroHeight();
 
 				request_height_reset = true;
 				ECL_WARN_TIMESTAMPED("gps hgt timeout - reset to baro");
 
 			} else if (!_gps_hgt_intermittent) {
-				setControlGPSHeight();
-
 				request_height_reset = true;
 				ECL_WARN_TIMESTAMPED("gps hgt timeout - reset to GPS");
-
 			}
-		}
 
-		// handle the case we are using range finder for height
-		if (_control_status.flags.rng_hgt) {
-
-			// check if baro data is available
-			const baroSample &baro_init = _baro_buffer.get_newest();
-			const bool baro_data_available = isRecent(baro_init.time_us, 2 * BARO_MAX_INTERVAL);
+		} else if (_control_status.flags.rng_hgt) {
 
 			if (_rng_hgt_valid) {
-
-				setControlRangeHeight();
-
 				request_height_reset = true;
 				ECL_WARN_TIMESTAMPED("rng hgt timeout - reset to rng hgt");
 
-			} else if (baro_data_available) {
-				// set height sensor health
-				_baro_hgt_faulty = false;
-
+			} else if (!_baro_hgt_faulty) {
 				setControlBaroHeight();
 
 				request_height_reset = true;
 				ECL_WARN_TIMESTAMPED("rng hgt timeout - reset to baro");
-
 			}
-		}
 
-		// handle the case where we are using external vision data for height
-		if (_control_status.flags.ev_hgt) {
+		} else if (_control_status.flags.ev_hgt) {
 			// check if vision data is available
 			const extVisionSample &ev_init = _ext_vision_buffer.get_newest();
 			const bool ev_data_available = isRecent(ev_init.time_us, 2 * EV_MAX_INTERVAL);
 
-			// check if baro data is available
-			const baroSample &baro_init = _baro_buffer.get_newest();
-			const bool baro_data_available = isRecent(baro_init.time_us, 2 * BARO_MAX_INTERVAL);
-
 			if (ev_data_available) {
-				setControlEVHeight();
-
 				request_height_reset = true;
 				ECL_WARN_TIMESTAMPED("ev hgt timeout - reset to ev hgt");
 
-			} else if (baro_data_available) {
-				// set height sensor health
-				_baro_hgt_faulty = false;
-
+			} else if (!_baro_hgt_faulty) {
 				setControlBaroHeight();
 
 				request_height_reset = true;
 				ECL_WARN_TIMESTAMPED("ev hgt timeout - reset to baro");
-
 			}
 		}
 
@@ -944,9 +876,47 @@ void Ekf::controlHeightSensorTimeouts()
 			resetHeight();
 			// Reset the timout timer
 			_time_last_hgt_fuse = _time_last_imu;
-
 		}
+	}
+}
 
+void Ekf::checkVerticalAccelerationHealth()
+{
+	// Check for IMU accelerometer vibration induced clipping as evidenced by the vertical
+	// innovations being positive and not stale.
+	// Clipping causes the average accel reading to move towards zero which makes the INS
+	// think it is falling and produces positive vertical innovations
+
+	const float var_product_lim = sq(_params.vert_innov_test_lim) * sq(_params.vert_innov_test_lim);
+	const bool is_fusing_gps_vel = !_gps_hgt_intermittent;
+	const bool is_fusing_baro_alt = _control_status.flags.baro_hgt && !_baro_hgt_faulty;
+	const bool are_vertical_pos_and_vel_independant = is_fusing_gps_vel && is_fusing_baro_alt; // TODO: should we add range hgt here?
+	const float pos_vel_innov_product = _gps_pos_innov(2) * fmaxf(fabsf(_gps_vel_innov(2)),fabsf(_ev_vel_innov(2)));
+	const float pos_vel_innov_var_product = _gps_pos_innov_var(2) * fmaxf(fabsf(_gps_vel_innov_var(2)),fabsf(_ev_vel_innov_var(2)));
+	const bool are_pos_vel_sensor_in_agreement = sq(pos_vel_innov_product) > var_product_lim * (pos_vel_innov_var_product);
+
+	// A positive innovation indicates that the inertial nav thinks it is falling
+	// This is caused by average of the Z accelerometer being 0, due to clipping
+	const bool is_inertial_nav_falling = _gps_vel_innov(2) > 0.0f || _ev_vel_innov(2) > 0.0f;
+
+	const bool bad_vert_accel = are_vertical_pos_and_vel_independant &&
+			      are_pos_vel_sensor_in_agreement &&
+			      is_inertial_nav_falling;
+
+	if (bad_vert_accel) {
+		_time_bad_vert_accel =  _time_last_imu;
+
+	} else {
+		_time_good_vert_accel = _time_last_imu;
+	}
+
+	// declare a bad vertical acceleration measurement and make the declaration persist
+	// for a minimum of BADACC_PROBATION seconds
+	if (_bad_vert_accel_detected) {
+		_bad_vert_accel_detected = isRecent(_time_bad_vert_accel, BADACC_PROBATION);
+
+	} else {
+		_bad_vert_accel_detected = bad_vert_accel;
 	}
 }
 
