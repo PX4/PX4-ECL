@@ -194,39 +194,39 @@ r_ver_vel = create_symbol("R_vert_vel", real=True) # vertical velocity noise var
 r_hor_pos = create_symbol("R_hor_pos", real=True) # horizontal position noise variance
 
 # inputs, integrated gyro measurements
-d_ang_x = create_symbol("d_ang_x", real=True)  # delta angle x
-d_ang_y = create_symbol("d_ang_y", real=True)  # delta angle y
-d_ang_z = create_symbol("d_ang_z", real=True)  # delta angle z
+d_ang_x = create_symbol("dax", real=True)  # delta angle x
+d_ang_y = create_symbol("day", real=True)  # delta angle y
+d_ang_z = create_symbol("daz", real=True)  # delta angle z
 
 d_ang = Matrix([d_ang_x, d_ang_y, d_ang_z])
 
 # inputs, integrated accelerometer measurements
-d_v_x = create_symbol("d_v_x", real=True)  # delta velocity x
-d_v_y = create_symbol("d_v_y", real=True)  # delta velocity y
-d_v_z = create_symbol("d_v_z", real=True)  # delta velocity z
+d_v_x = create_symbol("dvx", real=True)  # delta velocity x
+d_v_y = create_symbol("dvy", real=True)  # delta velocity y
+d_v_z = create_symbol("dvz", real=True)  # delta velocity z
 
 d_v = Matrix([d_v_x, d_v_y,d_v_z])
 
 u = Matrix([d_ang, d_v])
 
 # input noise
-d_ang_x_var = create_symbol("d_ang_x_var", real=True)
-d_ang_y_var = create_symbol("d_ang_y_var", real=True)
-d_ang_z_var = create_symbol("d_ang_z_var", real=True)
+d_ang_x_var = create_symbol("daxVar", real=True)
+d_ang_y_var = create_symbol("dayVar", real=True)
+d_ang_z_var = create_symbol("dazVar", real=True)
 
-d_v_x_var = create_symbol("d_v_x_var", real=True)
-d_v_y_var = create_symbol("d_v_y_var", real=True)
-d_v_z_var = create_symbol("d_v_z_var", real=True)
+d_v_x_var = create_symbol("dvxVar", real=True)
+d_v_y_var = create_symbol("dvyVar", real=True)
+d_v_z_var = create_symbol("dvzVar", real=True)
 
 var_u = Matrix.diag(d_ang_x_var, d_ang_y_var, d_ang_z_var, d_v_x_var, d_v_y_var, d_v_z_var)
 
 # define state vector
     
 # attitude quaternion
-qw = create_symbol("qw", real=True)  # quaternion real part
-qx = create_symbol("qx", real=True)  # quaternion x component
-qy = create_symbol("qy", real=True)  # quaternion y component
-qz = create_symbol("qz", real=True)  # quaternion z component
+qw = create_symbol("q0", real=True)  # quaternion real part
+qx = create_symbol("q1", real=True)  # quaternion x component
+qy = create_symbol("q2", real=True)  # quaternion y component
+qz = create_symbol("q3", real=True)  # quaternion z component
 
 q = Matrix([qw,qx,qy,qz])
 R_to_earth = quat2Rot(q)
@@ -248,18 +248,18 @@ pz = create_symbol("pz", real=True)  # down position
 p = Matrix([px,py,pz])
 
 # delta angle bias
-d_ang_bx = create_symbol("d_ang_bx", real=True)  # delta angle bias x
-d_ang_by = create_symbol("d_ang_by", real=True)  # delta angle bias y
-d_ang_bz = create_symbol("d_ang_bz", real=True)  # delta angle bias z
+d_ang_bx = create_symbol("dax_b", real=True)  # delta angle bias x
+d_ang_by = create_symbol("day_b", real=True)  # delta angle bias y
+d_ang_bz = create_symbol("daz_b", real=True)  # delta angle bias z
 
 d_ang_b = Matrix([d_ang_bx, d_ang_by, d_ang_bz])
 d_ang_true = d_ang - d_ang_b
 
 
 # delta velocity bias
-d_vel_bx = create_symbol("d_vel_bx", real=True)  # delta velocity bias x
-d_vel_by = create_symbol("d_vel_by", real=True)  # delta velocity bias y
-d_vel_bz = create_symbol("d_vel_bz", real=True)  # delta velocity bias z
+d_vel_bx = create_symbol("dvx_b", real=True)  # delta velocity bias x
+d_vel_by = create_symbol("dvy_b", real=True)  # delta velocity bias y
+d_vel_bz = create_symbol("dvz_b", real=True)  # delta velocity bias z
 
 d_vel_b = Matrix([d_vel_bx, d_vel_by, d_vel_bz])
 
@@ -344,9 +344,9 @@ code_gen_data = {
 
 generate_ccode(code_gen_data)
 
-set_values_for_cov_update({"save_location" : "./generated_python.cpp"})
+#set_values_for_cov_update({"save_location" : "./generated_python.cpp"})
 
-set_values_for_cov_update_matlab({"save_location" : "./generated_matlab.cpp"})
+#set_values_for_cov_update_matlab({"save_location" : "./generated_matlab.cpp"})
 
 
 # magnetometer fusion
