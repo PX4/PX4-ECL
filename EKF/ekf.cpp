@@ -81,7 +81,7 @@ void Ekf::reset()
 	_control_status.value = 0;
 	_control_status_prev.value = 0;
 
-	_dt_ekf_avg = FILTER_UPDATE_PERIOD_S;
+	_dt_ekf_avg = _params.filter_update_imu_samples * 0.004f; // TODO: use real data?
 
 	_fault_status.value = 0;
 	_innov_check_fail_status.value = 0;
@@ -282,11 +282,10 @@ void Ekf::predictState()
 	constrainStates();
 
 	// calculate an average filter update time
-	float input = 0.5f * (_imu_sample_delayed.delta_vel_dt + _imu_sample_delayed.delta_ang_dt);
+	const float input = 0.5f * (_imu_sample_delayed.delta_vel_dt + _imu_sample_delayed.delta_ang_dt);
 
-	// filter and limit input between -50% and +100% of nominal value
-	input = math::constrain(input, 0.5f * FILTER_UPDATE_PERIOD_S, 2.0f * FILTER_UPDATE_PERIOD_S);
-	_dt_ekf_avg = 0.99f * _dt_ekf_avg + 0.01f * input;
+	// filter and limit input between 2-20 ms
+	_dt_ekf_avg = 0.99f * _dt_ekf_avg + 0.01f * math::constrain(input, 0.002f, 0.02f);
 }
 
 /*

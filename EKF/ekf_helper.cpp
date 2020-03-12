@@ -1270,8 +1270,8 @@ bool Ekf::reset_imu_bias()
 
 	// Zero the corresponding covariances and set
 	// variances to the values use for initial alignment
-	P.uncorrelateCovarianceSetVariance<3>(10, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
-	P.uncorrelateCovarianceSetVariance<3>(13, sq(_params.switch_on_accel_bias * FILTER_UPDATE_PERIOD_S));
+	P.uncorrelateCovarianceSetVariance<3>(10, sq(_params.switch_on_gyro_bias * _dt_ekf_avg));
+	P.uncorrelateCovarianceSetVariance<3>(13, sq(_params.switch_on_accel_bias * _dt_ekf_avg));
 	_last_imu_bias_cov_reset_us = _imu_sample_delayed.time_us;
 
 	// Set previous frame values
@@ -1370,8 +1370,8 @@ void Ekf::fuse(float *K, float innovation)
 
 void Ekf::uncorrelateQuatFromOtherStates()
 {
-	P.slice<_k_num_states - 4, 4>(4, 0) = 0.f;	
-	P.slice<4, _k_num_states - 4>(0, 4) = 0.f;	
+	P.slice<_k_num_states - 4, 4>(4, 0) = 0.f;
+	P.slice<4, _k_num_states - 4>(0, 4) = 0.f;
 }
 
 bool Ekf::global_position_is_valid()

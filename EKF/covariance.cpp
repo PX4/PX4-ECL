@@ -55,7 +55,7 @@ void Ekf::initialiseCovariance()
 	_delta_angle_bias_var_accum.setZero();
 	_delta_vel_bias_var_accum.setZero();
 
-	const float dt = FILTER_UPDATE_PERIOD_S;
+	const float dt = _dt_ekf_avg;
 
 	// define the initial angle uncertainty as variances for a rotation vector
 	Vector3f rot_vec_var;
@@ -147,7 +147,7 @@ void Ekf::predictCovariance()
 	const float dvy_b = _state.delta_vel_bias(1);
 	const float dvz_b = _state.delta_vel_bias(2);
 
-	const float dt = math::constrain(_imu_sample_delayed.delta_ang_dt, 0.5f * FILTER_UPDATE_PERIOD_S, 2.0f * FILTER_UPDATE_PERIOD_S);
+	const float dt = math::constrain(_imu_sample_delayed.delta_ang_dt, 0.5f * _dt_ekf_avg, 2.0f * _dt_ekf_avg);
 	const float dt_inv = 1.0f / dt;
 
 	// convert rate of change of rate gyro bias (rad/s**2) as specified by the parameter to an expected change in delta angle (rad) since the last update

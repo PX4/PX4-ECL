@@ -1,14 +1,16 @@
 #include "imu_down_sampler.hpp"
 
-ImuDownSampler::ImuDownSampler(float target_dt_sec) : _target_dt{target_dt_sec} { reset(); }
+ImuDownSampler::ImuDownSampler(const int32_t& imu_samples) : _imu_samples{imu_samples} { reset(); }
 
 // integrate imu samples until target dt reached
 // assumes that dt of the gyroscope is close to the dt of the accelerometer
 // returns true if target dt is reached
-bool ImuDownSampler::update(const imuSample &imu_sample_new) {
+bool ImuDownSampler::update(const imuSample& imu_sample_new) {
 	if (_do_reset) {
 		reset();
 	}
+
+	_samples++;
 
 	// accumulate time deltas
 	_imu_down_sampled.delta_ang_dt += imu_sample_new.delta_ang_dt;
@@ -29,18 +31,12 @@ bool ImuDownSampler::update(const imuSample &imu_sample_new) {
 	// assume effective sample time is halfway between the previous and current rotation frame
 	_imu_down_sampled.delta_vel += (imu_sample_new.delta_vel + delta_R * imu_sample_new.delta_vel) * 0.5f;
 
-	// check if the target time delta between filter prediction steps has been exceeded
-	if (_imu_down_sampled.delta_ang_dt >= _target_dt - _imu_collection_time_adj) {
-		// accumulate the amount of time to advance the IMU collection time so that we meet the
-		// average EKF update rate requirement
-		_imu_collection_time_adj += 0.01f * (_imu_down_sampled.delta_ang_dt - _target_dt);
-		_imu_collection_time_adj = math::constrain(_imu_collection_time_adj, -0.5f * _target_dt,
-							   0.5f * _target_dt);
+	// check if we have enough IMU samples (and at least 2 ms of data) or if it's already more than 20 ms
+	if (((_samples >= _imu_samples) && (_imu_down_sampled.delta_ang_dt >= 0.002f)) ||
+	    (_imu_down_sampled.delta_ang_dt >= 0.020f)) {
 
 		_imu_down_sampled.delta_ang = _delta_angle_accumulated.to_axis_angle();
-
 		return true;
-
 	} else {
 		return false;
 	}
@@ -52,5 +48,6 @@ void ImuDownSampler::reset() {
 	_imu_down_sampled.delta_ang_dt = 0.0f;
 	_imu_down_sampled.delta_vel_dt = 0.0f;
 	_delta_angle_accumulated.setIdentity();
+	_samples = 0;
 	_do_reset = false;
 }

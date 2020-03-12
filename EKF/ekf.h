@@ -301,9 +301,6 @@ private:
 		Quatf quat_change;	///< quaternion delta due to last reset - multiply pre-reset quaternion by this to get post-reset quaternion
 	} _state_reset_status{};	///< reset event monitoring structure containing velocity, position, height and yaw reset information
 
-	float _dt_ekf_avg{FILTER_UPDATE_PERIOD_S}; ///< average update rate of the ekf
-	float _dt_update{0.01f}; ///< delta time since last ekf update. This time can be used for filters which run at the same rate as the Ekf::update() function. (sec)
-
 	stateSample _state{};		///< state struct of the ekf running at the delayed time horizon
 
 	bool _filter_initialised{false};	///< true when the EKF sttes and covariances been initialised
@@ -341,7 +338,6 @@ private:
 	uint64_t _time_last_fake_pos{0};	///< last time we faked position measurements to constrain tilt errors during operation without external aiding (uSec)
 
 	Vector2f _last_known_posNE;		///< last known local NE position vector (m)
-	float _imu_collection_time_adj{0.0f};	///< the amount of time the IMU collection needs to be advanced to meet the target set by FILTER_UPDATE_PERIOD_MS (sec)
 
 	uint64_t _time_acc_bias_check{0};	///< last time the  accel bias check passed (uSec)
 	uint64_t _delta_time_baro_us{0};	///< delta time between two consecutive delayed baro samples from the buffer (uSec)
