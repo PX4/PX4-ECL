@@ -280,8 +280,7 @@ bool Ekf::shouldInhibitMag() const
 							 && !_control_status.flags.ev_vel;
 
 	return (user_selected && heading_not_required_for_navigation)
-	       || isStrongMagneticDisturbance()
-	       || (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE);
+	       || isStrongMagneticDisturbance();
 }
 
 void Ekf::checkMagFieldStrength()
