@@ -828,8 +828,9 @@ void Ekf::fuseHeading()
 				// Vehicle is not at rest so fuse a zero innovation if necessary to prevent
 				// unconstrained quaterniion variance growth and record the predicted heading
 				// to use as an observation when movement ceases.
+				// TODO a better way of determining when this is necessary
 				float sumQuatVar = P(0,0) + P(1,1) + P(2,2) + P(3,3);
-				if (sumQuatVar > 0.01f) {
+				if (sumQuatVar > _params.quat_max_variance) {
 					fuseYaw321(0.0f, 0.25f, true);
 				}
 				_last_static_yaw = predicted_hdg;
@@ -891,8 +892,9 @@ void Ekf::fuseHeading()
 				// Vehicle is not at rest so fuse a zero innovation if necessary to prevent
 				// unconstrained quaterniion variance growth and record the predicted heading
 				// to use as an observation when movement ceases.
+				// TODO a better way of determining when this is necessary
 				float sumQuatVar = P(0,0) + P(1,1) + P(2,2) + P(3,3);
-				if (sumQuatVar > 0.01f) {
+				if (sumQuatVar > _params.quat_max_variance) {
 					fuseYaw312(0.0f, 0.25f, true);
 				}
 				_last_static_yaw = predicted_hdg;
