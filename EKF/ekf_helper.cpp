@@ -544,8 +544,8 @@ bool Ekf::resetMagHeading(const Vector3f &mag_init, bool increase_yaw_var, bool 
 			yaw_new_variance = sq(fmaxf(_params.mag_heading_noise, 1.0e-2f));
 		}
 
-	} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR && _mag_use_inhibit) {
-		// we are operating without knowing the earth frame yaw angle
+	} else if (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR && _yaw_use_inhibit) {
+		// we are operating temporarily without knowing the earth frame yaw angle
 		return true;
 
 	} else {
@@ -1808,13 +1808,19 @@ void Ekf::runYawEKFGSF()
 	if (_gps_data_ready && _gps_sample_delayed.vacc > FLT_EPSILON && ISFINITE(_gps_sample_delayed.vel(0)) && ISFINITE(_gps_sample_delayed.vel(1))) {
 		yawEstimator.setVelocity(_gps_sample_delayed.vel.xy(), _gps_sample_delayed.vacc);
 	}
+}
 
-	// Enable this yaw estimate to be used by the main filter for normal flight alignment
-	// when flying without a magnetometer. This requires fusion of a static yaw reference when on ground
-	// to prevent unconstrained quaternion bariance growth
-	if (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE) {
-		_mag_use_inhibit = true;
-		_mag_use_inhibit_prev = true;
-		fuseHeading();
+void Ekf::shrinkYawVariance()
+{
+	if (fabsf(_R_to_earth(2, 0)) < fabsf(_R_to_earth(2, 1))) {
+		// rolled more than pitched so use 321 rotation order to define yaw angle
+		// and fuse a zero innovation yaw to shrink quaternion yaw variance
+		fuseYaw321(0.0f, 0.25f, true);
+
+	} else {
+		// pitched more than rolled so use 312 rotation order to define yaw angle
+		// and fuse a zero innovation yaw to shrink quaternion yaw variance
+		fuseYaw312(0.0f, 0.25f, true);
+
 	}
 }

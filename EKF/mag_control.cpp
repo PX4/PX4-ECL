@@ -41,20 +41,31 @@
 
 void Ekf::controlMagFusion()
 {
+	// handle undefined behaviour
+	if (_params.mag_fusion_type > MAG_FUSE_TYPE_NONE) {
+		return;
+	}
+
+	// When operating without a magnetometer, yaw fusion is run selectively to prevent
+	// enable yaw gyro bias learning hen stationary on ground and to prevent uncontrolled
+	// yaw variance growth
+	if (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE) {
+		_yaw_use_inhibit = true;
+		fuseHeading();
+		return;
+	}
+
 	updateMagFilter();
 	checkMagFieldStrength();
 
-	// If we are on ground, store the local position and time to use as a reference
-	// Also reset the flight alignment flag so that the mag fields will be re-initialised next time we achieve flight altitude
+	// If we are on ground, reset the flight alignment flag so that the mag fields will be
+	// re-initialised next time we achieve flight altitude
 	if (!_control_status.flags.in_air) {
-		_last_on_ground_posD = _state.pos(2);
 		_control_status.flags.mag_aligned_in_flight = false;
 		_num_bad_flight_yaw_events = 0;
 	}
 
-	if ((_params.mag_fusion_type >= MAG_FUSE_TYPE_NONE)
-	    || _control_status.flags.mag_fault
-	    || !_control_status.flags.yaw_align) {
+	if (_control_status.flags.mag_fault || !_control_status.flags.yaw_align) {
 		stopMagFusion();
 		return;
 	}
@@ -143,7 +154,7 @@ void Ekf::runOnGroundYawReset()
 
 bool Ekf::isYawResetAuthorized() const
 {
-	return !_mag_use_inhibit;
+	return !_yaw_use_inhibit;
 }
 
 bool Ekf::canResetMagHeading() const
@@ -255,8 +266,8 @@ void Ekf::checkMagDeclRequired()
 
 void Ekf::checkMagInhibition()
 {
-	_mag_use_inhibit = shouldInhibitMag();
-	if (!_mag_use_inhibit) {
+	_yaw_use_inhibit = shouldInhibitMag();
+	if (!_yaw_use_inhibit) {
 		_mag_use_not_inhibit_us = _imu_sample_delayed.time_us;
 	}
 
