@@ -821,6 +821,7 @@ void Ekf::fuseHeading()
 		}
 
 		// handle special case where yaw measurement is unavailable
+		bool fuse_zero_innov = false;
 		if (_yaw_use_inhibit) {
 			// The yaw measurement cannot be trusted but we need to fuse something to prevent a badly
 			// conditioned covariance matrix developing over time.
@@ -831,10 +832,11 @@ void Ekf::fuseHeading()
 				// TODO a better way of determining when this is necessary
 				float sumQuatVar = P(0,0) + P(1,1) + P(2,2) + P(3,3);
 				if (sumQuatVar > _params.quat_max_variance) {
-					fuseYaw321(0.0f, 0.25f, true);
+					fuse_zero_innov = true;
+					R_YAW = 0.25f;
+
 				}
 				_last_static_yaw = predicted_hdg;
-				return;
 
 			} else {
 				// Vehicle is at rest so use the last moving prediction as an observation
@@ -848,7 +850,7 @@ void Ekf::fuseHeading()
 
 		}
 
-		fuseYaw321(measured_hdg, R_YAW, false);
+		fuseYaw321(measured_hdg, R_YAW, fuse_zero_innov);
 
 	} else {
 
@@ -885,6 +887,7 @@ void Ekf::fuseHeading()
 		}
 
 		// handle special case where yaw measurement is unavailable
+		bool fuse_zero_innov = false;
 		if (_yaw_use_inhibit) {
 			// The yaw measurement cannot be trusted but we need to fuse something to prevent a badly
 			// conditioned covariance matrix developing over time.
@@ -895,10 +898,11 @@ void Ekf::fuseHeading()
 				// TODO a better way of determining when this is necessary
 				float sumQuatVar = P(0,0) + P(1,1) + P(2,2) + P(3,3);
 				if (sumQuatVar > _params.quat_max_variance) {
-					fuseYaw312(0.0f, 0.25f, true);
+					fuse_zero_innov = true;
+					R_YAW = 0.25f;
+
 				}
 				_last_static_yaw = predicted_hdg;
-				return;
 
 			} else {
 				// Vehicle is at rest so use the last moving prediction as an observation
@@ -912,7 +916,7 @@ void Ekf::fuseHeading()
 
 		}
 
-		fuseYaw312(measured_hdg, R_YAW, false);
+		fuseYaw312(measured_hdg, R_YAW, fuse_zero_innov);
 
 	}
 }
