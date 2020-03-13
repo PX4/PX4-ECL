@@ -1723,7 +1723,9 @@ void Ekf::resetQuatStateYaw(float yaw, float yaw_variance, bool update_buffer)
 		_state_reset_status.quat_counter++;
 }
 
-// Reset main nav filter yaw to value from EKF-GSF and reset velocity and position to GPS
+// Resets the main Nav EKf yaw to the estimator from the EKF-GSF yaw estimator
+// Resets the horizontal velocity and position to the default navigation sensor
+// Returns true if the reset was successful
 bool Ekf::resetYawToEKFGSF()
 {
 	// don't allow reet using the EKF-GSF estimate until the filter has started fusing velocity

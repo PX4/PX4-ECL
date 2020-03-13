@@ -878,7 +878,8 @@ private:
 	// Call once per _imu_sample_delayed update after all main EKF data fusion oeprations have been completed
 	void runYawEKFGSF();
 
-	// Resets the main Nav EKf yaw to the esitmator from the EKF-GSF yaw estimator
+	// Resets the main Nav EKf yaw to the estimator from the EKF-GSF yaw estimator
+	// Resets the horizontal velocity and position to the default navigation sensor
 	// Returns true if the reset was successful
 	bool resetYawToEKFGSF();
 
