@@ -521,7 +521,7 @@ void Ekf::fuseYaw321(float yaw, float yaw_variance, bool zero_innovation)
 		innovation = 0.0f;
 	} else {
 		Eulerf euler321(_state.quat_nominal);
-		innovation = wrap_pi(atan2(_R_to_earth(1, 0), _R_to_earth(0, 0)) - measurement);
+		innovation = wrap_pi(atan2f(_R_to_earth(1, 0), _R_to_earth(0, 0)) - measurement);
 	}
 
 	// define the innovation gate size
