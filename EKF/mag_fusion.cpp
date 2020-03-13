@@ -516,18 +516,19 @@ void Ekf::fuseYaw321(float yaw, float yaw_variance, bool zero_innovation)
 	}
 
 	// calculate the yaw innovation and wrap to the interval between +-pi
+	float innovation;
 	if (zero_innovation) {
-		_heading_innov = 0.0f;
+		innovation = 0.0f;
 	} else {
 		Eulerf euler321(_state.quat_nominal);
-		_heading_innov = wrap_pi(atan2(_R_to_earth(1, 0), _R_to_earth(0, 0)) - measurement);
+		innovation = wrap_pi(atan2(_R_to_earth(1, 0), _R_to_earth(0, 0)) - measurement);
 	}
 
 	// define the innovation gate size
 	float innov_gate = math::max(_params.heading_innov_gate, 1.0f);
 
 	// Update the quaternion states and covariance matrix
-	updateQuaternion(_heading_innov, R_YAW, innov_gate, H_YAW);
+	updateQuaternion(innovation, R_YAW, innov_gate, H_YAW);
 }
 
 void Ekf::fuseYaw312(float yaw, float yaw_variance, bool zero_innovation)
@@ -606,18 +607,19 @@ void Ekf::fuseYaw312(float yaw, float yaw_variance, bool zero_innovation)
 
 	}
 
+	float innovation;
 	if (zero_innovation) {
-		_heading_innov = 0.0f;
+		innovation = 0.0f;
 	} else {
 		// calculate the the innovation and wrap to the interval between +-pi
-		_heading_innov = wrap_pi(atan2f(-_R_to_earth(0, 1), _R_to_earth(1, 1)) - measurement);
+		innovation = wrap_pi(atan2f(-_R_to_earth(0, 1), _R_to_earth(1, 1)) - measurement);
 	}
 
 	// define the innovation gate size
 	float innov_gate = math::max(_params.heading_innov_gate, 1.0f);
 
 	// Update the quaternion states and covariance matrix
-	updateQuaternion(_heading_innov, R_YAW, innov_gate, H_YAW);
+	updateQuaternion(innovation, R_YAW, innov_gate, H_YAW);
 }
 
 // update quaternion states and covariances using the yaw innovation, yaw observation variance and yaw Jacobian
@@ -682,7 +684,7 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 	}
 
 	// innovation test ratio
-	_yaw_test_ratio = sq(_heading_innov) / (sq(gate_sigma) * _heading_innov_var);
+	_yaw_test_ratio = sq(innovation) / (sq(gate_sigma) * _heading_innov_var);
 
 	// we are no longer using 3-axis fusion so set the reported test levels to zero
 	memset(_mag_test_ratio, 0, sizeof(_mag_test_ratio));
@@ -700,11 +702,12 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 		} else {
 			// constrain the innovation to the maximum set by the gate
 			float gate_limit = sqrtf((sq(gate_sigma) * _heading_innov_var));
-			_heading_innov = math::constrain(_heading_innov, -gate_limit, gate_limit);
+			_heading_innov = math::constrain(innovation, -gate_limit, gate_limit);
 		}
 
 	} else {
 		_innov_check_fail_status.flags.reject_yaw = false;
+		_heading_innov = innovation;
 	}
 
 	// apply covariance correction via P_new = (I -K*H)*P
