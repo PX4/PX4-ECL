@@ -621,7 +621,7 @@ void Ekf::fuseYaw312(float yaw, float yaw_variance, bool zero_innovation)
 }
 
 // update quaternion states and covariances using the yaw innovation, yaw observation variance and yaw Jacobian
-void Ekf::updateQuaternion(const float innovation, const float variance, const float gate_sigma, const float *yaw_jacobian)
+void Ekf::updateQuaternion(const float innovation, const float variance, const float gate_sigma, const float (&yaw_jacobian)[4])
 {
 	// Calculate innovation variance and Kalman gains, taking advantage of the fact that only the first 4 elements in H are non zero
 	// calculate the innovation variance
