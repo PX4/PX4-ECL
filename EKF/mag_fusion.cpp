@@ -821,6 +821,8 @@ void Ekf::fuseHeading()
 			const float Tbn_0_0 = sq(_ev_sample_delayed.quat(0))+sq(_ev_sample_delayed.quat(1))-sq(_ev_sample_delayed.quat(2))-sq(_ev_sample_delayed.quat(3));
 			measured_hdg = atan2f(Tbn_1_0,Tbn_0_0);
 
+		} else {
+			measured_hdg = predicted_hdg;
 		}
 
 		// handle special case where yaw measurement is unavailable
@@ -887,6 +889,8 @@ void Ekf::fuseHeading()
 			float Tbn_1_1 = sq(_ev_sample_delayed.quat(0))-sq(_ev_sample_delayed.quat(1))+sq(_ev_sample_delayed.quat(2))-sq(_ev_sample_delayed.quat(3));
 			measured_hdg = atan2f(Tbn_0_1_neg,Tbn_1_1);
 
+		} else {
+			measured_hdg = predicted_hdg;
 		}
 
 		// handle special case where yaw measurement is unavailable
