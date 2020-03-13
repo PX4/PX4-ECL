@@ -1745,7 +1745,6 @@ bool Ekf::resetYawToEKFGSF()
 
 		// record a magnetic field alignment event to prevent possibility of the EKF trying to reset the yaw to the mag later in flight
 		_flt_mag_align_start_time = _imu_sample_delayed.time_us;
-		_control_status.flags.mag_aligned_in_flight = true;
 		_control_status.flags.yaw_align = true;
 
 		if (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE) {
