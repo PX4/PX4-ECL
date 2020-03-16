@@ -82,7 +82,7 @@ void Ekf::updateRangeDataValidity()
 	}
 
 	// Check if excessively tilted
-	if (_R_rng_to_earth_2_2 < _params.range_cos_max_tilt) {
+	if (!_is_rng_tilt_ok) {
 		_rng_hgt_valid = false;
 		return;
 	}

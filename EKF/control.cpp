@@ -119,6 +119,7 @@ void Ekf::controlFusionModes()
 	// calculate 2,2 element of rotation matrix from sensor frame to earth frame
 	// this is required for use of range finder and flow data
 	_R_rng_to_earth_2_2 = _R_to_earth(2, 0) * _sin_tilt_rng + _R_to_earth(2, 2) * _cos_tilt_rng;
+	_is_rng_tilt_ok = _R_rng_to_earth_2_2 > _params.range_cos_max_tilt;
 
 	// Get range data from buffer and check validity
 	_range_data_ready = _range_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_range_sample_delayed);
@@ -1163,7 +1164,7 @@ void Ekf::controlHeightFusion()
 			fuseVerticalPosition(_gps_pos_innov,gps_hgt_innov_gate,
 				gps_hgt_obs_var, _gps_pos_innov_var,_gps_pos_test_ratio);
 
-		} else if (_control_status.flags.rng_hgt && (_R_rng_to_earth_2_2 > _params.range_cos_max_tilt)) {
+		} else if (_control_status.flags.rng_hgt && _is_rng_tilt_ok) {
 			// TODO: Tilt check does not belong here, should not set fuse height to true if tilted
 			Vector2f rng_hgt_innov_gate;
 			Vector3f rng_hgt_obs_var;

@@ -59,7 +59,7 @@ bool Ekf::initHagl()
 	} else if ((_params.terrain_fusion_mode & TerrainFusionMask::TerrainFuseRangeFinder)
 		   && _rng_hgt_valid
 		   && isRecent(latest_measurement.time_us, (uint64_t)2e5)
-		   && _R_rng_to_earth_2_2 > _params.range_cos_max_tilt) {
+		   && _is_rng_tilt_ok) {
 		// if we have a fresh measurement, use it to initialise the terrain estimator
 		_terrain_vpos = _state.pos(2) + latest_measurement.rng * _R_rng_to_earth_2_2;
 		// initialise state variance to variance of measurement
@@ -139,7 +139,7 @@ void Ekf::runTerrainEstimator()
 void Ekf::fuseHagl()
 {
 	// If the vehicle is excessively tilted, do not try to fuse range finder observations
-	if (_R_rng_to_earth_2_2 > _params.range_cos_max_tilt) {
+	if (_is_rng_tilt_ok) {
 		// get a height above ground measurement from the range finder assuming a flat earth
 		const float meas_hagl = _range_sample_delayed.rng * _R_rng_to_earth_2_2;
 
