@@ -50,7 +50,7 @@ symbol_name_list = []
 dt = create_symbol("dt", real=True)  # dt
 g = create_symbol("g", real=True) # gravity constant
 
-r_mag = create_symbol("R_mag", real=True)  # magnetometer measurement noise variance
+r_mag = create_symbol("R_MAG", real=True)  # magnetometer measurement noise variance
 r_baro = create_symbol("R_baro", real=True)    # barometer noise variance
 r_hor_vel = create_symbol("R_hor_vel", real=True) # horizontal velocity noise variance
 r_ver_vel = create_symbol("R_vert_vel", real=True) # vertical velocity noise variance
@@ -129,9 +129,9 @@ d_vel_b = Matrix([d_vel_bx, d_vel_by, d_vel_bz])
 d_vel_true = d_v - d_vel_b
 
 # earth magnetic field vector
-ix = create_symbol("ix", real=True)  # earth magnetic field x component
-iy = create_symbol("iy", real=True)  # earth magnetic field y component
-iz = create_symbol("iz", real=True)  # earth magnetic field z component
+ix = create_symbol("magN", real=True)  # earth magnetic field x component
+iy = create_symbol("magE", real=True)  # earth magnetic field y component
+iz = create_symbol("magD", real=True)  # earth magnetic field z component
 
 i = Matrix([ix,iy,iz])
 
@@ -187,6 +187,7 @@ for index in range(24):
 P_new_simple = cse(P_new, symbols("PS0:400"), optimizations='basic')
 
 cov_code_generator = CodeGenerator("./covariance_generated.cpp")
+cov_code_generator.print_string("Equations for covariance matrix prediction, without process noise!")
 cov_code_generator.write_subexpressions(P_new_simple[0])
 cov_code_generator.write_matrix(Matrix(P_new_simple[1]), "nextP", True)
 
@@ -194,6 +195,7 @@ cov_code_generator.close()
 
 # 3D magnetometer fusion
 m_mag = R_to_body * i + ib
+
 
 H_x_mag = Matrix([m_mag[0]]).jacobian(state)
 H_y_mag = Matrix([m_mag[1]]).jacobian(state)
@@ -203,20 +205,52 @@ K_x_mag = P * H_x_mag.T / (H_x_mag * P * H_x_mag.T + Matrix([r_mag]))
 K_y_mag = P * H_y_mag.T / (H_y_mag * P * H_y_mag.T + Matrix([r_mag]))
 K_z_mag = P * H_z_mag.T / (H_z_mag * P * H_z_mag.T + Matrix([r_mag]))
 
-K_simple_x = cse(K_x_mag, symbols('KSX0:200'))
-K_simple_y = cse(K_y_mag, symbols('KSY0:200'))
-K_simple_z = cse(K_z_mag, symbols('KSZ0:200'))
+
+mag_x_innov_var = H_x_mag * P * H_x_mag.T + Matrix([r_mag])
+mag_y_innov_var = H_y_mag * P * H_y_mag.T + Matrix([r_mag])
+mag_z_innov_var = H_z_mag * P * H_z_mag.T + Matrix([r_mag])
+
+mag_x_innov_var_simple = cse(mag_x_innov_var, symbols("SX0:100"))
+mag_y_innov_var_simple = cse(mag_y_innov_var, symbols("SY0:100"))
+mag_z_innov_var_simple = cse(mag_z_innov_var, symbols("SZ0:100"))
+
+
+HK_x_simple = cse(Matrix([H_x_mag.transpose(), K_x_mag]), symbols("HKX0:200"))
+HK_y_simple = cse(Matrix([H_y_mag.transpose(), K_y_mag]), symbols("HKY0:200"))
+HK_z_simple = cse(Matrix([H_z_mag.transpose(), K_z_mag]), symbols("HKZ0:200"))
 
 mag_code_generator = CodeGenerator("./3Dmag_generated.cpp")
+mag_code_generator.print_string("Equations for 3D mag fusion")
 
-mag_code_generator.write_subexpressions(K_simple_x[0])
-mag_code_generator.write_matrix(Matrix(K_simple_x[1]), "Kx")
+# x axis
+mag_code_generator.print_string("X axis innovation variance")
+mag_code_generator.write_subexpressions(mag_x_innov_var_simple[0])
+mag_code_generator.write_matrix(Matrix(mag_x_innov_var_simple[1]), "innov_var_x")
 
-mag_code_generator.write_subexpressions(K_simple_y[0])
-mag_code_generator.write_matrix(Matrix(K_simple_y[1]), "Ky")
+mag_code_generator.print_string("X axis observation matrix and kalman gain")
+mag_code_generator.write_subexpressions(HK_x_simple[0])
+mag_code_generator.write_matrix(Matrix(HK_x_simple[1][0][0:24]), "H_MAG")
+mag_code_generator.write_matrix(Matrix(HK_x_simple[1][0][24:]), "Kfusion")
 
-mag_code_generator.write_subexpressions(K_simple_z[0])
-mag_code_generator.write_matrix(Matrix(K_simple_z[1]), "Kz")
+# y axis
+mag_code_generator.print_string("Y axis innovation variance")
+mag_code_generator.write_subexpressions(mag_y_innov_var_simple[0])
+mag_code_generator.write_matrix(Matrix(mag_y_innov_var_simple[1]), "innov_var_y")
+
+mag_code_generator.print_string("Y axis observation matrix and kalman gain")
+mag_code_generator.write_subexpressions(HK_y_simple[0])
+mag_code_generator.write_matrix(Matrix(HK_y_simple[1][0][0:24]), "H_MAG")
+mag_code_generator.write_matrix(Matrix(HK_y_simple[1][0][24:]), "Kfusion")
+
+# z axis
+mag_code_generator.print_string("Z axis innovation variance")
+mag_code_generator.write_subexpressions(mag_z_innov_var_simple[0])
+mag_code_generator.write_matrix(Matrix(mag_z_innov_var_simple[1]), "innov_var_z")
+
+mag_code_generator.print_string("Z axis observation matrix and kalman gain")
+mag_code_generator.write_subexpressions(HK_z_simple[0])
+mag_code_generator.write_matrix(Matrix(HK_z_simple[1][0][0:24]), "H_MAG")
+mag_code_generator.write_matrix(Matrix(HK_z_simple[1][0][24:]), "Kfusion")
 
 mag_code_generator.close()
 
