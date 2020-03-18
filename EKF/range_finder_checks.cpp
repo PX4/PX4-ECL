@@ -40,7 +40,6 @@
 
 #include "ekf.h"
 
-// check that the range finder data is continuous
 void Ekf::updateRangeDataContinuity()
 {
 	// update range data continuous flag (1Hz ie 2000 ms)
@@ -59,52 +58,32 @@ void Ekf::updateRangeDataValidity()
 	updateRangeDataContinuity();
 
 	// check if out of date
-	if ((_imu_sample_delayed.time_us - _range_sample_delayed.time_us) > 2 * RNG_MAX_INTERVAL) {
+	if (((_imu_sample_delayed.time_us - _range_sample_delayed.time_us) > 2 * RNG_MAX_INTERVAL)
+	    || !isRangeDataContinuous()) {
 		_rng_hgt_valid = false;
 		return;
 	}
 
-	// Don't allow faulty flag to clear unless range data is continuous
-	if (!_rng_hgt_valid && !isRangeDataContinuous()) {
-		return;
-	}
-
-	// Don't run the checks after this unless we have retrieved new data from the buffer
-	if (!_range_data_ready) {
-		return;
-	}
-
-	if (_range_sample_delayed.quality == 0) {
-		_time_bad_rng_signal_quality = _imu_sample_delayed.time_us;
+	// Don't run the checks unless we have retrieved new data from the buffer
+	if (_range_data_ready) {
 		_rng_hgt_valid = false;
-	} else if (_imu_sample_delayed.time_us - _time_bad_rng_signal_quality > (unsigned)_params.range_signal_hysteresis_ms) {
-		_rng_hgt_valid = true;
-	}
 
-	// Check if excessively tilted
-	if (!_is_rng_tilt_ok) {
-		_rng_hgt_valid = false;
-		return;
-	}
+		if (_range_sample_delayed.quality == 0) {
+			_time_bad_rng_signal_quality = _imu_sample_delayed.time_us;
 
-	// Check if out of range
-	if ((_range_sample_delayed.rng > _rng_valid_max_val)
-	|| (_range_sample_delayed.rng < _rng_valid_min_val)) {
-		if (_control_status.flags.in_air) {
-			_rng_hgt_valid = false;
-			return;
-		} else {
-			// Range finders can fail to provide valid readings when resting on the ground
-			// or being handled by the user, which prevents use of as a primary height sensor.
-			// To work around this issue, we replace out of range data with the expected on ground value.
-			_range_sample_delayed.rng = _params.rng_gnd_clearance;
-			return;
+		} else if (_imu_sample_delayed.time_us - _time_bad_rng_signal_quality > (unsigned)_params.range_signal_hysteresis_ms) {
+			const bool is_in_range = ((_range_sample_delayed.rng > _rng_valid_min_val)
+						  && (_range_sample_delayed.rng < _rng_valid_max_val));
+
+			if (_is_rng_tilt_ok || is_in_range) {
+				updateRangeDataStuck();
+
+				if (!_control_status.flags.rng_stuck) {
+					_rng_hgt_valid = true;
+				}
+			}
 		}
 	}
-
-	updateRangeDataStuck();
-
-	_rng_hgt_valid = _rng_hgt_valid && !_control_status.flags.rng_stuck;
 }
 
 void Ekf::updateRangeDataStuck()
