@@ -511,7 +511,6 @@ private:
 
 	// variables used to control range aid functionality
 	bool _is_range_aid_suitable{false};	///< true when range finder can be used in flight as the height reference instead of the primary height sensor
-	bool _range_aid_mode_selected{false};	///< true when range finder is being used as the height reference instead of the primary height sensor
 
 	// variables used to check range finder validity data
 	float _rng_stuck_min_val{0.0f};		///< minimum value for new rng measurement when being stuck
