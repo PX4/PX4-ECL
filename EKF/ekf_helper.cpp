@@ -67,7 +67,7 @@ bool Ekf::resetVelocity()
 		float heightAboveGndEst = fmaxf((_terrain_vpos - _state.pos(2)), _params.rng_gnd_clearance);
 
 		// calculate absolute distance from focal point to centre of frame assuming a flat earth
-		float range = heightAboveGndEst / _R_rng_to_earth_2_2;
+		float range = heightAboveGndEst / _sensor_rng.getRToEarth();
 
 		if ((range - _params.rng_gnd_clearance) > 0.3f && _flow_sample_delayed.dt > 0.05f) {
 			// we should have reliable OF measurements so
@@ -227,7 +227,7 @@ void Ekf::resetHeight()
 
 	// reset the vertical position
 	if (_control_status.flags.rng_hgt) {
-		float new_pos_down = _hgt_sensor_offset - _range_sample_delayed.rng * _R_rng_to_earth_2_2;
+		float new_pos_down = _hgt_sensor_offset - _sensor_rng.getDelayedRng() * _sensor_rng.getRToEarth();
 
 		// update the state and associated variance
 		_state.pos(2) = new_pos_down;
@@ -1052,9 +1052,9 @@ hagl_max : Maximum height above ground (meters). NaN when limiting is not needed
 void Ekf::get_ekf_ctrl_limits(float *vxy_max, float *vz_max, float *hagl_min, float *hagl_max)
 {
 	// Calculate range finder limits
-	const float rangefinder_hagl_min = _rng_valid_min_val;
+	const float rangefinder_hagl_min = _sensor_rng.getValidMinVal();
 	// Allow use of 75% of rangefinder maximum range to allow for angular motion
-	const float rangefinder_hagl_max = 0.75f * _rng_valid_max_val;
+	const float rangefinder_hagl_max = 0.75f * _sensor_rng.getValidMaxVal();
 
 	// Calculate optical flow limits
 	// Allow ground relative velocity to use 50% of available flow sensor range to allow for angular motion

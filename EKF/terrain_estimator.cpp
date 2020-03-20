@@ -57,10 +57,10 @@ bool Ekf::initHagl()
 		initialized = true;
 
 	} else if ((_params.terrain_fusion_mode & TerrainFusionMask::TerrainFuseRangeFinder)
-		   && _rng_hgt_valid
+		   && _sensor_rng.isHealthy()
 		   && isRecent(latest_measurement.time_us, (uint64_t)2e5)) {
 		// if we have a fresh measurement, use it to initialise the terrain estimator
-		_terrain_vpos = _state.pos(2) + latest_measurement.rng * _R_rng_to_earth_2_2;
+		_terrain_vpos = _state.pos(2) + latest_measurement.rng * _sensor_rng.getRToEarth();
 		// initialise state variance to variance of measurement
 		_terrain_var = sq(_params.range_noise);
 		// success
@@ -112,13 +112,12 @@ void Ekf::runTerrainEstimator()
 		_terrain_var = math::constrain(_terrain_var, 0.0f, 1e4f);
 
 		// Fuse range finder data if available
-		if (_range_data_ready && _rng_hgt_valid) {
+		if (_sensor_rng.isDelayedHealthyData()) {
 			fuseHagl();
 
 			// update range sensor angle parameters in case they have changed
 			// we do this here to avoid doing those calculations at a high rate
-			_sin_tilt_rng = sinf(_params.rng_sens_pitch);
-			_cos_tilt_rng = cosf(_params.rng_sens_pitch);
+			_sensor_rng.setTilt(_params.rng_sens_pitch, _params.range_cos_max_tilt);
 		}
 
 		if (_flow_for_terrain_data_ready) {
@@ -138,7 +137,7 @@ void Ekf::runTerrainEstimator()
 void Ekf::fuseHagl()
 {
 	// get a height above ground measurement from the range finder assuming a flat earth
-	const float meas_hagl = _range_sample_delayed.rng * _R_rng_to_earth_2_2;
+	const float meas_hagl = _sensor_rng.getDelayedRng() * _sensor_rng.getRToEarth();
 
 	// predict the hagl from the vehicle position and terrain height
 	const float pred_hagl = _terrain_vpos - _state.pos(2);
@@ -149,7 +148,7 @@ void Ekf::fuseHagl()
 	// calculate the observation variance adding the variance of the vehicles own height uncertainty
 	const float obs_variance = fmaxf(P(9,9) * _params.vehicle_variance_scaler, 0.0f)
 			     + sq(_params.range_noise)
-			     + sq(_params.range_noise_scaler * _range_sample_delayed.rng);
+			     + sq(_params.range_noise_scaler * _sensor_rng.getDelayedRng());
 
 	// calculate the innovation variance - limiting it to prevent a badly conditioned fusion
 	_hagl_innov_var = fmaxf(_terrain_var + obs_variance, obs_variance);

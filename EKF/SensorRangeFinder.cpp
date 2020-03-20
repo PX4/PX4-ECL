@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2019 Estimation and Control Library (ECL). All rights reserved.
+ *   Copyright (c) 2020 Estimation and Control Library (ECL). All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,33 +32,29 @@
  ****************************************************************************/
 
 /**
- * @file range_finder_checks.cpp
- * Perform checks on range finder data in order to evaluate validity.
+ * @file SensorRangeFinder.cpp
  *
+ * @author Mathieu Bresciani <brescianimathieu@gmail.com>
  *
  */
 
-#include "ekf.h"
+#include "SensorRangeFinder.hpp"
 
-void Ekf::updateRangeDataContinuity()
+void SensorRangeFinder::runChecks(const uint64_t time_delayed_us, const Dcmf &R_to_earth)
 {
-	// update range data continuous flag (1Hz ie 2000 ms)
-	/* Timing in micro seconds */
+	// calculate 2,2 element of rotation matrix from sensor frame to earth frame
+	// this is required for use of range finder and flow data
+	_R_rng_to_earth_2_2 = R_to_earth(2, 0) * _sin_tilt_rng + R_to_earth(2, 2) * _cos_tilt_rng;
 
-	/* Apply a 2.0 sec low pass filter to the time delta from the last range finder updates */
-	float alpha = 0.5f * _dt_update;
-	_dt_last_range_update_filt_us = _dt_last_range_update_filt_us * (1.0f - alpha) + alpha *
-					(_imu_sample_delayed.time_us - _range_sample_delayed.time_us);
-
-	_dt_last_range_update_filt_us = fminf(_dt_last_range_update_filt_us, 4e6f);
+	updateRangeDataValidity(time_delayed_us);
 }
 
-void Ekf::updateRangeDataValidity()
+void SensorRangeFinder::updateRangeDataValidity(uint64_t time_delayed_us)
 {
-	updateRangeDataContinuity();
+	updateRangeDataContinuity(time_delayed_us);
 
 	// check if out of date
-	if (((_imu_sample_delayed.time_us - _range_sample_delayed.time_us) > 2 * RNG_MAX_INTERVAL)
+	if (((time_delayed_us - _range_sample_delayed.time_us) > 2 * RNG_MAX_INTERVAL)
 	    || !isRangeDataContinuous()) {
 		_rng_hgt_valid = false;
 		return;
@@ -69,16 +65,16 @@ void Ekf::updateRangeDataValidity()
 		_rng_hgt_valid = false;
 
 		if (_range_sample_delayed.quality == 0) {
-			_time_bad_rng_signal_quality = _imu_sample_delayed.time_us;
+			_time_bad_rng_signal_quality = time_delayed_us;
 
-		} else if (_imu_sample_delayed.time_us - _time_bad_rng_signal_quality > (unsigned)_params.range_signal_hysteresis_ms) {
+		} else if (time_delayed_us - _time_bad_rng_signal_quality > _range_signal_hysteresis_ms) {
 			const bool is_in_range = ((_range_sample_delayed.rng > _rng_valid_min_val)
 						  && (_range_sample_delayed.rng < _rng_valid_max_val));
 
-			if (_is_rng_tilt_ok || is_in_range) {
+			if (isTiltOk() || is_in_range) {
 				updateRangeDataStuck();
 
-				if (!_control_status.flags.rng_stuck) {
+				if (!_is_stuck) {
 					_rng_hgt_valid = true;
 				}
 			}
@@ -86,19 +82,31 @@ void Ekf::updateRangeDataValidity()
 	}
 }
 
-void Ekf::updateRangeDataStuck()
+void SensorRangeFinder::updateRangeDataContinuity(uint64_t time_delayed_us)
+{
+	// update range data continuous flag (1Hz ie 2000 ms)
+	/* Timing in micro seconds */
+
+	/* Apply a 2.0 sec low pass filter to the time delta from the last range finder updates */
+	float alpha = 0.5f * _dt_update;
+	_dt_last_range_update_filt_us = _dt_last_range_update_filt_us * (1.0f - alpha) + alpha *
+					(time_delayed_us - _range_sample_delayed.time_us);
+
+	_dt_last_range_update_filt_us = fminf(_dt_last_range_update_filt_us, 4e6f);
+}
+
+void SensorRangeFinder::updateRangeDataStuck()
 {
 	// Check for "stuck" range finder measurements when range was not valid for certain period
 	// This handles a failure mode observed with some lidar sensors
-	if (((_range_sample_delayed.time_us - _time_last_rng_ready) > (uint64_t)10e6) &&
-	    _control_status.flags.in_air) {
+	if (((_range_sample_delayed.time_us - _time_last_rng_ready) > (uint64_t)10e6)) {
 
 		// require a variance of rangefinder values to check for "stuck" measurements
-		if (_rng_stuck_max_val - _rng_stuck_min_val > _params.range_stuck_threshold) {
+		if (_rng_stuck_max_val - _rng_stuck_min_val > _range_stuck_threshold) {
 			_time_last_rng_ready = _range_sample_delayed.time_us;
 			_rng_stuck_min_val = 0.0f;
 			_rng_stuck_max_val = 0.0f;
-			_control_status.flags.rng_stuck = false;
+			_is_stuck = false;
 
 		} else {
 			if (_range_sample_delayed.rng > _rng_stuck_max_val) {
@@ -109,10 +117,20 @@ void Ekf::updateRangeDataStuck()
 				_rng_stuck_min_val = _range_sample_delayed.rng;
 			}
 
-			_control_status.flags.rng_stuck = true;
+			_is_stuck = true;
 		}
 
 	} else {
 		_time_last_rng_ready = _range_sample_delayed.time_us;
 	}
+}
+
+bool SensorRangeFinder::canBeusedAsFailover() const
+{
+	return false;
+}
+
+bool SensorRangeFinder::canResetOnSensor() const
+{
+	return false;
 }
