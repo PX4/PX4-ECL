@@ -120,16 +120,16 @@ void Ekf::controlFusionModes()
 
 	{
 	// Get range data from buffer and check validity
-	const bool is_rng_data_ready = _range_buffer.pop_first_older_than(_imu_sample_delayed.time_us, _sensor_rng.getSampleDelayedAddress());
-	_sensor_rng.setDataReadiness(is_rng_data_ready);
-	_sensor_rng.runChecks(_imu_sample_delayed.time_us, _R_to_earth);
+	const bool is_rng_data_ready = _range_buffer.pop_first_older_than(_imu_sample_delayed.time_us, _range_sensor.getSampleDelayedAddress());
+	_range_sensor.setDataReadiness(is_rng_data_ready);
+	_range_sensor.runChecks(_imu_sample_delayed.time_us, _R_to_earth);
 	}
 
-	if (_sensor_rng.isDelayedHealthyData()) {
+	if (_range_sensor.isDelayedHealthyData()) {
 		// correct the range data for position offset relative to the IMU
 		Vector3f pos_offset_body = _params.rng_pos_body - _params.imu_pos_body;
 		Vector3f pos_offset_earth = _R_to_earth * pos_offset_body;
-		_sensor_rng.setDelayedRng(_sensor_rng.getDelayedRng() + pos_offset_earth(2) / _sensor_rng.getRToEarth());
+		_range_sensor.setDelayedRng(_range_sensor.getDelayedRng() + pos_offset_earth(2) / _range_sensor.getRangeToEarth());
 	}
 
 	// We don't fuse flow data immediately because we have to wait for the mid integration point to fall behind the fusion time horizon.
@@ -853,7 +853,7 @@ void Ekf::controlHeightSensorTimeouts()
 
 		} else if (_control_status.flags.rng_hgt) {
 
-			if (_sensor_rng.isHealthy()) {
+			if (_range_sensor.isHealthy()) {
 				request_height_reset = true;
 				ECL_WARN_TIMESTAMPED("rng hgt timeout - reset to rng hgt");
 
@@ -943,7 +943,7 @@ void Ekf::controlHeightFusion()
 
 	// FALLTHROUGH
 	case VDIST_SENSOR_BARO:
-		if (do_range_aid && _sensor_rng.isDelayedHealthyData()) {
+		if (do_range_aid && _range_sensor.isDelayedHealthyData()) {
 			setControlRangeHeight();
 			fuse_height = true;
 
@@ -985,7 +985,7 @@ void Ekf::controlHeightFusion()
 		break;
 
 	case VDIST_SENSOR_RANGE:
-		if (_sensor_rng.isDelayedHealthyData()) {
+		if (_range_sensor.isDelayedHealthyData()) {
 			setControlRangeHeight();
 			fuse_height = true;
 
@@ -997,7 +997,7 @@ void Ekf::controlHeightFusion()
 					_hgt_sensor_offset = _terrain_vpos;
 
 				} else if (_control_status.flags.in_air) {
-					_hgt_sensor_offset = _sensor_rng.getRToEarth() * _sensor_rng.getDelayedRng() + _state.pos(2);
+					_hgt_sensor_offset = _range_sensor.getRangeToEarth() * _range_sensor.getDelayedRng() + _state.pos(2);
 
 				} else {
 					_hgt_sensor_offset = _params.rng_gnd_clearance;
@@ -1020,7 +1020,7 @@ void Ekf::controlHeightFusion()
 	case VDIST_SENSOR_GPS:
 
 		// Determine if GPS should be used as the height source
-		if (do_range_aid && _sensor_rng.isDelayedHealthyData()) {
+		if (do_range_aid && _range_sensor.isDelayedHealthyData()) {
 			setControlRangeHeight();
 			fuse_height = true;
 
@@ -1093,13 +1093,13 @@ void Ekf::controlHeightFusion()
 	}
 
 	if (isTimedOut(_time_last_hgt_fuse, 2 * RNG_MAX_INTERVAL) && _control_status.flags.rng_hgt
-	    && (!_sensor_rng.isDelayedHealthyData())) {
+	    && (!_range_sensor.isDelayedHealthyData())) {
 
 		// If we are supposed to be using range finder data as the primary height sensor, have missed or rejected measurements
 		// and are on the ground, then synthesise a measurement at the expected on ground value
 		if (!_control_status.flags.in_air) {
-			_sensor_rng.setDelayedRng(_params.rng_gnd_clearance);
-			_sensor_rng.setValidity(true);
+			_range_sensor.setDelayedRng(_params.rng_gnd_clearance);
+			_range_sensor.setValidity(true);
 		}
 
 		fuse_height = true;
@@ -1156,10 +1156,10 @@ void Ekf::controlHeightFusion()
 			Vector2f rng_hgt_innov_gate;
 			Vector3f rng_hgt_obs_var;
 			// use range finder with tilt correction
-			_rng_hgt_innov(2) = _state.pos(2) - (-math::max(_sensor_rng.getDelayedRng() * _sensor_rng.getRToEarth(),
+			_rng_hgt_innov(2) = _state.pos(2) - (-math::max(_range_sensor.getDelayedRng() * _range_sensor.getRangeToEarth(),
 							 _params.rng_gnd_clearance)) - _hgt_sensor_offset;
 			// observation variance - user parameter defined
-			rng_hgt_obs_var(2) = fmaxf((sq(_params.range_noise) + sq(_params.range_noise_scaler * _sensor_rng.getDelayedRng())) * sq(_sensor_rng.getRToEarth()), 0.01f);
+			rng_hgt_obs_var(2) = fmaxf((sq(_params.range_noise) + sq(_params.range_noise_scaler * _range_sensor.getDelayedRng())) * sq(_range_sensor.getRangeToEarth()), 0.01f);
 			// innovation gate size
 			rng_hgt_innov_gate(1) = fmaxf(_params.range_innov_gate, 1.0f);
 			// fuse height information
@@ -1185,7 +1185,7 @@ void Ekf::controlHeightFusion()
 void Ekf::checkRangeAidSuitability()
 {
 	if (_control_status.flags.in_air
-	    && _sensor_rng.isHealthy()
+	    && _range_sensor.isHealthy()
 	    && isTerrainEstimateValid()
 	    && isHorizontalAidingActive()) {
 		// check if we can use range finder measurements to estimate height, use hysteresis to avoid rapid switching

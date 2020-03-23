@@ -64,8 +64,8 @@ public:
 	bool canBeusedAsFailover() const override;
 	bool canResetOnSensor() const override;
 
-	void setNewestSample(rangeSample sample) { _newest_sample = sample; }
-	void setDelayedSample(rangeSample sample) {
+	void setNewestSample(const rangeSample &sample) { _newest_sample = sample; }
+	void setDelayedSample(const rangeSample &sample) {
 		_range_sample_delayed = sample;
 		_range_data_ready = true;
 	}
@@ -84,7 +84,7 @@ public:
 		_rng_valid_max_val = max_distance;
 	};
 
-	float getRToEarth() const { return _R_rng_to_earth_2_2; }
+	float getRangeToEarth() const { return _R_rng_to_earth_2_2; }
 
 	void setDelayedRng(float rng) { _range_sample_delayed.rng = rng; }
 	float getDelayedRng() const { return _range_sample_delayed.rng; }
