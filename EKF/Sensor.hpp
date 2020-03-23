@@ -43,6 +43,11 @@
 
 #include "common.h"
 
+namespace estimator
+{
+namespace sensor
+{
+
 class Sensor
 {
 public:
@@ -58,3 +63,6 @@ public:
 protected:
 	bool _is_healthy{};
 };
+
+} // namespace sensor
+} // namespace estimator

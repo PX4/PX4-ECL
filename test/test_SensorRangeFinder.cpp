@@ -39,6 +39,7 @@
 
 using estimator::rangeSample;
 using matrix::Dcmf;
+using namespace estimator::sensor;
 
 class SensorRangeFinderTest : public ::testing::Test {
 public:
@@ -70,4 +71,3 @@ TEST_F(SensorRangeFinderTest, setData)
 	/* _range_finder_data.runChecks(1e6f, attitude); */
 	EXPECT_TRUE(_range_finder.isHealthy());
 }
-

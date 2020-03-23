@@ -40,6 +40,11 @@
 
 #include "SensorRangeFinder.hpp"
 
+namespace estimator
+{
+namespace sensor
+{
+
 void SensorRangeFinder::runChecks(const uint64_t time_delayed_us, const Dcmf &R_to_earth)
 {
 	// calculate 2,2 element of rotation matrix from sensor frame to earth frame
@@ -134,3 +139,6 @@ bool SensorRangeFinder::canResetOnSensor() const
 {
 	return false;
 }
+
+} // namespace sensor
+} // namespace estimator

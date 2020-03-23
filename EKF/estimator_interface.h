@@ -436,7 +436,7 @@ protected:
 	magSample _mag_sample_delayed{};
 	baroSample _baro_sample_delayed{};
 	gpsSample _gps_sample_delayed{};
-	SensorRangeFinder _sensor_rng{};
+	sensor::SensorRangeFinder _sensor_rng{};
 	airspeedSample _airspeed_sample_delayed{};
 	flowSample _flow_sample_delayed{};
 	extVisionSample _ev_sample_delayed{};

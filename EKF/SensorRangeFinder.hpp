@@ -43,6 +43,11 @@
 #include "Sensor.hpp"
 #include <matrix/math.hpp>
 
+namespace estimator
+{
+namespace sensor
+{
+
 using estimator::rangeSample;
 using matrix::Dcmf;
 
@@ -129,3 +134,6 @@ private:
 	float _range_stuck_threshold{0.1f};	///< minimum variation in range finder reading required to declare a range finder 'unstuck' when readings recommence after being out of range (m)
 	uint64_t _range_signal_hysteresis_ms{1000}; 	///< minimum duration during which the reported range finder signal quality needs to be non-zero in order to be declared valid (ms)
 };
+
+} // namespace sensor
+} // namespace estimator
