@@ -47,20 +47,22 @@ namespace sensor
 
 void SensorRangeFinder::runChecks(const uint64_t time_delayed_us, const Dcmf &R_to_earth)
 {
+	updateSensorToEarthRotation(R_to_earth);
+	updateRangeDataValidity(time_delayed_us);
+}
+
+void SensorRangeFinder::updateSensorToEarthRotation(const Dcmf &R_to_earth)
+{
 	// calculate 2,2 element of rotation matrix from sensor frame to earth frame
 	// this is required for use of range finder and flow data
 	_R_rng_to_earth_2_2 = R_to_earth(2, 0) * _sin_tilt_rng + R_to_earth(2, 2) * _cos_tilt_rng;
-
-	updateRangeDataValidity(time_delayed_us);
 }
 
 void SensorRangeFinder::updateRangeDataValidity(uint64_t time_delayed_us)
 {
 	updateRangeDataContinuity(time_delayed_us);
 
-	// check if out of date
-	if (((time_delayed_us - _range_sample_delayed.time_us) > 2 * RNG_MAX_INTERVAL)
-	    || !isRangeDataContinuous()) {
+	if (isDelayedDataOutOfDate(time_delayed_us) || !isRangeDataContinuous()) {
 		_rng_hgt_valid = false;
 		return;
 	}
@@ -73,10 +75,9 @@ void SensorRangeFinder::updateRangeDataValidity(uint64_t time_delayed_us)
 			_time_bad_rng_signal_quality = time_delayed_us;
 
 		} else if (time_delayed_us - _time_bad_rng_signal_quality > _range_signal_hysteresis_ms) {
-			const bool is_in_range = ((_range_sample_delayed.rng >= _rng_valid_min_val)
-						  && (_range_sample_delayed.rng <= _rng_valid_max_val));
+			// We did not receive bad quality data for some time
 
-			if (isTiltOk() || is_in_range) {
+			if (isTiltOk() && isDelayedDataInRange()) {
 				updateRangeDataStuck();
 
 				if (!_is_stuck) {
@@ -96,6 +97,16 @@ void SensorRangeFinder::updateRangeDataContinuity(uint64_t time_delayed_us)
 
 	// Apply spike protection to the filter state.
 	_dt_last_range_update_filt_us = fminf(_dt_last_range_update_filt_us, 4e6f);
+}
+
+inline bool SensorRangeFinder::isDelayedDataOutOfDate(uint64_t time_delayed_us) const
+{
+	return (time_delayed_us - _range_sample_delayed.time_us) > 2 * RNG_MAX_INTERVAL;
+}
+
+inline bool SensorRangeFinder::isDelayedDataInRange() const
+{
+	return (_range_sample_delayed.rng >= _rng_valid_min_val) && (_range_sample_delayed.rng <= _rng_valid_max_val);
 }
 
 void SensorRangeFinder::updateRangeDataStuck()

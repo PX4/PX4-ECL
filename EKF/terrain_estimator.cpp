@@ -114,10 +114,6 @@ void Ekf::runTerrainEstimator()
 		// Fuse range finder data if available
 		if (_range_sensor.isDelayedHealthyData()) {
 			fuseHagl();
-
-			// update range sensor angle parameters in case they have changed
-			// we do this here to avoid doing those calculations at a high rate
-			_range_sensor.setTilt(_params.rng_sens_pitch, _params.range_cos_max_tilt);
 		}
 
 		if (_flow_for_terrain_data_ready) {

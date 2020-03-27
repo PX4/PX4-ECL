@@ -102,8 +102,11 @@ public:
 	rangeSample* getSampleDelayedAddress() { return &_range_sample_delayed; }
 
 private:
+	void updateSensorToEarthRotation(const Dcmf &R_to_earth);
 	void updateRangeDataValidity(uint64_t time_delayed_us);
 	void updateRangeDataContinuity(uint64_t time_delayed_us);
+	bool isDelayedDataOutOfDate(uint64_t time_delayed_us) const;
+	bool isDelayedDataInRange() const;
 	bool isRangeDataContinuous() const { return _dt_last_range_update_filt_us < 2e6f; }
 	void updateRangeDataStuck();
 
@@ -121,9 +124,9 @@ private:
 
 	static constexpr float _dt_update{0.01f}; ///< delta time since last ekf update TODO: this should be a parameter
 
-	float _tilt{};
+	float _tilt{3.14f}; ///< range finder tilt rotation about the Y body axis
 	float _sin_tilt_rng{0.0f}; ///< sine of the range finder tilt rotation about the Y body axis
-	float _cos_tilt_rng{0.0f}; ///< cosine of the range finder tilt rotation about the Y body axis
+	float _cos_tilt_rng{-1.0f}; ///< cosine of the range finder tilt rotation about the Y body axis
 
 	float _R_rng_to_earth_2_2{0.0f};	///< 2,2 element of the rotation matrix from sensor frame to earth frame
 
