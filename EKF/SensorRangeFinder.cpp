@@ -73,8 +73,8 @@ void SensorRangeFinder::updateRangeDataValidity(uint64_t time_delayed_us)
 			_time_bad_rng_signal_quality = time_delayed_us;
 
 		} else if (time_delayed_us - _time_bad_rng_signal_quality > _range_signal_hysteresis_ms) {
-			const bool is_in_range = ((_range_sample_delayed.rng > _rng_valid_min_val)
-						  && (_range_sample_delayed.rng < _rng_valid_max_val));
+			const bool is_in_range = ((_range_sample_delayed.rng >= _rng_valid_min_val)
+						  && (_range_sample_delayed.rng <= _rng_valid_max_val));
 
 			if (isTiltOk() || is_in_range) {
 				updateRangeDataStuck();
