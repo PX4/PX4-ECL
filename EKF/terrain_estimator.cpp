@@ -60,6 +60,7 @@ bool Ekf::initHagl()
 		   && _range_sensor.isHealthy()
 		   && isRecent(latest_measurement.time_us, (uint64_t)2e5)) {
 		// if we have a fresh measurement, use it to initialise the terrain estimator
+		// TODO: the latest measurment did not go through the checks and could be invalid!
 		_terrain_vpos = _state.pos(2) + latest_measurement.rng * _range_sensor.getRangeToEarth();
 		// initialise state variance to variance of measurement
 		_terrain_var = sq(_params.range_noise);
@@ -112,7 +113,7 @@ void Ekf::runTerrainEstimator()
 		_terrain_var = math::constrain(_terrain_var, 0.0f, 1e4f);
 
 		// Fuse range finder data if available
-		if (_range_sensor.isDelayedHealthyData()) {
+		if (_range_sensor.isDelayedDataHealthy()) {
 			fuseHagl();
 		}
 

@@ -139,15 +139,5 @@ void SensorRangeFinder::updateRangeDataStuck()
 	}
 }
 
-bool SensorRangeFinder::canBeusedAsFailover() const
-{
-	return false;
-}
-
-bool SensorRangeFinder::canResetOnSensor() const
-{
-	return false;
-}
-
 } // namespace sensor
 } // namespace estimator

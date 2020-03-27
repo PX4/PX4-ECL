@@ -53,15 +53,23 @@ class Sensor
 public:
 	virtual ~Sensor() {};
 
+	/*
+	 * run sanity checks on the current data
+	 * this has to be called immediately after
+	 * setting new data
+	 */
 	virtual void runChecks(){};
-	virtual bool isHealthy() const { return _is_healthy; }
-	virtual bool isNewHealthyData() const = 0;
-	virtual bool isDelayedHealthyData() const = 0;
-	virtual bool canBeusedAsFailover() const = 0;
-	virtual bool canResetOnSensor() const = 0;
 
-protected:
-	bool _is_healthy{};
+	/*
+	 * return true if the sensor is healthy
+	 */
+	virtual bool isHealthy() const = 0;
+
+	/*
+	 * return true if the delayed sample is healthy
+	 * and can be fused in the estimator
+	 */
+	virtual bool isDelayedDataHealthy() const = 0;
 };
 
 } // namespace sensor

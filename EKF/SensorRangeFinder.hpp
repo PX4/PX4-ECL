@@ -59,10 +59,7 @@ public:
 
 	void runChecks(uint64_t time_delayed_us, const Dcmf &R_to_earth);
 	bool isHealthy() const override { return _rng_hgt_valid; }
-	bool isNewHealthyData() const override { return _range_data_ready && _rng_hgt_valid; }
-	bool isDelayedHealthyData() const override { return _range_data_ready && _rng_hgt_valid; }
-	bool canBeusedAsFailover() const override;
-	bool canResetOnSensor() const override;
+	bool isDelayedDataHealthy() const override { return _range_data_ready && _rng_hgt_valid; }
 
 	void setNewestSample(const rangeSample &sample) { _newest_sample = sample; }
 	void setDelayedSample(const rangeSample &sample) {

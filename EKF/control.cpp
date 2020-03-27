@@ -128,7 +128,7 @@ void Ekf::controlFusionModes()
 	_range_sensor.setTilt(_params.rng_sens_pitch, _params.range_cos_max_tilt);
 	}
 
-	if (_range_sensor.isDelayedHealthyData()) {
+	if (_range_sensor.isDelayedDataHealthy()) {
 		// correct the range data for position offset relative to the IMU
 		Vector3f pos_offset_body = _params.rng_pos_body - _params.imu_pos_body;
 		Vector3f pos_offset_earth = _R_to_earth * pos_offset_body;
@@ -946,7 +946,7 @@ void Ekf::controlHeightFusion()
 
 	// FALLTHROUGH
 	case VDIST_SENSOR_BARO:
-		if (do_range_aid && _range_sensor.isDelayedHealthyData()) {
+		if (do_range_aid && _range_sensor.isDelayedDataHealthy()) {
 			setControlRangeHeight();
 			fuse_height = true;
 
@@ -988,7 +988,7 @@ void Ekf::controlHeightFusion()
 		break;
 
 	case VDIST_SENSOR_RANGE:
-		if (_range_sensor.isDelayedHealthyData()) {
+		if (_range_sensor.isDelayedDataHealthy()) {
 			setControlRangeHeight();
 			fuse_height = true;
 
@@ -1023,7 +1023,7 @@ void Ekf::controlHeightFusion()
 	case VDIST_SENSOR_GPS:
 
 		// Determine if GPS should be used as the height source
-		if (do_range_aid && _range_sensor.isDelayedHealthyData()) {
+		if (do_range_aid && _range_sensor.isDelayedDataHealthy()) {
 			setControlRangeHeight();
 			fuse_height = true;
 
@@ -1096,7 +1096,7 @@ void Ekf::controlHeightFusion()
 	}
 
 	if (isTimedOut(_time_last_hgt_fuse, 2 * RNG_MAX_INTERVAL) && _control_status.flags.rng_hgt
-	    && (!_range_sensor.isDelayedHealthyData())) {
+	    && (!_range_sensor.isDelayedDataHealthy())) {
 
 		// If we are supposed to be using range finder data as the primary height sensor, have missed or rejected measurements
 		// and are on the ground, then synthesise a measurement at the expected on ground value
