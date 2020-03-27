@@ -132,7 +132,7 @@ void Ekf::controlFusionModes()
 		// correct the range data for position offset relative to the IMU
 		Vector3f pos_offset_body = _params.rng_pos_body - _params.imu_pos_body;
 		Vector3f pos_offset_earth = _R_to_earth * pos_offset_body;
-		_range_sensor.setDelayedRng(_range_sensor.getDelayedRng() + pos_offset_earth(2) / _range_sensor.getRangeToEarth());
+		_range_sensor.setDelayedRng(_range_sensor.getDelayedRng() + pos_offset_earth(2) / _range_sensor.getCosTilt());
 	}
 
 	// We don't fuse flow data immediately because we have to wait for the mid integration point to fall behind the fusion time horizon.
@@ -1000,7 +1000,7 @@ void Ekf::controlHeightFusion()
 					_hgt_sensor_offset = _terrain_vpos;
 
 				} else if (_control_status.flags.in_air) {
-					_hgt_sensor_offset = _range_sensor.getRangeToEarth() * _range_sensor.getDelayedRng() + _state.pos(2);
+					_hgt_sensor_offset = _range_sensor.getCosTilt() * _range_sensor.getDelayedRng() + _state.pos(2);
 
 				} else {
 					_hgt_sensor_offset = _params.rng_gnd_clearance;
@@ -1159,10 +1159,10 @@ void Ekf::controlHeightFusion()
 			Vector2f rng_hgt_innov_gate;
 			Vector3f rng_hgt_obs_var;
 			// use range finder with tilt correction
-			_rng_hgt_innov(2) = _state.pos(2) - (-math::max(_range_sensor.getDelayedRng() * _range_sensor.getRangeToEarth(),
+			_rng_hgt_innov(2) = _state.pos(2) - (-math::max(_range_sensor.getDelayedRng() * _range_sensor.getCosTilt(),
 							 _params.rng_gnd_clearance)) - _hgt_sensor_offset;
 			// observation variance - user parameter defined
-			rng_hgt_obs_var(2) = fmaxf((sq(_params.range_noise) + sq(_params.range_noise_scaler * _range_sensor.getDelayedRng())) * sq(_range_sensor.getRangeToEarth()), 0.01f);
+			rng_hgt_obs_var(2) = fmaxf((sq(_params.range_noise) + sq(_params.range_noise_scaler * _range_sensor.getDelayedRng())) * sq(_range_sensor.getCosTilt()), 0.01f);
 			// innovation gate size
 			rng_hgt_innov_gate(1) = fmaxf(_params.range_innov_gate, 1.0f);
 			// fuse height information

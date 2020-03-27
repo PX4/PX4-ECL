@@ -67,7 +67,7 @@ bool Ekf::resetVelocity()
 		const float heightAboveGndEst = fmaxf((_terrain_vpos - _state.pos(2)), _params.rng_gnd_clearance);
 
 		// calculate absolute distance from focal point to centre of frame assuming a flat earth
-		const float range = heightAboveGndEst / _range_sensor.getRangeToEarth();
+		const float range = heightAboveGndEst / _range_sensor.getCosTilt();
 
 		if ((range - _params.rng_gnd_clearance) > 0.3f && _flow_sample_delayed.dt > 0.05f) {
 			// we should have reliable OF measurements so
@@ -227,7 +227,7 @@ void Ekf::resetHeight()
 
 	// reset the vertical position
 	if (_control_status.flags.rng_hgt) {
-		const float new_pos_down = _hgt_sensor_offset - _range_sensor.getDelayedRng() * _range_sensor.getRangeToEarth();
+		const float new_pos_down = _hgt_sensor_offset - _range_sensor.getDelayedRng() * _range_sensor.getCosTilt();
 
 		// update the state and associated variance
 		_state.pos(2) = new_pos_down;

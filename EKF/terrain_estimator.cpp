@@ -61,7 +61,7 @@ bool Ekf::initHagl()
 		   && isRecent(latest_measurement.time_us, (uint64_t)2e5)) {
 		// if we have a fresh measurement, use it to initialise the terrain estimator
 		// TODO: the latest measurment did not go through the checks and could be invalid!
-		_terrain_vpos = _state.pos(2) + latest_measurement.rng * _range_sensor.getRangeToEarth();
+		_terrain_vpos = _state.pos(2) + latest_measurement.rng * _range_sensor.getCosTilt();
 		// initialise state variance to variance of measurement
 		_terrain_var = sq(_params.range_noise);
 		// success
@@ -134,7 +134,7 @@ void Ekf::runTerrainEstimator()
 void Ekf::fuseHagl()
 {
 	// get a height above ground measurement from the range finder assuming a flat earth
-	const float meas_hagl = _range_sensor.getDelayedRng() * _range_sensor.getRangeToEarth();
+	const float meas_hagl = _range_sensor.getDelayedRng() * _range_sensor.getCosTilt();
 
 	// predict the hagl from the vehicle position and terrain height
 	const float pred_hagl = _terrain_vpos - _state.pos(2);
