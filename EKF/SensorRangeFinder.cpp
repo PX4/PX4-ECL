@@ -89,14 +89,12 @@ void SensorRangeFinder::updateRangeDataValidity(uint64_t time_delayed_us)
 
 void SensorRangeFinder::updateRangeDataContinuity(uint64_t time_delayed_us)
 {
-	// update range data continuous flag (1Hz ie 2000 ms)
-	/* Timing in micro seconds */
-
-	/* Apply a 2.0 sec low pass filter to the time delta from the last range finder updates */
+	// Calculate a first order IIR low-pass filtered time of arrival between samples using a 2 second time constant.
 	float alpha = 0.5f * _dt_update;
 	_dt_last_range_update_filt_us = _dt_last_range_update_filt_us * (1.0f - alpha) + alpha *
 					(time_delayed_us - _range_sample_delayed.time_us);
 
+	// Apply spike protection to the filter state.
 	_dt_last_range_update_filt_us = fminf(_dt_last_range_update_filt_us, 4e6f);
 }
 
