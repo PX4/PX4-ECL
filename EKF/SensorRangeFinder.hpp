@@ -67,19 +67,20 @@ public:
 	// TODO: move the ring buffer here
 	rangeSample* getSampleDelayedAddress() { return &_range_sample_delayed; }
 
-	void setTilt(float new_tilt, float range_cos_max_tilt)
+	void setSensorTilt(float new_tilt)
 	{
 		if (fabsf(_tilt - new_tilt) > FLT_EPSILON) {
 			_sin_tilt_rng = sinf(new_tilt);
 			_cos_tilt_rng = cosf(new_tilt);
 		}
-		_range_cos_max_tilt = range_cos_max_tilt;
-	};
+	}
+
+	void setCosMaxTilt(float cos_max_tilt) { _range_cos_max_tilt = cos_max_tilt; }
 
 	void setLimits(float min_distance, float max_distance) {
 		_rng_valid_min_val = min_distance;
 		_rng_valid_max_val = max_distance;
-	};
+	}
 
 	float getCosTilt() const { return _R_rng_to_earth_2_2; }
 
