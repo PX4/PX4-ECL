@@ -39,6 +39,7 @@
 
 using estimator::rangeSample;
 using matrix::Dcmf;
+using matrix::Eulerf;
 using namespace estimator::sensor;
 
 class SensorRangeFinderTest : public ::testing::Test {
@@ -46,6 +47,9 @@ public:
 	// Setup the Ekf with synthetic measurements
 	void SetUp() override
 	{
+		_range_finder.setSensorTilt(0.f);
+		_range_finder.setCosMaxTilt(0.707f);
+		_range_finder.setLimits(_min_range, _max_range);
 	}
 
 	// Use this method to clean up any memory, network etc. after each test
@@ -55,19 +59,57 @@ public:
 
 protected:
 	SensorRangeFinder _range_finder{};
+	const rangeSample _good_sample{1.f, (uint64_t)1e6, 100}; // {range, time_us, quality}
+	const float _min_range{0.5f};
+	const float _max_range{10.f};
 };
 
 
-TEST_F(SensorRangeFinderTest, setData)
+TEST_F(SensorRangeFinderTest, setRange)
 {
 	rangeSample sample{};
 	sample.rng = 1.f;
-	sample.quality = 9.f;
-	sample.time_us = 1e6f;
-	Dcmf attitude{};
+	sample.time_us = 1e6;
+	sample.quality = 9;
 
 	_range_finder.setDelayedRng(sample.rng);
 	_range_finder.setValidity(true);
-	/* _range_finder_data.runChecks(1e6f, attitude); */
 	EXPECT_TRUE(_range_finder.isHealthy());
+}
+
+TEST_F(SensorRangeFinderTest, goodData)
+{
+	// WHEN: the drone is leveled and the data is good
+	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+	_range_finder.setDelayedSample(_good_sample);
+	_range_finder.runChecks(1e6f, attitude);
+
+	// THEN: the data can be used for aiding
+	EXPECT_TRUE(_range_finder.isDelayedDataHealthy());
+}
+
+TEST_F(SensorRangeFinderTest, tiltExceeded)
+{
+	// WHEN: the drone is excessively tilted
+	Dcmf attitude{Eulerf(0.f, 1.f, 0.f)};
+
+	_range_finder.setDelayedSample(_good_sample);
+	_range_finder.runChecks(1e6f, attitude);
+
+	// THEN: the data should be marked as unhealthy
+	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+}
+
+TEST_F(SensorRangeFinderTest, rangeExceeded)
+{
+	// WHEN: the measured range is larger than the maximum
+	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+
+	rangeSample bad_sample = _good_sample;
+	bad_sample. rng = 100.f;
+	_range_finder.setDelayedSample(bad_sample);
+	_range_finder.runChecks(1e6f, attitude);
+
+	// THEN: the data should be marked as unhealthy
+	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
 }
