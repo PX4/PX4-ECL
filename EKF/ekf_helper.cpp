@@ -1739,10 +1739,6 @@ bool Ekf::resetYawToEKFGSF()
 		resetVelocity();
 		resetPosition();
 
-		// stop using the magnetometer in the main EKF otherwise it's fusion could drag the yaw around
-		// and cause another navigation failure
-		_control_status.flags.mag_fault = true;
-
 		// record a magnetic field alignment event to prevent possibility of the EKF trying to reset the yaw to the mag later in flight
 		_flt_mag_align_start_time = _imu_sample_delayed.time_us;
 		_control_status.flags.yaw_align = true;
@@ -1750,6 +1746,9 @@ bool Ekf::resetYawToEKFGSF()
 		if (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE) {
 			ECL_INFO_TIMESTAMPED("Yaw aligned using IMU and GPS");
 		} else {
+			// stop using the magnetometer in the main EKF otherwise it's fusion could drag the yaw around
+			// and cause another navigation failure
+			_control_status.flags.mag_fault = true;
 			ECL_INFO_TIMESTAMPED("Emergency yaw reset - magnetometer use stopped");
 		}
 
