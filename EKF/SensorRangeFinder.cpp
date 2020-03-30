@@ -74,7 +74,7 @@ void SensorRangeFinder::updateRangeDataValidity(uint64_t time_delayed_us)
 		if (_range_sample_delayed.quality == 0) {
 			_time_bad_rng_signal_quality = time_delayed_us;
 
-		} else if (time_delayed_us - _time_bad_rng_signal_quality > _range_signal_hysteresis_ms) {
+		} else if (time_delayed_us - _time_bad_rng_signal_quality > _range_signal_hysteresis_us) {
 			// We did not receive bad quality data for some time
 
 			if (isTiltOk() && isDelayedDataInRange()) {

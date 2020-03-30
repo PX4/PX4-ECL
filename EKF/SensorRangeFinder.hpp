@@ -144,7 +144,7 @@ private:
 	 * Quality check
 	 */
 	uint64_t _time_bad_rng_signal_quality{};	///< timestamp at which range finder signal quality was 0 (used for hysteresis)
-	uint64_t _range_signal_hysteresis_ms{1000}; 	///< minimum duration during which the reported range finder signal quality needs to be non-zero in order to be declared valid (ms)
+	uint64_t _range_signal_hysteresis_us{1000000}; 	///< minimum duration during which the reported range finder signal quality needs to be non-zero in order to be declared valid (us)
 };
 
 } // namespace sensor
