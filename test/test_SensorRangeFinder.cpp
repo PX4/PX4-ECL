@@ -62,7 +62,29 @@ protected:
 	const rangeSample _good_sample{1.f, (uint64_t)2e6, 100}; // {range, time_us, quality}
 	const float _min_range{0.5f};
 	const float _max_range{10.f};
+
+	void runDurationRateSensorRate(uint64_t duration_us, uint64_t dt_update_us, uint64_t dt_sensor_us);
 };
+
+void SensorRangeFinderTest::runDurationRateSensorRate(uint64_t duration_us, uint64_t dt_update_us, uint64_t dt_sensor_us)
+{
+	const Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+
+	rangeSample new_sample = _good_sample;
+	uint64_t t_now_us = _good_sample.time_us;
+	for (int i = 0; i < int(duration_us / dt_update_us); i++) {
+		t_now_us += dt_update_us;
+		if ((i % int(dt_sensor_us / dt_update_us)) == 0) {
+			new_sample.rng += 0.2f; // update the range to not trigger the stuck detection
+			if (new_sample.rng > _max_range) {
+				new_sample.rng = _min_range;
+			}
+			new_sample.time_us = t_now_us;
+			_range_finder.setDelayedSample(new_sample);
+		}
+		_range_finder.runChecks(t_now_us, attitude);
+	}
+}
 
 
 TEST_F(SensorRangeFinderTest, setRange)
@@ -147,17 +169,29 @@ TEST_F(SensorRangeFinderTest, rangeStuck)
 {
 	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 
-	// WHEN: the data is constantly the same
+	// WHEN: the data is first not valid and then
+	// constantly the same
 	rangeSample new_sample = _good_sample;
-	const float dt = 3e5;
-	const float stuck_timeout = 10e6;
-	for (int i = 0; i < (stuck_timeout / dt) + 2; i++) {
+	const uint64_t dt = 3e5;
+	const uint64_t stuck_timeout = 11e6;
+	new_sample.quality = 0;
+	for (int i = 0; i < int(stuck_timeout / dt); i++) {
 		_range_finder.setDelayedSample(new_sample);
 		_range_finder.runChecks(new_sample.time_us, attitude);
-		new_sample.time_us += float(i) * dt;
+		new_sample.time_us += dt;
+	}
+	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+
+	new_sample.quality = 100;
+	// we need a few sample to pass the hysteresis check
+	for (int i = 0; i < int(2e6 / dt); i++) {
+		_range_finder.setDelayedSample(new_sample);
+		_range_finder.runChecks(new_sample.time_us, attitude);
+		new_sample.time_us += dt;
 	}
 
 	// THEN: the data should be marked as unhealthy
+	// because the sensor is "stuck"
 	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
 }
 
@@ -179,31 +213,41 @@ TEST_F(SensorRangeFinderTest, qualityHysteresis)
 	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
 
 	// AND: we need to put enough good data to pass the hysteresis
-	const float dt = 3e5;
-	const float hyst_time = 1e6;
-	for (int i = 0; i < (hyst_time / dt) + 1; i++) {
+	const uint64_t dt = 3e5;
+	const uint64_t hyst_time = 1e6;
+	for (int i = 0; i < int(hyst_time / dt) + 2; i++) {
 		_range_finder.setDelayedSample(new_sample);
 		_range_finder.runChecks(new_sample.time_us, attitude);
-		new_sample.time_us += float(i) * dt;
+		new_sample.time_us += dt;
 	}
 
 	// THEN: the data is again declared healthy
 	EXPECT_TRUE(_range_finder.isDelayedDataHealthy());
 }
 
-/* TEST_F(SensorRangeFinderTest, continuity) */
-/* { */
-/* 	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)}; */
+TEST_F(SensorRangeFinderTest, continuity)
+{
+	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 
-/* 	// WHEN: the data too slow */
-/* 	rangeSample new_sample = _good_sample; */
-/* 	float dt = 2e6; */
-/* 	for (int i = 0; i < 10; i++) { */
-/* 		_range_finder.setDelayedSample(new_sample); */
-/* 		_range_finder.runChecks(new_sample.time_us, attitude); */
-/* 		new_sample.time_us += float(i) * dt; */
-/* 	} */
+	// WHEN: the data rate is too slow
+	const uint64_t dt_update_us = 10e3;
+	uint64_t dt_sensor_us = 4e6;
+	uint64_t duration_us = 8e6;
+	runDurationRateSensorRate(duration_us, dt_update_us, dt_sensor_us);
 
-/* 	// THEN: the data should be marked as unhealthy */
-/* 	EXPECT_TRUE(_range_finder.isDelayedDataHealthy()); */
-/* } */
+	// THEN: the data should be marked as unhealthy
+	// Note that it also fails the out-of-date test here
+	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+
+	// AND WHEN: the data rate is acceptable
+	dt_sensor_us = 3e5;
+	duration_us = 5e5;
+	runDurationRateSensorRate(duration_us, dt_update_us, dt_sensor_us);
+
+	// THEN: it should still fail until the filter converge
+	// to the new datarate
+	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+
+	runDurationRateSensorRate(duration_us, dt_update_us, dt_sensor_us);
+	EXPECT_TRUE(_range_finder.isDelayedDataHealthy());
+}

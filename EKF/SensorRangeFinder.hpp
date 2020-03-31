@@ -58,7 +58,7 @@ public:
 	bool isHealthy() const override { return _rng_hgt_valid; }
 	bool isDelayedDataHealthy() const override { return _range_data_ready && _rng_hgt_valid; }
 
-	void setDelayedSample(const rangeSample &sample) {
+	void setDelayedSample(rangeSample sample) {
 		_range_sample_delayed = sample;
 		_range_data_ready = true;
 	}
