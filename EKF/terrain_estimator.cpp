@@ -113,7 +113,7 @@ void Ekf::runTerrainEstimator()
 		_terrain_var = math::constrain(_terrain_var, 0.0f, 1e4f);
 
 		// Fuse range finder data if available
-		if (_range_sensor.isDelayedDataHealthy()) {
+		if (_range_sensor.isDataHealthy()) {
 			fuseHagl();
 		}
 
@@ -134,7 +134,7 @@ void Ekf::runTerrainEstimator()
 void Ekf::fuseHagl()
 {
 	// get a height above ground measurement from the range finder assuming a flat earth
-	const float meas_hagl = _range_sensor.getDelayedRng() * _range_sensor.getCosTilt();
+	const float meas_hagl = _range_sensor.getRange() * _range_sensor.getCosTilt();
 
 	// predict the hagl from the vehicle position and terrain height
 	const float pred_hagl = _terrain_vpos - _state.pos(2);
@@ -145,7 +145,7 @@ void Ekf::fuseHagl()
 	// calculate the observation variance adding the variance of the vehicles own height uncertainty
 	const float obs_variance = fmaxf(P(9,9) * _params.vehicle_variance_scaler, 0.0f)
 			     + sq(_params.range_noise)
-			     + sq(_params.range_noise_scaler * _range_sensor.getDelayedRng());
+			     + sq(_params.range_noise_scaler * _range_sensor.getRange());
 
 	// calculate the innovation variance - limiting it to prevent a badly conditioned fusion
 	_hagl_innov_var = fmaxf(_terrain_var + obs_variance, obs_variance);

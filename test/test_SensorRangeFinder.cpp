@@ -80,7 +80,7 @@ void SensorRangeFinderTest::runDurationRateSensorRate(uint64_t duration_us, uint
 				new_sample.rng = _min_range;
 			}
 			new_sample.time_us = t_now_us;
-			_range_finder.setDelayedSample(new_sample);
+			_range_finder.setSample(new_sample);
 		}
 		_range_finder.runChecks(t_now_us, attitude);
 	}
@@ -94,7 +94,7 @@ TEST_F(SensorRangeFinderTest, setRange)
 	sample.time_us = 1e6;
 	sample.quality = 9;
 
-	_range_finder.setDelayedRng(sample.rng);
+	_range_finder.setRange(sample.rng);
 	_range_finder.setValidity(true);
 	EXPECT_TRUE(_range_finder.isHealthy());
 }
@@ -103,11 +103,11 @@ TEST_F(SensorRangeFinderTest, goodData)
 {
 	// WHEN: the drone is leveled and the data is good
 	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
-	_range_finder.setDelayedSample(_good_sample);
+	_range_finder.setSample(_good_sample);
 	_range_finder.runChecks(_good_sample.time_us, attitude);
 
 	// THEN: the data can be used for aiding
-	EXPECT_TRUE(_range_finder.isDelayedDataHealthy());
+	EXPECT_TRUE(_range_finder.isDataHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, tiltExceeded)
@@ -115,11 +115,11 @@ TEST_F(SensorRangeFinderTest, tiltExceeded)
 	// WHEN: the drone is excessively tilted
 	Dcmf attitude{Eulerf(0.f, 1.f, 0.f)};
 
-	_range_finder.setDelayedSample(_good_sample);
+	_range_finder.setSample(_good_sample);
 	_range_finder.runChecks(_good_sample.time_us, attitude);
 
 	// THEN: the data should be marked as unhealthy
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, rangeMaxExceeded)
@@ -129,11 +129,11 @@ TEST_F(SensorRangeFinderTest, rangeMaxExceeded)
 	// WHEN: the measured range is larger than the maximum
 	rangeSample bad_sample = _good_sample;
 	bad_sample.rng = _max_range + 0.01f;
-	_range_finder.setDelayedSample(bad_sample);
+	_range_finder.setSample(bad_sample);
 	_range_finder.runChecks(bad_sample.time_us, attitude);
 
 	// THEN: the data should be marked as unhealthy
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, rangeMinExceeded)
@@ -143,11 +143,11 @@ TEST_F(SensorRangeFinderTest, rangeMinExceeded)
 	// WHEN: the measured range is shorter than the minimum
 	rangeSample bad_sample = _good_sample;
 	bad_sample.rng = _min_range - 0.01f;
-	_range_finder.setDelayedSample(bad_sample);
+	_range_finder.setSample(bad_sample);
 	_range_finder.runChecks(bad_sample.time_us, attitude);
 
 	// THEN: the data should be marked as unhealthy
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, outOfDate)
@@ -158,11 +158,11 @@ TEST_F(SensorRangeFinderTest, outOfDate)
 	rangeSample outdated_sample = _good_sample;
 	outdated_sample.time_us = 0;
 	uint64_t t_now = _good_sample.time_us;
-	_range_finder.setDelayedSample(outdated_sample);
+	_range_finder.setSample(outdated_sample);
 	_range_finder.runChecks(t_now, attitude);
 
 	// THEN: the data should be marked as unhealthy
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, rangeStuck)
@@ -176,23 +176,23 @@ TEST_F(SensorRangeFinderTest, rangeStuck)
 	const uint64_t stuck_timeout = 11e6;
 	new_sample.quality = 0;
 	for (int i = 0; i < int(stuck_timeout / dt); i++) {
-		_range_finder.setDelayedSample(new_sample);
+		_range_finder.setSample(new_sample);
 		_range_finder.runChecks(new_sample.time_us, attitude);
 		new_sample.time_us += dt;
 	}
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 
 	new_sample.quality = 100;
 	// we need a few sample to pass the hysteresis check
 	for (int i = 0; i < int(2e6 / dt); i++) {
-		_range_finder.setDelayedSample(new_sample);
+		_range_finder.setSample(new_sample);
 		_range_finder.runChecks(new_sample.time_us, attitude);
 		new_sample.time_us += dt;
 	}
 
 	// THEN: the data should be marked as unhealthy
 	// because the sensor is "stuck"
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, qualityHysteresis)
@@ -203,26 +203,26 @@ TEST_F(SensorRangeFinderTest, qualityHysteresis)
 	rangeSample new_sample = _good_sample;
 
 	new_sample.quality = 0;
-	_range_finder.setDelayedSample(new_sample);
+	_range_finder.setSample(new_sample);
 	_range_finder.runChecks(new_sample.time_us, attitude);
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 
 	new_sample.quality = _good_sample.quality;
-	_range_finder.setDelayedSample(new_sample);
+	_range_finder.setSample(new_sample);
 	_range_finder.runChecks(new_sample.time_us, attitude);
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 
 	// AND: we need to put enough good data to pass the hysteresis
 	const uint64_t dt = 3e5;
 	const uint64_t hyst_time = 1e6;
 	for (int i = 0; i < int(hyst_time / dt) + 2; i++) {
-		_range_finder.setDelayedSample(new_sample);
+		_range_finder.setSample(new_sample);
 		_range_finder.runChecks(new_sample.time_us, attitude);
 		new_sample.time_us += dt;
 	}
 
 	// THEN: the data is again declared healthy
-	EXPECT_TRUE(_range_finder.isDelayedDataHealthy());
+	EXPECT_TRUE(_range_finder.isDataHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, continuity)
@@ -237,7 +237,7 @@ TEST_F(SensorRangeFinderTest, continuity)
 
 	// THEN: the data should be marked as unhealthy
 	// Note that it also fails the out-of-date test here
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 
 	// AND WHEN: the data rate is acceptable
 	dt_sensor_us = 3e5;
@@ -246,8 +246,8 @@ TEST_F(SensorRangeFinderTest, continuity)
 
 	// THEN: it should still fail until the filter converge
 	// to the new datarate
-	EXPECT_FALSE(_range_finder.isDelayedDataHealthy());
+	EXPECT_FALSE(_range_finder.isDataHealthy());
 
 	runDurationRateSensorRate(duration_us, dt_update_us, dt_sensor_us);
-	EXPECT_TRUE(_range_finder.isDelayedDataHealthy());
+	EXPECT_TRUE(_range_finder.isDataHealthy());
 }

@@ -54,18 +54,18 @@ public:
 	SensorRangeFinder() = default;
 	~SensorRangeFinder() override = default;
 
-	void runChecks(uint64_t time_delayed_us, const matrix::Dcmf &R_to_earth);
-	bool isHealthy() const override { return _is_delayed_data_valid; }
-	bool isDelayedDataHealthy() const override { return _is_delayed_data_ready && _is_delayed_data_valid; }
+	void runChecks(uint64_t current_time_us, const matrix::Dcmf &R_to_earth);
+	bool isHealthy() const override { return _is_sample_valid; }
+	bool isDataHealthy() const override { return _is_sample_ready && _is_sample_valid; }
 
-	void setDelayedSample(rangeSample sample) {
-		_delayed_data = sample;
-		_is_delayed_data_ready = true;
+	void setSample(rangeSample sample) {
+		_sample = sample;
+		_is_sample_ready = true;
 	}
 
 	// This is required because of the ring buffer
 	// TODO: move the ring buffer here
-	rangeSample* getSampleDelayedAddress() { return &_delayed_data; }
+	rangeSample* getSampleAddress() { return &_sample; }
 
 	void setSensorTilt(float new_tilt)
 	{
@@ -84,11 +84,11 @@ public:
 
 	float getCosTilt() const { return _cos_tilt_rng_to_earth; }
 
-	void setDelayedRng(float rng) { _delayed_data.rng = rng; }
-	float getDelayedRng() const { return _delayed_data.rng; }
+	void setRange(float rng) { _sample.rng = rng; }
+	float getRange() const { return _sample.rng; }
 
-	void setDataReadiness(bool is_ready) { _is_delayed_data_ready = is_ready; }
-	void setValidity(bool is_valid) { _is_delayed_data_valid = is_valid; }
+	void setDataReadiness(bool is_ready) { _is_sample_ready = is_ready; }
+	void setValidity(bool is_valid) { _is_sample_valid = is_valid; }
 
 	float getValidMinVal() const { return _rng_valid_min_val; }
 	float getValidMaxVal() const { return _rng_valid_max_val; }
@@ -96,19 +96,19 @@ public:
 private:
 	void updateSensorToEarthRotation(const matrix::Dcmf &R_to_earth);
 
-	void updateValidity(uint64_t time_delayed_us);
-	void updateDtDataLpf(uint64_t time_delayed_us);
-	bool isDelayedDataOutOfDate(uint64_t time_delayed_us) const;
+	void updateValidity(uint64_t current_time_us);
+	void updateDtDataLpf(uint64_t current_time_us);
+	bool isSampleOutOfDate(uint64_t current_time_us) const;
 	bool isDataContinuous() const { return _dt_data_lpf < 2e6f; }
 	bool isTiltOk() const { return _cos_tilt_rng_to_earth > _range_cos_max_tilt; }
-	bool isDelayedDataInRange() const;
+	bool isDataInRange() const;
 	void updateStuckCheck();
 
-	rangeSample _delayed_data{};
+	rangeSample _sample{};
 
-	bool _is_delayed_data_ready{};	///< true when new range finder data has fallen behind the fusion time horizon and is available to be fused
-	bool _is_delayed_data_valid{};		///< true if range finder sample retrieved from buffer is valid
-	uint64_t _time_last_valid_us{};///< time the last range finder measurement was ready (uSec)
+	bool _is_sample_ready{};	///< true when new range finder data has fallen behind the fusion time horizon and is available to be fused
+	bool _is_sample_valid{};	///< true if range finder sample retrieved from buffer is valid
+	uint64_t _time_last_valid_us{};	///< time the last range finder measurement was ready (uSec)
 
 	/*
 	 * Stuck check
@@ -122,7 +122,7 @@ private:
 	 * Data regularity check
 	 */
 	static constexpr float _dt_update{0.01f}; 	///< delta time since last ekf update TODO: this should be a parameter
-	float _dt_data_lpf{};		///< filtered value of the delta time elapsed since the last range measurement came into the filter (uSec)
+	float _dt_data_lpf{};	///< filtered value of the delta time elapsed since the last range measurement came into the filter (uSec)
 
 	/*
 	 * Tilt check

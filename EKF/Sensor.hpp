@@ -69,7 +69,7 @@ public:
 	 * return true if the delayed sample is healthy
 	 * and can be fused in the estimator
 	 */
-	virtual bool isDelayedDataHealthy() const = 0;
+	virtual bool isDataHealthy() const = 0;
 };
 
 } // namespace sensor
