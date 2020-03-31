@@ -48,94 +48,93 @@ namespace sensor
 void SensorRangeFinder::runChecks(const uint64_t time_delayed_us, const Dcmf &R_to_earth)
 {
 	updateSensorToEarthRotation(R_to_earth);
-	updateRangeDataValidity(time_delayed_us);
+	updateValidity(time_delayed_us);
 }
 
 void SensorRangeFinder::updateSensorToEarthRotation(const Dcmf &R_to_earth)
 {
 	// calculate 2,2 element of rotation matrix from sensor frame to earth frame
 	// this is required for use of range finder and flow data
-	_R_rng_to_earth_2_2 = R_to_earth(2, 0) * _sin_tilt_rng + R_to_earth(2, 2) * _cos_tilt_rng;
+	_cos_tilt_rng_to_earth = R_to_earth(2, 0) * _sin_tilt_rng + R_to_earth(2, 2) * _cos_tilt_rng;
 }
 
-void SensorRangeFinder::updateRangeDataValidity(uint64_t time_delayed_us)
+void SensorRangeFinder::updateValidity(uint64_t time_delayed_us)
 {
-	updateRangeDataContinuity(time_delayed_us);
+	updateDtDataLpf(time_delayed_us);
 
-	if (isDelayedDataOutOfDate(time_delayed_us) || !isRangeDataContinuous()) {
-		_rng_hgt_valid = false;
+	if (isDelayedDataOutOfDate(time_delayed_us) || !isDataContinuous()) {
+		_is_delayed_data_valid = false;
 		return;
 	}
 
 	// Don't run the checks unless we have retrieved new data from the buffer
-	if (_range_data_ready) {
-		_rng_hgt_valid = false;
+	if (_is_delayed_data_ready) {
+		_is_delayed_data_valid = false;
 
-		if (_range_sample_delayed.quality == 0) {
-			_time_bad_rng_signal_quality = time_delayed_us;
+		if (_delayed_data.quality == 0) {
+			_time_bad_quality_us = time_delayed_us;
 
-		} else if (time_delayed_us - _time_bad_rng_signal_quality > _range_signal_hysteresis_us) {
+		} else if (time_delayed_us - _time_bad_quality_us > _quality_hyst_us) {
 			// We did not receive bad quality data for some time
 
 			if (isTiltOk() && isDelayedDataInRange()) {
-				updateRangeDataStuck();
+				updateStuckCheck();
 
 				if (!_is_stuck) {
-					_rng_hgt_valid = true;
+					_is_delayed_data_valid = true;
 				}
 			}
 		}
 	}
 }
 
-void SensorRangeFinder::updateRangeDataContinuity(uint64_t time_delayed_us)
+void SensorRangeFinder::updateDtDataLpf(uint64_t time_delayed_us)
 {
 	// Calculate a first order IIR low-pass filtered time of arrival between samples using a 2 second time constant.
 	float alpha = 0.5f * _dt_update;
-	_dt_last_range_update_filt_us = _dt_last_range_update_filt_us * (1.0f - alpha) + alpha *
-					(time_delayed_us - _range_sample_delayed.time_us);
+	_dt_data_lpf = _dt_data_lpf * (1.0f - alpha) + alpha * (time_delayed_us - _delayed_data.time_us);
 
 	// Apply spike protection to the filter state.
-	_dt_last_range_update_filt_us = fminf(_dt_last_range_update_filt_us, 4e6f);
+	_dt_data_lpf = fminf(_dt_data_lpf, 4e6f);
 }
 
 inline bool SensorRangeFinder::isDelayedDataOutOfDate(uint64_t time_delayed_us) const
 {
-	return (time_delayed_us - _range_sample_delayed.time_us) > 2 * RNG_MAX_INTERVAL;
+	return (time_delayed_us - _delayed_data.time_us) > 2 * RNG_MAX_INTERVAL;
 }
 
 inline bool SensorRangeFinder::isDelayedDataInRange() const
 {
-	return (_range_sample_delayed.rng >= _rng_valid_min_val) && (_range_sample_delayed.rng <= _rng_valid_max_val);
+	return (_delayed_data.rng >= _rng_valid_min_val) && (_delayed_data.rng <= _rng_valid_max_val);
 }
 
-void SensorRangeFinder::updateRangeDataStuck()
+void SensorRangeFinder::updateStuckCheck()
 {
 	// Check for "stuck" range finder measurements when range was not valid for certain period
 	// This handles a failure mode observed with some lidar sensors
-	if (((_range_sample_delayed.time_us - _time_last_rng_ready) > (uint64_t)10e6)) {
+	if (((_delayed_data.time_us - _time_last_valid_us) > (uint64_t)10e6)) {
 
 		// require a variance of rangefinder values to check for "stuck" measurements
-		if (_rng_stuck_max_val - _rng_stuck_min_val > _range_stuck_threshold) {
-			_time_last_rng_ready = _range_sample_delayed.time_us;
-			_rng_stuck_min_val = 0.0f;
-			_rng_stuck_max_val = 0.0f;
+		if (_stuck_max_val - _stuck_min_val > _stuck_threshold) {
+			_time_last_valid_us = _delayed_data.time_us;
+			_stuck_min_val = 0.0f;
+			_stuck_max_val = 0.0f;
 			_is_stuck = false;
 
 		} else {
-			if (_range_sample_delayed.rng > _rng_stuck_max_val) {
-				_rng_stuck_max_val = _range_sample_delayed.rng;
+			if (_delayed_data.rng > _stuck_max_val) {
+				_stuck_max_val = _delayed_data.rng;
 			}
 
-			if (_rng_stuck_min_val < 0.1f || _range_sample_delayed.rng < _rng_stuck_min_val) {
-				_rng_stuck_min_val = _range_sample_delayed.rng;
+			if (_stuck_min_val < 0.1f || _delayed_data.rng < _stuck_min_val) {
+				_stuck_min_val = _delayed_data.rng;
 			}
 
 			_is_stuck = true;
 		}
 
 	} else {
-		_time_last_rng_ready = _range_sample_delayed.time_us;
+		_time_last_valid_us = _delayed_data.time_us;
 	}
 }
 
