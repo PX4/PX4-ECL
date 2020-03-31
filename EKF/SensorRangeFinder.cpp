@@ -82,6 +82,7 @@ void SensorRangeFinder::updateValidity(uint64_t current_time_us)
 
 				if (!_is_stuck) {
 					_is_sample_valid = true;
+					_time_last_valid_us = _sample.time_us;
 				}
 			}
 		}
@@ -116,7 +117,6 @@ void SensorRangeFinder::updateStuckCheck()
 
 		// require a variance of rangefinder values to check for "stuck" measurements
 		if (_stuck_max_val - _stuck_min_val > _stuck_threshold) {
-			_time_last_valid_us = _sample.time_us;
 			_stuck_min_val = 0.0f;
 			_stuck_max_val = 0.0f;
 			_is_stuck = false;
@@ -132,9 +132,6 @@ void SensorRangeFinder::updateStuckCheck()
 
 			_is_stuck = true;
 		}
-
-	} else {
-		_time_last_valid_us = _sample.time_us;
 	}
 }
 
