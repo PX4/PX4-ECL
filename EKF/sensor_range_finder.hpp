@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
- * @file SensorRangeFinder.hpp
+ * @file sensor_range_finder.hpp
  * Range finder class containing all the required checks
  *
  * @author Mathieu Bresciani <brescianimathieu@gmail.com>

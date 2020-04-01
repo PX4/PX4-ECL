@@ -49,7 +49,7 @@ add_library(ecl_EKF
 	gps_yaw_fusion.cpp
 	imu_down_sampler.cpp
 	EKFGSF_yaw.cpp
-	SensorRangeFinder.cpp
+	sensor_range_finder.cpp
 )
 
 add_dependencies(ecl_EKF prebuild_targets)

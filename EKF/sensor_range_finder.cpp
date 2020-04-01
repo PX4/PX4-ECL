@@ -32,13 +32,13 @@
  ****************************************************************************/
 
 /**
- * @file SensorRangeFinder.cpp
+ * @file sensor_range_finder.cpp
  *
  * @author Mathieu Bresciani <brescianimathieu@gmail.com>
  *
  */
 
-#include "SensorRangeFinder.hpp"
+#include "sensor_range_finder.hpp"
 
 namespace estimator
 {

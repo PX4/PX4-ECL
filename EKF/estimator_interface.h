@@ -47,7 +47,7 @@
 #include "AlphaFilter.hpp"
 #include "imu_down_sampler.hpp"
 #include "EKFGSF_yaw.h"
-#include "SensorRangeFinder.hpp"
+#include "sensor_range_finder.hpp"
 
 #include <geo/geo.h>
 #include <matrix/math.hpp>
