@@ -75,7 +75,7 @@ bool Ekf::resetVelocity()
 			// rotate from body to earth frame
 			const Vector3f vel_optflow_earth = _R_to_earth * vel_optflow_body;
 
-			resetHorizontalVelocityTo(Vector2f(vel_optflow_earth.xy()));
+			resetHorizontalVelocityTo(Vector2f(vel_optflow_earth));
 		} else {
 			resetHorizontalVelocityTo(Vector2f{0.f, 0.f});
 		}
@@ -109,8 +109,7 @@ void Ekf::resetVelocityTo(const Vector3f &new_vel) {
 
 void Ekf::resetHorizontalVelocityTo(const Vector2f &new_horz_vel) {
 	const Vector2f delta_horz_vel = new_horz_vel - Vector2f(_state.vel);
-	_state.vel(0) = new_horz_vel(0);
-	_state.vel(1) = new_horz_vel(1);
+	_state.vel.xy() = new_horz_vel;
 
 	for (uint8_t index = 0; index < _output_buffer.get_length(); index++) {
 		_output_buffer[index].vel(0) += delta_horz_vel(0);
@@ -119,8 +118,7 @@ void Ekf::resetHorizontalVelocityTo(const Vector2f &new_horz_vel) {
 	_output_new.vel(0) += delta_horz_vel(0);
 	_output_new.vel(1) += delta_horz_vel(1);
 
-	_state_reset_status.velNE_change(0) = delta_horz_vel(0);
-	_state_reset_status.velNE_change(1) = delta_horz_vel(1);
+	_state_reset_status.velNE_change = delta_horz_vel;
 	_state_reset_status.velNE_counter++;
 }
 
