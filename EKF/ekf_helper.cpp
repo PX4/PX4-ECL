@@ -130,8 +130,11 @@ void Ekf::resetVerticalVelocityTo(float new_vert_vel) {
 
 	for (uint8_t index = 0; index < _output_buffer.get_length(); index++) {
 		_output_buffer[index].vel(2) += delta_vert_vel;
+		_output_vert_buffer[index].vel_d += delta_vert_vel;
 	}
 	_output_new.vel(2) += delta_vert_vel;
+	_output_vert_delayed.vel_d = new_vert_vel;
+	_output_vert_new.vel_d = new_vert_vel;
 
 	_state_reset_status.velD_change = delta_vert_vel;
 	_state_reset_status.velD_counter++;
