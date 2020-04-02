@@ -72,6 +72,7 @@ public:
 		if (fabsf(_tilt_offset_rad - new_tilt_offset) > FLT_EPSILON) {
 			_sin_tilt_rng = sinf(new_tilt_offset);
 			_cos_tilt_rng = cosf(new_tilt_offset);
+			_tilt_offset_rad = new_tilt_offset;
 		}
 	}
 
