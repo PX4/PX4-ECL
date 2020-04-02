@@ -58,7 +58,7 @@ public:
 	bool isHealthy() const override { return _is_sample_valid; }
 	bool isDataHealthy() const override { return _is_sample_ready && _is_sample_valid; }
 
-	void setSample(rangeSample sample) {
+	void setSample(const rangeSample &sample) {
 		_sample = sample;
 		_is_sample_ready = true;
 	}
@@ -67,11 +67,11 @@ public:
 	// TODO: move the ring buffer here
 	rangeSample* getSampleAddress() { return &_sample; }
 
-	void setSensorTilt(float new_tilt)
+	void setTiltOffset(float new_tilt_offset)
 	{
-		if (fabsf(_tilt - new_tilt) > FLT_EPSILON) {
-			_sin_tilt_rng = sinf(new_tilt);
-			_cos_tilt_rng = cosf(new_tilt);
+		if (fabsf(_tilt_offset_rad - new_tilt_offset) > FLT_EPSILON) {
+			_sin_tilt_rng = sinf(new_tilt_offset);
+			_cos_tilt_rng = cosf(new_tilt_offset);
 		}
 	}
 
@@ -129,7 +129,7 @@ private:
 	 */
 	float _cos_tilt_rng_to_earth{};		///< 2,2 element of the rotation matrix from sensor frame to earth frame
 	float _range_cos_max_tilt{0.7071f};	///< cosine of the maximum tilt angle from the vertical that permits use of range finder and flow data
-	float _tilt{3.14f}; 			///< range finder tilt rotation about the Y body axis
+	float _tilt_offset_rad{3.14f}; 		///< range finder tilt rotation about the Y body axis
 	float _sin_tilt_rng{0.0f}; 		///< sine of the range finder tilt rotation about the Y body axis
 	float _cos_tilt_rng{-1.0f}; 		///< cosine of the range finder tilt rotation about the Y body axis
 

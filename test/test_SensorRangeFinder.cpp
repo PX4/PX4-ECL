@@ -47,7 +47,7 @@ public:
 	// Setup the Ekf with synthetic measurements
 	void SetUp() override
 	{
-		_range_finder.setSensorTilt(0.f);
+		_range_finder.setTiltOffset(0.f);
 		_range_finder.setCosMaxTilt(0.707f);
 		_range_finder.setLimits(_min_range, _max_range);
 	}
@@ -63,10 +63,10 @@ protected:
 	const float _min_range{0.5f};
 	const float _max_range{10.f};
 
-	void runDurationRateSensorRate(uint64_t duration_us, uint64_t dt_update_us, uint64_t dt_sensor_us);
+	void updateSensorAtRate(uint64_t duration_us, uint64_t dt_update_us, uint64_t dt_sensor_us);
 };
 
-void SensorRangeFinderTest::runDurationRateSensorRate(uint64_t duration_us, uint64_t dt_update_us, uint64_t dt_sensor_us)
+void SensorRangeFinderTest::updateSensorAtRate(uint64_t duration_us, uint64_t dt_update_us, uint64_t dt_sensor_us)
 {
 	const Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 
@@ -95,36 +95,40 @@ TEST_F(SensorRangeFinderTest, setRange)
 	sample.quality = 9;
 
 	_range_finder.setRange(sample.rng);
+	_range_finder.setDataReadiness(true);
 	_range_finder.setValidity(true);
+	EXPECT_TRUE(_range_finder.isDataHealthy());
 	EXPECT_TRUE(_range_finder.isHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, goodData)
 {
 	// WHEN: the drone is leveled and the data is good
-	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+	const Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 	_range_finder.setSample(_good_sample);
 	_range_finder.runChecks(_good_sample.time_us, attitude);
 
 	// THEN: the data can be used for aiding
 	EXPECT_TRUE(_range_finder.isDataHealthy());
+	EXPECT_TRUE(_range_finder.isHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, tiltExceeded)
 {
 	// WHEN: the drone is excessively tilted
-	Dcmf attitude{Eulerf(0.f, 1.f, 0.f)};
+	const Dcmf attitude{Eulerf(0.f, 1.f, 0.f)};
 
 	_range_finder.setSample(_good_sample);
 	_range_finder.runChecks(_good_sample.time_us, attitude);
 
 	// THEN: the data should be marked as unhealthy
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, rangeMaxExceeded)
 {
-	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+	const Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 
 	// WHEN: the measured range is larger than the maximum
 	rangeSample bad_sample = _good_sample;
@@ -134,11 +138,12 @@ TEST_F(SensorRangeFinderTest, rangeMaxExceeded)
 
 	// THEN: the data should be marked as unhealthy
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, rangeMinExceeded)
 {
-	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+	const Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 
 	// WHEN: the measured range is shorter than the minimum
 	rangeSample bad_sample = _good_sample;
@@ -148,11 +153,12 @@ TEST_F(SensorRangeFinderTest, rangeMinExceeded)
 
 	// THEN: the data should be marked as unhealthy
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, outOfDate)
 {
-	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+	const Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 
 	// WHEN: the data is outdated
 	rangeSample outdated_sample = _good_sample;
@@ -163,11 +169,12 @@ TEST_F(SensorRangeFinderTest, outOfDate)
 
 	// THEN: the data should be marked as unhealthy
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, rangeStuck)
 {
-	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+	const Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 
 	// WHEN: the data is first not valid and then
 	// constantly the same
@@ -181,6 +188,7 @@ TEST_F(SensorRangeFinderTest, rangeStuck)
 		new_sample.time_us += dt;
 	}
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 
 	new_sample.quality = 100;
 	// we need a few sample to pass the hysteresis check
@@ -193,11 +201,12 @@ TEST_F(SensorRangeFinderTest, rangeStuck)
 	// THEN: the data should be marked as unhealthy
 	// because the sensor is "stuck"
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, qualityHysteresis)
 {
-	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+	const Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 
 	// WHEN: the data is first bad and then good
 	rangeSample new_sample = _good_sample;
@@ -206,11 +215,13 @@ TEST_F(SensorRangeFinderTest, qualityHysteresis)
 	_range_finder.setSample(new_sample);
 	_range_finder.runChecks(new_sample.time_us, attitude);
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 
 	new_sample.quality = _good_sample.quality;
 	_range_finder.setSample(new_sample);
 	_range_finder.runChecks(new_sample.time_us, attitude);
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 
 	// AND: we need to put enough good data to pass the hysteresis
 	const uint64_t dt = 3e5;
@@ -223,31 +234,35 @@ TEST_F(SensorRangeFinderTest, qualityHysteresis)
 
 	// THEN: the data is again declared healthy
 	EXPECT_TRUE(_range_finder.isDataHealthy());
+	EXPECT_TRUE(_range_finder.isHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, continuity)
 {
-	Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
+	const Dcmf attitude{Eulerf(0.f, 0.f, 0.f)};
 
 	// WHEN: the data rate is too slow
 	const uint64_t dt_update_us = 10e3;
 	uint64_t dt_sensor_us = 4e6;
 	uint64_t duration_us = 8e6;
-	runDurationRateSensorRate(duration_us, dt_update_us, dt_sensor_us);
+	updateSensorAtRate(duration_us, dt_update_us, dt_sensor_us);
 
 	// THEN: the data should be marked as unhealthy
 	// Note that it also fails the out-of-date test here
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 
 	// AND WHEN: the data rate is acceptable
 	dt_sensor_us = 3e5;
 	duration_us = 5e5;
-	runDurationRateSensorRate(duration_us, dt_update_us, dt_sensor_us);
+	updateSensorAtRate(duration_us, dt_update_us, dt_sensor_us);
 
 	// THEN: it should still fail until the filter converge
 	// to the new datarate
 	EXPECT_FALSE(_range_finder.isDataHealthy());
+	EXPECT_FALSE(_range_finder.isHealthy());
 
-	runDurationRateSensorRate(duration_us, dt_update_us, dt_sensor_us);
+	updateSensorAtRate(duration_us, dt_update_us, dt_sensor_us);
 	EXPECT_TRUE(_range_finder.isDataHealthy());
+	EXPECT_TRUE(_range_finder.isHealthy());
 }

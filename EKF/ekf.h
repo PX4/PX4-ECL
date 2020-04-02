@@ -488,7 +488,6 @@ private:
 	float _terrain_var{1e4f};		///< variance of terrain position estimate (m**2)
 	uint64_t _time_last_hagl_fuse{0};		///< last system time that the hagl measurement failed it's checks (uSec)
 	bool _terrain_initialised{false};	///< true when the terrain estimator has been initialized
-	bool _is_rng_tilt_ok{false};		///< true when the tilt condition for the range finder is passing
 	bool _hagl_valid{false};		///< true when the height above ground estimate is valid
 
 	// height sensor status
