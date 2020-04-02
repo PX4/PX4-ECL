@@ -64,6 +64,7 @@ protected:
 	const float _max_range{10.f};
 
 	void updateSensorAtRate(uint64_t duration_us, uint64_t dt_update_us, uint64_t dt_sensor_us);
+	void testTilt(const Eulerf &euler, bool should_pass);
 };
 
 void SensorRangeFinderTest::updateSensorAtRate(uint64_t duration_us, uint64_t dt_update_us, uint64_t dt_sensor_us)
@@ -86,6 +87,21 @@ void SensorRangeFinderTest::updateSensorAtRate(uint64_t duration_us, uint64_t dt
 	}
 }
 
+void SensorRangeFinderTest::testTilt(const Eulerf &euler, bool should_pass)
+{
+	const Dcmf attitude{euler};
+	_range_finder.setSample(_good_sample);
+	_range_finder.runChecks(_good_sample.time_us, attitude);
+
+	if (should_pass) {
+		EXPECT_TRUE(_range_finder.isDataHealthy());
+		EXPECT_TRUE(_range_finder.isHealthy());
+
+	} else {
+		EXPECT_FALSE(_range_finder.isDataHealthy());
+		EXPECT_FALSE(_range_finder.isHealthy());
+	}
+}
 
 TEST_F(SensorRangeFinderTest, setRange)
 {
@@ -115,15 +131,30 @@ TEST_F(SensorRangeFinderTest, goodData)
 
 TEST_F(SensorRangeFinderTest, tiltExceeded)
 {
-	// WHEN: the drone is excessively tilted
-	const Dcmf attitude{Eulerf(0.f, 1.f, 0.f)};
+	const Eulerf zero(0.f, 0.f, 0.f);
+	const Eulerf pitch_46(0.f, 0.8f, 0.f);
+	const Eulerf pitch_minus46(0.f, -0.8f, 0.f);
+	const Eulerf pitch_40(0.f, 0.7f, 1.f);
+	const Eulerf pitch_minus40(0.f, -0.7f, 0.f);
+	const Eulerf roll_46(0.8f, 0.f, 0.f);
+	const Eulerf roll_minus46(-0.8f, 0.f, 0.f);
+	const Eulerf roll_40(0.7f, 0.f, 2.f);
+	const Eulerf roll_minus40(-0.7f, 0.f, 3.f);
+	const Eulerf roll_28_pitch_minus28(0.5f, -0.5f, 4.f);
+	const Eulerf roll_46_pitch_minus46(0.8f, -0.8f, 4.f);
 
-	_range_finder.setSample(_good_sample);
-	_range_finder.runChecks(_good_sample.time_us, attitude);
+	testTilt(zero, true);
+	testTilt(pitch_46, false);
+	testTilt(pitch_minus46, false);
+	testTilt(pitch_40, true);
+	testTilt(pitch_minus40, true);
+	testTilt(roll_46, false);
+	testTilt(roll_minus46, false);
+	testTilt(roll_40, true);
+	testTilt(roll_minus40, true);
+	testTilt(roll_28_pitch_minus28, true);
+	testTilt(roll_46_pitch_minus46, false);
 
-	// THEN: the data should be marked as unhealthy
-	EXPECT_FALSE(_range_finder.isDataHealthy());
-	EXPECT_FALSE(_range_finder.isHealthy());
 }
 
 TEST_F(SensorRangeFinderTest, rangeMaxExceeded)
