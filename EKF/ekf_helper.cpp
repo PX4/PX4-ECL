@@ -132,7 +132,7 @@ void Ekf::resetVerticalVelocityTo(float new_vert_vel) {
 	}
 	_output_new.vel(2) += delta_vert_vel;
 	_output_vert_delayed.pos_deriv = new_vert_vel;
-	_output_vert_new.pos_deriv = new_vert_vel;
+	_output_vert_new.pos_deriv += delta_vert_vel;
 
 	_state_reset_status.velD_change = delta_vert_vel;
 	_state_reset_status.velD_counter++;
