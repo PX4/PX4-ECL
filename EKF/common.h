@@ -81,8 +81,8 @@ struct outputSample {
 };
 
 struct outputVert {
-	float	    vel_d;		///< D velocity calculated using alternative algorithm (m/sec)
-	float	    vel_d_integ;	///< Integral of vel_d (m)
+	float	    pos_deriv;		///< position derivative calculated using alternative algorithm (m/sec)
+	float	    pos_deriv_integ;	///< Integral of position derivative (m)
 	float	    dt;			///< delta time (sec)
 	uint64_t    time_us;		///< timestamp of the measurement (uSec)
 };
