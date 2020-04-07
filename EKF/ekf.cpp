@@ -256,9 +256,6 @@ bool Ekf::initialiseFilter()
 		// calculate the initial magnetic field and yaw alignment
 		_control_status.flags.yaw_align = resetMagHeading(_mag_filt_state, false, false);
 
-		// initialise the state covariance matrix
-		initialiseCovariance();
-
 		// update the yaw angle variance using the variance of the measurement
 		if (_control_status.flags.ev_yaw) {
 			// using error estimate from external vision data TODO: this is never true
@@ -296,6 +293,9 @@ bool Ekf::initialiseFilter()
 
 		// reset the output predictor state history to match the EKF initial values
 		alignOutputFilter();
+
+		// initialise the state covariance matrix
+		initialiseCovariance();
 
 		return true;
 	}
