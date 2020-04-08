@@ -128,11 +128,11 @@ void Ekf::resetVerticalVelocityTo(float new_vert_vel) {
 
 	for (uint8_t index = 0; index < _output_buffer.get_length(); index++) {
 		_output_buffer[index].vel(2) += delta_vert_vel;
-		_output_vert_buffer[index].pos_deriv += delta_vert_vel;
+		_output_vert_buffer[index].vert_vel += delta_vert_vel;
 	}
 	_output_new.vel(2) += delta_vert_vel;
-	_output_vert_delayed.pos_deriv = new_vert_vel;
-	_output_vert_new.pos_deriv += delta_vert_vel;
+	_output_vert_delayed.vert_vel = new_vert_vel;
+	_output_vert_new.vert_vel += delta_vert_vel;
 
 	_state_reset_status.velD_change = delta_vert_vel;
 	_state_reset_status.velD_counter++;
@@ -333,14 +333,14 @@ void Ekf::resetHeight()
 	for (uint8_t i = 0; i < _output_buffer.get_length(); i++) {
 		if (vert_pos_reset) {
 			_output_buffer[i].pos(2) += _state_reset_status.posD_change;
-			_output_vert_buffer[i].pos_deriv_integ += _state_reset_status.posD_change;
+			_output_vert_buffer[i].vert_vel_integ += _state_reset_status.posD_change;
 		}
 	}
 
 	// add the reset amount to the output observer vertical position state
 	if (vert_pos_reset) {
-		_output_vert_delayed.pos_deriv_integ = _state.pos(2);
-		_output_vert_new.pos_deriv_integ = _state.pos(2);
+		_output_vert_delayed.vert_vel_integ = _state.pos(2);
+		_output_vert_new.vert_vel_integ = _state.pos(2);
 	}
 }
 
