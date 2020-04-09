@@ -605,7 +605,7 @@ void Ekf::controlGpsFusion()
 					if (_mag_inhibit_yaw_reset_req) {
 						_mag_inhibit_yaw_reset_req = false;
 						// Zero the yaw bias covariance and set the variance to the initial alignment uncertainty
-						P.uncorrelateCovarianceSetVariance<1>(12, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
+						P.uncorrelateCovarianceSetVariance<1>(12, sq(_params.switch_on_gyro_bias * _dt_ekf_avg));
 					}
 				}
 

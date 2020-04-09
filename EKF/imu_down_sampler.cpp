@@ -1,11 +1,11 @@
 #include "imu_down_sampler.hpp"
 
-ImuDownSampler::ImuDownSampler(float target_dt_sec) : _target_dt{target_dt_sec} { reset(); }
+ImuDownSampler::ImuDownSampler(const int32_t& target_dt_us) : _target_dt_us{target_dt_us} { reset(); }
 
 // integrate imu samples until target dt reached
 // assumes that dt of the gyroscope is close to the dt of the accelerometer
 // returns true if target dt is reached
-bool ImuDownSampler::update(const imuSample &imu_sample_new) {
+bool ImuDownSampler::update(const imuSample& imu_sample_new) {
 	if (_do_reset) {
 		reset();
 	}
@@ -32,13 +32,15 @@ bool ImuDownSampler::update(const imuSample &imu_sample_new) {
 	// assume effective sample time is halfway between the previous and current rotation frame
 	_imu_down_sampled.delta_vel += (imu_sample_new.delta_vel + delta_R * imu_sample_new.delta_vel) * 0.5f;
 
+	const float target_dt = _target_dt_us * 1e-6f;
+
 	// check if the target time delta between filter prediction steps has been exceeded
-	if (_imu_down_sampled.delta_ang_dt >= _target_dt - _imu_collection_time_adj) {
+	if (_imu_down_sampled.delta_ang_dt >= target_dt - _imu_collection_time_adj) {
 		// accumulate the amount of time to advance the IMU collection time so that we meet the
 		// average EKF update rate requirement
-		_imu_collection_time_adj += 0.01f * (_imu_down_sampled.delta_ang_dt - _target_dt);
-		_imu_collection_time_adj = math::constrain(_imu_collection_time_adj, -0.5f * _target_dt,
-							   0.5f * _target_dt);
+		_imu_collection_time_adj += 0.01f * (_imu_down_sampled.delta_ang_dt - target_dt);
+		_imu_collection_time_adj = math::constrain(_imu_collection_time_adj, -0.5f * target_dt,
+							   0.5f * target_dt);
 
 		_imu_down_sampled.delta_ang = _delta_angle_accumulated.to_axis_angle();
 

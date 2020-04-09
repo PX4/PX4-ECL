@@ -61,7 +61,7 @@ class EstimatorInterface
 public:
 	typedef AlphaFilter<Vector3f> AlphaFilterVector3f;
 
-	EstimatorInterface():_imu_down_sampler(FILTER_UPDATE_PERIOD_S){};
+	EstimatorInterface() = default;
 	virtual ~EstimatorInterface() = default;
 
 	virtual bool init(uint64_t timestamp) = 0;
@@ -376,25 +376,19 @@ public:
 	// return a bitmask integer that describes which state estimates can be used for flight control
 	virtual void get_ekf_soln_status(uint16_t *status) = 0;
 
+	// Getter for the average EKF update period in s
+	float get_dt_ekf_avg() const { return _dt_ekf_avg; }
+
 	// Getter for the average imu update period in s
 	float get_dt_imu_avg() const { return _dt_imu_avg; }
 
 	// Getter for the imu sample on the delayed time horizon
-	imuSample get_imu_sample_delayed()
-	{
-		return _imu_sample_delayed;
-	}
+	imuSample get_imu_sample_delayed() const { return _imu_sample_delayed; }
 
 	// Getter for the baro sample on the delayed time horizon
-	baroSample get_baro_sample_delayed()
-	{
-		return _baro_sample_delayed;
-	}
+	baroSample get_baro_sample_delayed() const { return _baro_sample_delayed; }
 
 	void print_status();
-
-	static constexpr unsigned FILTER_UPDATE_PERIOD_MS{8};	// ekf prediction period in milliseconds - this should ideally be an integer multiple of the IMU time delta
-	static constexpr float FILTER_UPDATE_PERIOD_S{FILTER_UPDATE_PERIOD_MS * 0.001f};
 
 	// request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
 	// argment should be incremented only when a new reset is required
@@ -407,7 +401,7 @@ protected:
 
 	parameters _params;		// filter parameters
 
-	ImuDownSampler _imu_down_sampler;
+	ImuDownSampler _imu_down_sampler{_params.filter_update_interval_us};
 
 	/*
 	 OBS_BUFFER_LENGTH defines how many observations (non-IMU measurements) we can buffer
@@ -428,7 +422,8 @@ protected:
 
 	unsigned _min_obs_interval_us{0}; // minimum time interval between observations that will guarantee data is not lost (usec)
 
-	float _dt_imu_avg{0.0f};	// average imu update period in s
+	float _dt_imu_avg{0.004f}; ///< average imu update period in s
+	float _dt_ekf_avg{0.008f}; ///< average update rate of the ekf in s
 
 	imuSample _imu_sample_delayed{};	// captures the imu sample on the delayed time horizon
 

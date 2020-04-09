@@ -64,8 +64,8 @@ TEST_P(EkfImuSamplingTest, imuSamplingAtMultipleRates)
 	// WHEN: adding imu samples at a same or lower rate than the update loop
 	// THEN: imu sample should reach buffer unchanged
 
-	uint32_t dt_us = std::get<0>(GetParam()) * (_ekf.FILTER_UPDATE_PERIOD_MS * 1000);
-	uint32_t expected_dt_us = std::get<1>(GetParam()) * (_ekf.FILTER_UPDATE_PERIOD_MS * 1000);
+	uint32_t dt_us = std::get<0>(GetParam()) * (_ekf.get_dt_ekf_avg() * 1e6);
+	uint32_t expected_dt_us = std::get<1>(GetParam()) * (_ekf.get_dt_ekf_avg() * 1e6);
 
 	Vector3f ang_vel= std::get<2>(GetParam());
 	Vector3f accel = std::get<3>(GetParam());

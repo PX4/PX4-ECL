@@ -156,7 +156,7 @@ void EstimatorInterface::setMagData(const magSample &mag_sample)
 		// Use the time in the middle of the downsampling interval for the sample
 		mag_sample_new.time_us = 1000 * (_mag_timestamp_sum / _mag_sample_count);
 		mag_sample_new.time_us -= _params.mag_delay_ms * 1000;
-		mag_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
+		mag_sample_new.time_us -= _dt_ekf_avg * 5e5f; // filter update period (us) divided by 2
 
 		mag_sample_new.mag = _mag_data_sum / _mag_sample_count;
 
@@ -195,7 +195,7 @@ void EstimatorInterface::setGpsData(const gps_message &gps)
 		gpsSample gps_sample_new;
 
 		gps_sample_new.time_us = gps.time_usec - _params.gps_delay_ms * 1000;
-		gps_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
+		gps_sample_new.time_us -= _dt_ekf_avg * 5e5f; // filter update period (us) divided by 2
 
 		gps_sample_new.vel = gps.vel_ned;
 
@@ -265,7 +265,7 @@ void EstimatorInterface::setBaroData(const baroSample &baro_sample)
 		// Use the time in the middle of the downsampling interval for the sample
 		baro_sample_new.time_us = 1000 * (_baro_timestamp_sum / _baro_sample_count);
 		baro_sample_new.time_us -= _params.baro_delay_ms * 1000;
-		baro_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
+		baro_sample_new.time_us -= _dt_ekf_avg * 5e5f; // filter update period (us) divided by 2
 
 		_baro_buffer.push(baro_sample_new);
 
@@ -299,7 +299,7 @@ void EstimatorInterface::setAirspeedData(const airspeedSample &airspeed_sample)
 		airspeedSample airspeed_sample_new = airspeed_sample;
 
 		airspeed_sample_new.time_us -= _params.airspeed_delay_ms * 1000;
-		airspeed_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
+		airspeed_sample_new.time_us -= _dt_ekf_avg * 5e5f; // filter update period (us) divided by 2
 
 		_airspeed_buffer.push(airspeed_sample_new);
 	}
@@ -328,7 +328,7 @@ void EstimatorInterface::setRangeData(const rangeSample& range_sample)
 
 		rangeSample range_sample_new = range_sample;
 		range_sample_new.time_us -= _params.range_delay_ms * 1000;
-		range_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
+		range_sample_new.time_us -= _dt_ekf_avg * 5e5f; // filter update period (us) divided by 2
 
 		_range_buffer.push(range_sample_new);
 	}
@@ -386,7 +386,7 @@ void EstimatorInterface::setOpticalFlowData(const flowSample& flow)
 			flowSample optflow_sample_new = flow;
 
 			optflow_sample_new.time_us -= _params.flow_delay_ms * 1000;
-			optflow_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
+			optflow_sample_new.time_us -= _dt_ekf_avg * 5e5f; // filter update period (us) divided by 2
 
 			optflow_sample_new.dt = delta_time;
 
@@ -420,7 +420,7 @@ void EstimatorInterface::setExtVisionData(const extVisionSample& evdata)
 		extVisionSample ev_sample_new = evdata;
 		// calculate the system time-stamp for the mid point of the integration period
 		ev_sample_new.time_us -= _params.ev_delay_ms * 1000;
-		ev_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
+		ev_sample_new.time_us -= _dt_ekf_avg * 5e5f; // filter update period (us) divided by 2
 
 		_ext_vision_buffer.push(ev_sample_new);
 	}
@@ -450,7 +450,7 @@ void EstimatorInterface::setAuxVelData(const auxVelSample& auxvel_sample)
 		auxVelSample auxvel_sample_new = auxvel_sample;
 
 		auxvel_sample_new.time_us -= _params.auxvel_delay_ms * 1000;
-		auxvel_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
+		auxvel_sample_new.time_us -= _dt_ekf_avg * 5e5f; // filter update period (us) divided by 2
 
 		_auxvel_buffer.push(auxvel_sample_new);
 	}
@@ -519,7 +519,7 @@ bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 								 math::max(_params.airspeed_delay_ms, _params.baro_delay_ms))))))));
 
 	// calculate the IMU buffer length required to accomodate the maximum delay with some allowance for jitter
-	_imu_buffer_length = (max_time_delay_ms / FILTER_UPDATE_PERIOD_MS) + 1;
+	_imu_buffer_length = (max_time_delay_ms / (_params.filter_update_interval_us / 1000)) + 1;
 
 	// set the observation buffer length to handle the minimum time of arrival between observations in combination
 	// with the worst case delay from current time to ekf fusion time
@@ -608,7 +608,10 @@ void EstimatorInterface::print_status()
 {
 	ECL_INFO("local position valid: %s", local_position_is_valid() ? "yes" : "no");
 	ECL_INFO("global position valid: %s", global_position_is_valid() ? "yes" : "no");
-
+	ECL_INFO(" ");
+	ECL_INFO("EKF average dt: %.6f", (double)_dt_ekf_avg);
+	ECL_INFO("IMU average dt: %.6f", (double)_dt_imu_avg);
+	ECL_INFO(" ");
 	ECL_INFO("imu buffer: %d (%d Bytes)", _imu_buffer.get_length(), _imu_buffer.get_total_size());
 	ECL_INFO("gps buffer: %d (%d Bytes)", _gps_buffer.get_length(), _gps_buffer.get_total_size());
 	ECL_INFO("mag buffer: %d (%d Bytes)", _mag_buffer.get_length(), _mag_buffer.get_total_size());

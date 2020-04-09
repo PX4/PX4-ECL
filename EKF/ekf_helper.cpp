@@ -1105,8 +1105,9 @@ bool Ekf::reset_imu_bias()
 
 	// Zero the corresponding covariances and set
 	// variances to the values use for initial alignment
-	P.uncorrelateCovarianceSetVariance<3>(10, sq(_params.switch_on_gyro_bias * FILTER_UPDATE_PERIOD_S));
-	P.uncorrelateCovarianceSetVariance<3>(13, sq(_params.switch_on_accel_bias * FILTER_UPDATE_PERIOD_S));
+	const float filter_update_s = 1e-6f * _params.filter_update_interval_us;
+	P.uncorrelateCovarianceSetVariance<3>(10, sq(_params.switch_on_gyro_bias * filter_update_s));
+	P.uncorrelateCovarianceSetVariance<3>(13, sq(_params.switch_on_accel_bias * filter_update_s));
 	_last_imu_bias_cov_reset_us = _imu_sample_delayed.time_us;
 
 	// Set previous frame values

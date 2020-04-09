@@ -207,6 +207,9 @@ enum TerrainFusionMask : int32_t {
 #define GNDEFFECT_TIMEOUT	10E6	///< Maximum period of time that ground effect protection will be active after it was last turned on (uSec)
 
 struct parameters {
+
+	int32_t filter_update_interval_us{8000};	///< filter update interval in microseconds
+
 	// measurement source control
 	int32_t fusion_mode{MASK_USE_GPS};		///< bitmasked integer that selects which aiding sources will be used
 	int32_t vdist_sensor_type{VDIST_SENSOR_BARO};	///< selects the primary source for height data
