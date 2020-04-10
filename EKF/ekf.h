@@ -518,7 +518,7 @@ private:
 	void predictState();
 
 	// predict ekf covariance
-	void predictCovariance();
+	void predictCovariance() __attribute__ ((optimize(3)));
 
 	// ekf sequential fusion of magnetometer measurements
 	void fuseMag();
@@ -732,7 +732,8 @@ private:
 	bool isRangeAidSuitable() { return _is_range_aid_suitable; }
 
 	// return the square of two floating point numbers - used in auto coded sections
-	static constexpr float sq(float var) { return var * var; }
+	template <typename T>
+	static constexpr T sq(T var) { return var * var; }
 
 	// set control flags to use baro height
 	void setControlBaroHeight();

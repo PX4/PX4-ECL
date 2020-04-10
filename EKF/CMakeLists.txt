@@ -59,4 +59,6 @@ target_link_libraries(ecl_EKF PRIVATE ecl_geo ecl_geo_lookup mathlib)
 
 set_target_properties(ecl_EKF PROPERTIES PUBLIC_HEADER "ekf.h")
 
-target_compile_options(ecl_EKF PRIVATE -fno-associative-math)
+target_compile_options(ecl_EKF PRIVATE -fno-associative-math -Wno-error)
+
+#set_source_files_properties(covariance.cpp PROPERTIES COMPILE_FLAGS -O3)
