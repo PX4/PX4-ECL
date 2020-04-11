@@ -432,6 +432,20 @@ void Ekf::predictCovariance()
 	nextP[11][12] = P[11][12];
 	nextP[12][12] = P[12][12];
 
+	float min_var_increment[_k_num_states] = {};
+	for(unsigned i = 0; i<=12; i++) {
+		min_var_increment[i] = process_noise[i];
+	}
+
+	min_var_increment[0] += (dayVar*sq(q2))/4 + (dazVar*sq(q3))/4 + (daxVar*SQ[10])/4;
+	min_var_increment[1] += (dayVar*sq(q3))/4 + (dazVar*sq(q2))/4 + daxVar*SQ[9];
+	min_var_increment[2] += (daxVar*sq(q3))/4 + dayVar*SQ[9] + (dazVar*SQ[10])/4;
+	min_var_increment[3] += (daxVar*sq(q2))/4 + (dayVar*SQ[10])/4 + dazVar*SQ[9];
+	min_var_increment[4] += dvyVar*sq(SG[7] - 2*q0*q3) + dvzVar*sq(SG[6] + 2*q0*q2) + dvxVar*sq(SG[1] + SG[2] - SG[3] - SG[4]);
+	min_var_increment[5] += dvxVar*sq(SG[7] + 2*q0*q3) + dvzVar*sq(SG[5] - 2*q0*q1) + dvyVar*sq(SG[1] - SG[2] + SG[3] - SG[4]);
+	min_var_increment[6] += dvxVar*sq(SG[6] - 2*q0*q2) + dvyVar*sq(SG[5] + 2*q0*q1) + dvzVar*sq(SG[1] - SG[2] - SG[3] + SG[4]);
+
+
 	// add process noise that is not from the IMU
 	for (unsigned i = 0; i <= 9; i++) {
 		nextP[i][i] += process_noise[i];
@@ -500,6 +514,7 @@ void Ekf::predictCovariance()
 		for (unsigned i = 13; i <= 15; i++) {
 			const int index = i-13;
 			nextP[i][i] = kahanSummation(nextP[i][i], process_noise[i], _delta_vel_bias_var_accum(index));
+			min_var_increment[i] += process_noise[i];
 		}
 
 	} else {
@@ -633,6 +648,7 @@ void Ekf::predictCovariance()
 		// add process noise that is not from the IMU
 		for (unsigned i = 16; i <= 21; i++) {
 			nextP[i][i] += process_noise[i];
+			min_var_increment[i] += process_noise[i];
 		}
 
 	}
@@ -692,6 +708,7 @@ void Ekf::predictCovariance()
 		// add process noise that is not from the IMU
 		for (unsigned i = 22; i <= 23; i++) {
 			nextP[i][i] += process_noise[i];
+			min_var_increment[i] += process_noise[i];
 		}
 
 	}
@@ -706,6 +723,30 @@ void Ekf::predictCovariance()
 			}
 		}
 	}
+
+	// check if the variances increased for the minimal amount
+	// if needed increase variances and and all relevant offdiagonal entries
+	for (unsigned i = 0; i <_k_num_states ; i++) {
+		if(nextP[i][i] < P[i][i] + min_var_increment[i]) {
+
+			nextP[i][i] = P[i][i] + min_var_increment[i];
+
+			float FPF = nextP[i][i] - min_var_increment[i];
+
+			if(FPF < 0.00000001f) { continue; }
+
+			float sigma_ratio = math::constrain(sqrtf(P[i][i] / FPF), 1.0f, 1.01f);
+
+			for (unsigned j = i + 1; j < _k_num_states; j++) {
+				nextP[i][j] *= sigma_ratio;
+			}
+
+			for (int j = i-1; j >= 0; j--) {
+				nextP[j][i] *= sigma_ratio;
+			}
+		}
+	}
+
 
 	// covariance matrix is symmetrical, so copy upper half to lower half
 	for (unsigned row = 1; row < _k_num_states; row++) {
