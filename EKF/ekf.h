@@ -655,7 +655,8 @@ private:
 	void checkRangeDataValidity();
 
 	// return the square of two floating point numbers - used in auto coded sections
-	static constexpr float sq(float var) { return var * var; }
+	template <typename T>
+	static constexpr T sq(T var) { return var * var; }
 
 	// set control flags to use baro height
 	void setControlBaroHeight();
