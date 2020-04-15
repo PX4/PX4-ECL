@@ -59,7 +59,7 @@ class EkfExternalVisionTest : public ::testing::Test {
 	void SetUp() override
 	{
 		_ekf->init(0);
-		_sensor_simulator.runSeconds(2);
+		_sensor_simulator.runSeconds(3);
 	}
 
 	// Use this method to clean up any memory, network etc. after each test
@@ -113,7 +113,7 @@ TEST_F(EkfExternalVisionTest, visionVelocityReset)
 	_ekf_wrapper.enableExternalVisionVelocityFusion();
 	_sensor_simulator.startExternalVision();
 	// Note: test duration needs to allow time for tilt alignment to complete
-	_sensor_simulator.runMicroseconds(1e6);
+	_sensor_simulator.runMicroseconds(2e5);
 
 	// THEN: a reset to Vision velocity should be done
 	// Note: velocity will drift after reset due to INAV errors so the tolerance needs to allow for this
@@ -145,7 +145,7 @@ TEST_F(EkfExternalVisionTest, visionVelocityResetWithAlignment)
 	_sensor_simulator._vio.setVelocity(simulated_velocity_in_vision_frame);
 	_ekf_wrapper.enableExternalVisionVelocityFusion();
 	_sensor_simulator.startExternalVision();
-	_sensor_simulator.runMicroseconds(1E6);
+	_sensor_simulator.runMicroseconds(2e5);
 
 	// THEN: a reset to Vision velocity should be done
 	const Vector3f estimated_velocity_in_ekf_frame = _ekf->getVelocity();
