@@ -735,7 +735,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 
 	for (int i = 4; i <= 6; i++) {
 		// NED velocity states
-		P(i,i) = math::constrain(P(i,i), 1E-6f P_lim[1]);
+		P(i,i) = math::constrain(P(i,i), 1E-6f, P_lim[1]);
 	}
 
 	for (int i = 7; i <= 9; i++) {
