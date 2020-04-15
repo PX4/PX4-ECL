@@ -145,11 +145,11 @@ TEST_F(EkfExternalVisionTest, visionVelocityResetWithAlignment)
 	_sensor_simulator._vio.setVelocity(simulated_velocity_in_vision_frame);
 	_ekf_wrapper.enableExternalVisionVelocityFusion();
 	_sensor_simulator.startExternalVision();
-	_sensor_simulator.runMicroseconds(6e5);
+	_sensor_simulator.runMicroseconds(1E6);
 
 	// THEN: a reset to Vision velocity should be done
 	const Vector3f estimated_velocity_in_ekf_frame = _ekf->getVelocity();
-	EXPECT_TRUE(isEqual(estimated_velocity_in_ekf_frame, simulated_velocity_in_ekf_frame, 1e-5f));
+	EXPECT_TRUE(isEqual(estimated_velocity_in_ekf_frame, simulated_velocity_in_ekf_frame, 0.01f));
 	// And: the frame offset should be estimated correctly
 	Quatf estimatedExternalVisionFrameOffset = _ekf->getVisionAlignmentQuaternion();
 	EXPECT_TRUE(matrix::isEqual(vision_to_ekf.canonical(),
