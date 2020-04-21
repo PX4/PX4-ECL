@@ -159,7 +159,7 @@ TEST_F(EkfExternalVisionTest, visionVelocityResetWithAlignment)
 	reset_logging_checker.capturePostResetState();
 	EXPECT_TRUE(reset_logging_checker.isHorizontalVelocityResetCounterIncreasedBy(1));
 	EXPECT_TRUE(reset_logging_checker.isVerticalVelocityResetCounterIncreasedBy(1));
-	EXPECT_TRUE(reset_logging_checker.isVelocityDeltaLoggedCorrectly(1e-5f));
+	EXPECT_TRUE(reset_logging_checker.isVelocityDeltaLoggedCorrectly(0.01f));
 }
 
 TEST_F(EkfExternalVisionTest, visionVarianceCheck)
