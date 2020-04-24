@@ -141,7 +141,7 @@ public:
 					_tail = (index + 1) % _size;
 				}
 
-				_buffer[index].time_us = 0;
+				//_buffer[index].time_us = 0;
 
 				return true;
 			}
