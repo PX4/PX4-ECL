@@ -130,7 +130,7 @@ TEST_F(EkfExternalVisionTest, visionVelocityReset)
 
 TEST_F(EkfExternalVisionTest, visionVelocityResetWithAlignment)
 {
-	_sensor_simulator.runSeconds(3);	
+	_sensor_simulator.runSeconds(3);
 	ResetLoggingChecker reset_logging_checker(_ekf);
 	reset_logging_checker.capturePreResetState();
 	// GIVEN: Drone is pointing north, and we use mag (ROTATE_EV)
@@ -253,15 +253,18 @@ TEST_F(EkfExternalVisionTest, visionAlignment)
 
 TEST_F(EkfExternalVisionTest, velocityFrameBody)
 {
+	// GIVEN: Drone is turned 90 degrees
 	const Quatf quat_sim(Eulerf(0.0f, 0.0f, math::radians(90.0f)));
 	_sensor_simulator.simulateOrientation(quat_sim);
 	_sensor_simulator.runSeconds(3);
 
+	// Without any measurement x and y velocity variance are close
 	const Vector3f velVar_init = _ekf->getVelocityVariance();
 	EXPECT_NEAR(velVar_init(0), velVar_init(1), 0.0001);
 
+	// WHEN: measurement is given in BODY-FRAME and
+	//       x variance is bigger than y variance
 	_sensor_simulator._vio.setVelocityFrameToBody();
-
 	float vel_cov_data [9] = {2.0f, 0.0f, 0.0f,
 				  0.0f, 0.01f, 0.0f,
 				  0.0f, 0.0f, 0.01f};
@@ -273,8 +276,10 @@ TEST_F(EkfExternalVisionTest, velocityFrameBody)
 	_sensor_simulator.startExternalVision();
 	_sensor_simulator.runSeconds(4);
 
+	// THEN: As the drone is turned 90 degrees, velocity variance
+	//       along local y axis is expected to be bigger
 	const Vector3f velVar_new = _ekf->getVelocityVariance();
-	EXPECT_TRUE(velVar_new(1) > velVar_new(0));
+	EXPECT_NEAR(velVar_new(1) / velVar_new(0), 80.f, 10.f);
 
 	const Vector3f vel_earth_est = _ekf->getVelocity();
 	EXPECT_NEAR(vel_earth_est(0), 0.0f, 0.1f);
@@ -283,15 +288,18 @@ TEST_F(EkfExternalVisionTest, velocityFrameBody)
 
 TEST_F(EkfExternalVisionTest, velocityFrameLocal)
 {
+	// GIVEN: Drone is turned 90 degrees
 	const Quatf quat_sim(Eulerf(0.0f, 0.0f, math::radians(90.0f)));
 	_sensor_simulator.simulateOrientation(quat_sim);
 	_sensor_simulator.runSeconds(3);
 
+	// Without any measurement x and y velocity variance are close
 	const Vector3f velVar_init = _ekf->getVelocityVariance();
 	EXPECT_NEAR(velVar_init(0), velVar_init(1), 0.0001);
 
+	// WHEN: measurement is given in LOCAL-FRAME and
+	//       x variance is bigger than y variance
 	_sensor_simulator._vio.setVelocityFrameToLocal();
-
 	float vel_cov_data [9] = {2.0f, 0.0f, 0.0f,
 				  0.0f, 0.01f, 0.0f,
 				  0.0f, 0.0f, 0.01f};
@@ -303,8 +311,10 @@ TEST_F(EkfExternalVisionTest, velocityFrameLocal)
 	_sensor_simulator.startExternalVision();
 	_sensor_simulator.runSeconds(4);
 
+	// THEN: Independently on drones heading, velocity variance
+	//       along local x axis is expected to be bigger
 	const Vector3f velVar_new = _ekf->getVelocityVariance();
-	EXPECT_TRUE(velVar_new(0) > velVar_new(1));
+	EXPECT_NEAR(velVar_new(0) / velVar_new(1), 80.f, 10.f);
 
 	const Vector3f vel_earth_est = _ekf->getVelocity();
 	EXPECT_NEAR(vel_earth_est(0), 1.0f, 0.1f);
