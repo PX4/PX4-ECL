@@ -335,7 +335,7 @@ void Ekf::controlExternalVisionFusion()
 				}
 			}
 
-			ev_vel_obs_var = matrix::max(getVisionVelocityVarianceInEkfFrame(), sq(0.01f));
+			ev_vel_obs_var = matrix::max(getVisionVelocityVarianceInEkfFrame(), sq(0.05f));
 
 			ev_vel_innov_gates.setAll(fmaxf(_params.ev_vel_innov_gate, 1.0f));
 
