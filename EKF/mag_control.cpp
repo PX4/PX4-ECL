@@ -60,18 +60,18 @@ void Ekf::controlMagFusion()
 
 	// If we are on ground, reset the flight alignment flag so that the mag fields will be
 	// re-initialised next time we achieve flight altitude
-	if (!_control_status.flags.in_air) {
-		_control_status.flags.mag_aligned_in_flight = false;
+	if (!_control_status.in_air) {
+		_control_status.mag_aligned_in_flight = false;
 		_num_bad_flight_yaw_events = 0;
 	}
 
-	if (_control_status.flags.mag_fault || !_control_status.flags.yaw_align) {
+	if (_control_status.mag_fault || !_control_status.yaw_align) {
 		stopMagFusion();
 		return;
 	}
 
 	if (canRunMagFusion()) {
-		if (_control_status.flags.in_air) {
+		if (_control_status.in_air) {
 			checkHaglYawResetReq();
 			runInAirYawReset();
 			runVelPosReset();
@@ -120,14 +120,14 @@ bool Ekf::canRunMagFusion() const
 {
 	// check for new magnetometer data that has fallen behind the fusion time horizon
 	// If we are using external vision data or GPS-heading for heading then no magnetometer fusion is used
-	return !_control_status.flags.ev_yaw && !_control_status.flags.gps_yaw && _mag_data_ready;
+	return !_control_status.ev_yaw && !_control_status.gps_yaw && _mag_data_ready;
 }
 
 void Ekf::checkHaglYawResetReq()
 {
 	// We need to reset the yaw angle after climbing away from the ground to enable
 	// recovery from ground level magnetic interference.
-	if (!_control_status.flags.mag_aligned_in_flight) {
+	if (!_control_status.mag_aligned_in_flight) {
 		// Check if height has increased sufficiently to be away from ground magnetic anomalies
 		// and request a yaw reset if not already requested.
 		static constexpr float mag_anomalies_max_hagl = 1.5f;
@@ -171,13 +171,13 @@ void Ekf::runInAirYawReset()
 		else if (canResetMagHeading()) { has_realigned_yaw = resetMagHeading(_mag_lpf.getState()); }
 
 		_mag_yaw_reset_req = !has_realigned_yaw;
-		_control_status.flags.mag_aligned_in_flight = has_realigned_yaw;
+		_control_status.mag_aligned_in_flight = has_realigned_yaw;
 	}
 }
 
 bool Ekf::canRealignYawUsingGps() const
 {
-	return _control_status.flags.fixed_wing;
+	return _control_status.fixed_wing;
 }
 
 void Ekf::runVelPosReset()
@@ -214,7 +214,7 @@ void Ekf::checkYawAngleObservability()
 				: _accel_lpf_NE.norm() > 2.0f * _params.mag_acc_gate;
 
 	_yaw_angle_observable = _yaw_angle_observable
-				&& (_control_status.flags.gps || _control_status.flags.ev_pos); // Do we have to add ev_vel here?
+				&& (_control_status.gps || _control_status.ev_pos); // Do we have to add ev_vel here?
 }
 
 void Ekf::checkMagBiasObservability()
@@ -249,7 +249,7 @@ bool Ekf::canUse3DMagFusion() const
 {
 	// Use of 3D fusion requires an in-air heading alignment but it should not
 	// be used when the heading and mag biases are not observable for more than 2 seconds
-	return _control_status.flags.mag_aligned_in_flight
+	return _control_status.mag_aligned_in_flight
 	       && ((_imu_sample_delayed.time_us - _time_last_mov_3d_mag_suitable) < (uint64_t)2e6);
 }
 
@@ -260,8 +260,8 @@ void Ekf::checkMagDeclRequired()
 	// fusing declination when gps aiding is available is optional, but recommended to prevent
 	// problem if the vehicle is static for extended periods of time
 	const bool user_selected = (_params.mag_declination_source & MASK_FUSE_DECL);
-	const bool not_using_ne_aiding = !_control_status.flags.gps;
-	_control_status.flags.mag_dec = (_control_status.flags.mag_3D && (not_using_ne_aiding || user_selected));
+	const bool not_using_ne_aiding = !_control_status.gps;
+	_control_status.mag_dec = (_control_status.mag_3D && (not_using_ne_aiding || user_selected));
 }
 
 void Ekf::checkMagInhibition()
@@ -286,9 +286,9 @@ bool Ekf::shouldInhibitMag() const
 	// has explicitly stopped magnetometer use.
 	const bool user_selected = (_params.mag_fusion_type == MAG_FUSE_TYPE_INDOOR);
 
-	const bool heading_not_required_for_navigation = !_control_status.flags.gps
-							 && !_control_status.flags.ev_pos
-							 && !_control_status.flags.ev_vel;
+	const bool heading_not_required_for_navigation = !_control_status.gps
+							 && !_control_status.ev_pos
+							 && !_control_status.ev_vel;
 
 	return (user_selected && heading_not_required_for_navigation)
 	       || isStrongMagneticDisturbance();
@@ -297,18 +297,18 @@ bool Ekf::shouldInhibitMag() const
 void Ekf::checkMagFieldStrength()
 {
 	if (_params.check_mag_strength) {
-		_control_status.flags.mag_field_disturbed = _NED_origin_initialised
+		_control_status.mag_field_disturbed = _NED_origin_initialised
 							    ? !isMeasuredMatchingGpsMagStrength()
 							    : !isMeasuredMatchingAverageMagStrength();
 
 	} else {
-		_control_status.flags.mag_field_disturbed = false;
+		_control_status.mag_field_disturbed = false;
 	}
 }
 
 bool Ekf::isStrongMagneticDisturbance() const
 {
-	return _control_status.flags.mag_field_disturbed;
+	return _control_status.mag_field_disturbed;
 }
 
 bool Ekf::isMeasuredMatchingGpsMagStrength() const
@@ -334,9 +334,9 @@ bool Ekf::isMeasuredMatchingExpected(const float measured, const float expected,
 
 void Ekf::runMagAndMagDeclFusions()
 {
-	if (_control_status.flags.mag_3D) {
+	if (_control_status.mag_3D) {
 		run3DMagAndDeclFusions();
-	} else if (_control_status.flags.mag_hdg) {
+	} else if (_control_status.mag_hdg) {
 		fuseHeading();
 	}
 }
@@ -357,7 +357,7 @@ void Ekf::run3DMagAndDeclFusions()
 		// declination angle at a higher uncertainty to allow some learning of
 		// declination angle over time.
 		fuseMag();
-		if (_control_status.flags.mag_dec) {
+		if (_control_status.mag_dec) {
 			fuseDeclination(0.5f);
 		}
 	}

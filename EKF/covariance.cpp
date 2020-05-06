@@ -68,10 +68,10 @@ void Ekf::initialiseCovariance()
 	P(7,7) = sq(fmaxf(_params.gps_pos_noise, 0.01f));
 	P(8,8) = P(7,7);
 
-	if (_control_status.flags.rng_hgt) {
+	if (_control_status.rng_hgt) {
 		P(9,9) = sq(fmaxf(_params.range_noise, 0.01f));
 
-	} else if (_control_status.flags.gps_hgt) {
+	} else if (_control_status.gps_hgt) {
 		float lower_limit = fmaxf(_params.gps_pos_noise, 0.01f);
 		float upper_limit = fmaxf(_params.pos_noaid_noise, lower_limit);
 		P(9,9) = sq(1.5f * math::constrain(_gps_sample_delayed.vacc, lower_limit, upper_limit));
@@ -182,7 +182,7 @@ void Ekf::predictCovariance()
 	// Don't continue to grow the earth field variances if they are becoming too large or we are not doing 3-axis fusion as this can make the covariance matrix badly conditioned
 	float mag_I_sig;
 
-	if (_control_status.flags.mag_3D && (P(16,16) + P(17,17) + P(18,18)) < 0.1f) {
+	if (_control_status.mag_3D && (P(16,16) + P(17,17) + P(18,18)) < 0.1f) {
 		mag_I_sig = dt * math::constrain(_params.mage_p_noise, 0.0f, 1.0f);
 
 	} else {
@@ -192,7 +192,7 @@ void Ekf::predictCovariance()
 	// Don't continue to grow the body field variances if they is becoming too large or we are not doing 3-axis fusion as this can make the covariance matrix badly conditioned
 	float mag_B_sig;
 
-	if (_control_status.flags.mag_3D && (P(19,19) + P(20,20) + P(21,21)) < 0.1f) {
+	if (_control_status.mag_3D && (P(19,19) + P(20,20) + P(21,21)) < 0.1f) {
 		mag_B_sig = dt * math::constrain(_params.magb_p_noise, 0.0f, 1.0f);
 
 	} else {
@@ -206,7 +206,7 @@ void Ekf::predictCovariance()
 	_height_rate_lpf = _height_rate_lpf * (1.0f - alpha_height_rate_lpf) + _state.vel(2) * alpha_height_rate_lpf;
 
 	// Don't continue to grow wind velocity state variances if they are becoming too large or we are not using wind velocity states as this can make the covariance matrix badly conditioned
-	if (_control_status.flags.wind && (P(22,22) + P(23,23)) < sq(_params.initial_wind_uncertainty)) {
+	if (_control_status.wind && (P(22,22) + P(23,23)) < sq(_params.initial_wind_uncertainty)) {
 		wind_vel_sig = dt * math::constrain(_params.wind_vel_p_noise, 0.0f, 1.0f) * (1.0f + _params.wind_vel_p_noise_scaler * fabsf(_height_rate_lpf));
 
 	} else {
@@ -496,7 +496,7 @@ void Ekf::predictCovariance()
 	}
 
 	// Don't do covariance prediction on magnetic field states unless we are using 3-axis fusion
-	if (_control_status.flags.mag_3D) {
+	if (_control_status.mag_3D) {
 		// calculate variances and upper diagonal covariances for earth and body magnetic field states
 		nextP(0,16) = P(0,16) + P(1,16)*SF[9] + P(2,16)*SF[11] + P(3,16)*SF[10] + P(10,16)*SF[14] + P(11,16)*SF[15] + P(12,16)*SPP[10];
 		nextP(1,16) = P(1,16) + P(0,16)*SF[8] + P(2,16)*SF[7] + P(3,16)*SF[11] - P(12,16)*SF[15] + P(11,16)*SPP[10] - (P(10,16)*q0)/2;
@@ -624,7 +624,7 @@ void Ekf::predictCovariance()
 	}
 
 	// Don't do covariance prediction on wind states unless we are using them
-	if (_control_status.flags.wind) {
+	if (_control_status.wind) {
 
 		// calculate variances and upper diagonal covariances for wind states
 		nextP(0,22) = P(0,22) + P(1,22)*SF[9] + P(2,22)*SF[11] + P(3,22)*SF[10] + P(10,22)*SF[14] + P(11,22)*SF[15] + P(12,22)*SPP[10];
@@ -801,17 +801,17 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 
 		// check that the vertical component of accel bias is consistent with both the vertical position and velocity innovation
 		bool bad_acc_bias = (fabsf(down_dvel_bias) > dVel_bias_lim
-				     && ( (down_dvel_bias * _gps_vel_innov(2) < 0.0f && _control_status.flags.gps)
-				     ||   (down_dvel_bias * _ev_vel_innov(2) < 0.0f && _control_status.flags.ev_vel) )
+				     && ( (down_dvel_bias * _gps_vel_innov(2) < 0.0f && _control_status.gps)
+				     ||   (down_dvel_bias * _ev_vel_innov(2) < 0.0f && _control_status.ev_vel) )
 				     && down_dvel_bias * _gps_pos_innov(2) < 0.0f);
 
 		// record the pass/fail
 		if (!bad_acc_bias) {
-			_fault_status.flags.bad_acc_bias = false;
+			_fault_status.bad_acc_bias = false;
 			_time_acc_bias_check = _time_last_imu;
 
 		} else {
-			_fault_status.flags.bad_acc_bias = true;
+			_fault_status.bad_acc_bias = true;
 		}
 
 		// if we have failed for 7 seconds continuously, reset the accel bias covariances to fix bad conditioning of
@@ -821,7 +821,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 			P.uncorrelateCovariance<3>(13);
 
 			_time_acc_bias_check = _time_last_imu;
-			_fault_status.flags.bad_acc_bias = false;
+			_fault_status.bad_acc_bias = false;
 			ECL_WARN_TIMESTAMPED("invalid accel bias - resetting covariance");
 
 		} else if (force_symmetry) {
@@ -832,7 +832,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 	}
 
 	// magnetic field states
-	if (!_control_status.flags.mag_3D) {
+	if (!_control_status.mag_3D) {
 		zeroMagCov();
 
 	} else {
@@ -854,7 +854,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 	}
 
 	// wind velocity states
-	if (!_control_status.flags.wind) {
+	if (!_control_status.wind) {
 		P.uncorrelateCovarianceSetVariance<2>(22, 0.0f);
 
 	} else {
@@ -901,7 +901,7 @@ void Ekf::resetMagCov()
 	P.uncorrelateCovarianceSetVariance<3>(16, sq(_params.mag_noise));
 	P.uncorrelateCovarianceSetVariance<3>(19, sq(_params.mag_noise));
 
-	if (!_control_status.flags.mag_3D) {
+	if (!_control_status.mag_3D) {
 		// save covariance data for re-use when auto-switching between heading and 3-axis fusion
 		// if already in 3-axis fusion mode, the covariances are automatically saved when switching out
 		// of this mode

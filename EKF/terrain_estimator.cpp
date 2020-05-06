@@ -47,7 +47,7 @@ bool Ekf::initHagl()
 {
 	bool initialized = false;
 
-	if (!_control_status.flags.in_air) {
+	if (!_control_status.in_air) {
 		// if on ground, do not trust the range sensor, but assume a ground clearance
 		_terrain_vpos = _state.pos(2) + _params.rng_gnd_clearance;
 		// use the ground clearance value as our uncertainty
@@ -85,13 +85,13 @@ bool Ekf::initHagl()
 void Ekf::runTerrainEstimator()
 {
 	// If we are on ground, store the local position and time to use as a reference
-	if (!_control_status.flags.in_air) {
+	if (!_control_status.in_air) {
 		_last_on_ground_posD = _state.pos(2);
 	}
 
 	// Perform initialisation check and
 	// on ground, continuously reset the terrain estimator
-	if (!_terrain_initialised || !_control_status.flags.in_air) {
+	if (!_terrain_initialised || !_control_status.in_air) {
 		_terrain_initialised = initHagl();
 
 	} else {
@@ -159,7 +159,7 @@ void Ekf::fuseHagl()
 		_terrain_var = fmaxf(_terrain_var * (1.0f - gain), 0.0f);
 		// record last successful fusion event
 		_time_last_hagl_fuse = _time_last_imu;
-		_innov_check_fail_status.flags.reject_hagl = false;
+		_innov_check_fail_status.reject_hagl = false;
 
 	} else {
 		// If we have been rejecting range data for too long, reset to measurement
@@ -168,7 +168,7 @@ void Ekf::fuseHagl()
 			_terrain_var = obs_variance;
 
 		} else {
-			_innov_check_fail_status.flags.reject_hagl = true;
+			_innov_check_fail_status.reject_hagl = true;
 		}
 	}
 }
@@ -286,7 +286,7 @@ void Ekf::updateTerrainValidity()
 	// we have been fusing optical flow measurements for terrain estimation within the last 5 seconds
 	// this can only be the case if the main filter does not fuse optical flow
 	const bool recent_flow_for_terrain_fusion = isRecent(_time_last_of_fuse, (uint64_t)5e6)
-						    && !_control_status.flags.opt_flow;
+						    && !_control_status.opt_flow;
 
 	_hagl_valid = (_terrain_initialised && (recent_range_fusion || recent_flow_for_terrain_fusion));
 }

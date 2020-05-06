@@ -17,9 +17,7 @@ void EkfWrapper::setBaroHeight()
 
 bool EkfWrapper::isIntendingBaroHeightFusion() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.baro_hgt;
+	return _ekf->getControlMode().baro_hgt;
 }
 
 void EkfWrapper::setGpsHeight()
@@ -29,9 +27,7 @@ void EkfWrapper::setGpsHeight()
 
 bool EkfWrapper::isIntendingGpsHeightFusion() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.gps_hgt;
+	return _ekf->getControlMode().gps_hgt;
 }
 
 void EkfWrapper::setRangeHeight()
@@ -41,9 +37,7 @@ void EkfWrapper::setRangeHeight()
 
 bool EkfWrapper::isIntendingRangeHeightFusion() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.rng_hgt;
+	return _ekf->getControlMode().rng_hgt;
 }
 
 void EkfWrapper::setVisionHeight()
@@ -53,9 +47,7 @@ void EkfWrapper::setVisionHeight()
 
 bool EkfWrapper::isIntendingVisionHeightFusion() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.ev_hgt;
+	return _ekf->getControlMode().ev_hgt;
 }
 
 void EkfWrapper::enableGpsFusion()
@@ -70,9 +62,7 @@ void EkfWrapper::disableGpsFusion()
 
 bool EkfWrapper::isIntendingGpsFusion() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.gps;
+	return _ekf->getControlMode().gps;
 }
 
 void EkfWrapper::enableFlowFusion()
@@ -87,9 +77,7 @@ void EkfWrapper::disableFlowFusion()
 
 bool EkfWrapper::isIntendingFlowFusion() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.opt_flow;
+	return _ekf->getControlMode().opt_flow;
 }
 
 void EkfWrapper::enableExternalVisionPositionFusion()
@@ -104,9 +92,7 @@ void EkfWrapper::disableExternalVisionPositionFusion()
 
 bool EkfWrapper::isIntendingExternalVisionPositionFusion() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.ev_pos;
+	return _ekf->getControlMode().ev_pos;
 }
 
 void EkfWrapper::enableExternalVisionVelocityFusion()
@@ -121,9 +107,7 @@ void EkfWrapper::disableExternalVisionVelocityFusion()
 
 bool EkfWrapper::isIntendingExternalVisionVelocityFusion() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.ev_vel;
+	return _ekf->getControlMode().ev_vel;
 }
 
 void EkfWrapper::enableExternalVisionHeadingFusion()
@@ -138,9 +122,7 @@ void EkfWrapper::disableExternalVisionHeadingFusion()
 
 bool EkfWrapper::isIntendingExternalVisionHeadingFusion() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.ev_yaw;
+	return _ekf->getControlMode().ev_yaw;
 }
 
 void EkfWrapper::enableExternalVisionAlignment()
@@ -155,9 +137,7 @@ void EkfWrapper::disableExternalVisionAlignment()
 
 bool EkfWrapper::isWindVelocityEstimated() const
 {
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	return control_status.flags.wind;
+	return _ekf->getControlMode().wind;
 }
 
 Eulerf EkfWrapper::getEulerAngles() const

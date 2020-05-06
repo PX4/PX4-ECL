@@ -80,15 +80,15 @@ void Ekf::reset()
 	_range_sensor.setPitchOffset(_params.rng_sens_pitch);
 	_range_sensor.setCosMaxTilt(_params.range_cos_max_tilt);
 
-	_control_status.value = 0;
-	_control_status_prev.value = 0;
+	_control_status = filter_control_status{};
+	_control_status_prev = filter_control_status{};
 
 	_dt_ekf_avg = FILTER_UPDATE_PERIOD_S;
 
 	_ang_rate_delayed_raw.zero();
 
-	_fault_status.value = 0;
-	_innov_check_fail_status.value = 0;
+	_fault_status = fault_status{};
+	_innov_check_fail_status = innovation_fault_status{};
 
 	_accel_magnitude_filt = 0.0f;
 	_ang_rate_magnitude_filt = 0.0f;
@@ -198,7 +198,7 @@ bool Ekf::initialiseFilter()
 		}
 
 		// calculate the initial magnetic field and yaw alignment
-		_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState(), false, false);
+		_control_status.yaw_align = resetMagHeading(_mag_lpf.getState(), false, false);
 
 		// initialise the state covariance matrix now we have starting values for all the states
 		initialiseCovariance();

@@ -379,118 +379,85 @@ struct stateSample {
 	Vector2f    wind_vel;	///< horizontal wind velocity in earth frame in m/s
 };
 
-union fault_status_u {
-	struct {
-		bool bad_mag_x: 1;	///< 0 - true if the fusion of the magnetometer X-axis has encountered a numerical error
-		bool bad_mag_y: 1;	///< 1 - true if the fusion of the magnetometer Y-axis has encountered a numerical error
-		bool bad_mag_z: 1;	///< 2 - true if the fusion of the magnetometer Z-axis has encountered a numerical error
-		bool bad_hdg: 1;	///< 3 - true if the fusion of the heading angle has encountered a numerical error
-		bool bad_mag_decl: 1;	///< 4 - true if the fusion of the magnetic declination has encountered a numerical error
-		bool bad_airspeed: 1;	///< 5 - true if fusion of the airspeed has encountered a numerical error
-		bool bad_sideslip: 1;	///< 6 - true if fusion of the synthetic sideslip constraint has encountered a numerical error
-		bool bad_optflow_X: 1;	///< 7 - true if fusion of the optical flow X axis has encountered a numerical error
-		bool bad_optflow_Y: 1;	///< 8 - true if fusion of the optical flow Y axis has encountered a numerical error
-		bool bad_vel_N: 1;	///< 9 - true if fusion of the North velocity has encountered a numerical error
-		bool bad_vel_E: 1;	///< 10 - true if fusion of the East velocity has encountered a numerical error
-		bool bad_vel_D: 1;	///< 11 - true if fusion of the Down velocity has encountered a numerical error
-		bool bad_pos_N: 1;	///< 12 - true if fusion of the North position has encountered a numerical error
-		bool bad_pos_E: 1;	///< 13 - true if fusion of the East position has encountered a numerical error
-		bool bad_pos_D: 1;	///< 14 - true if fusion of the Down position has encountered a numerical error
-		bool bad_acc_bias: 1;	///< 15 - true if bad delta velocity bias estimates have been detected
-	} flags;
-	uint16_t value;
-
+struct fault_status {
+	bool bad_mag_x;      ///<  0 - true if the fusion of the magnetometer X-axis has encountered a numerical error
+	bool bad_mag_y;      ///<  1 - true if the fusion of the magnetometer Y-axis has encountered a numerical error
+	bool bad_mag_z;      ///<  2 - true if the fusion of the magnetometer Z-axis has encountered a numerical error
+	bool bad_hdg;	     ///<  3 - true if the fusion of the heading angle has encountered a numerical error
+	bool bad_mag_decl;   ///<  4 - true if the fusion of the magnetic declination has encountered a numerical error
+	bool bad_airspeed;   ///<  5 - true if fusion of the airspeed has encountered a numerical error
+	bool bad_sideslip;   ///<  6 - true if fusion of the synthetic sideslip constraint has encountered a numerical error
+	bool bad_optflow_X;  ///<  7 - true if fusion of the optical flow X axis has encountered a numerical error
+	bool bad_optflow_Y;  ///<  8 - true if fusion of the optical flow Y axis has encountered a numerical error
+	bool bad_vel_N;	     ///<  9 - true if fusion of the North velocity has encountered a numerical error
+	bool bad_vel_E;      ///< 10 - true if fusion of the East velocity has encountered a numerical error
+	bool bad_vel_D;	     ///< 11 - true if fusion of the Down velocity has encountered a numerical error
+	bool bad_pos_N;	     ///< 12 - true if fusion of the North position has encountered a numerical error
+	bool bad_pos_E;	     ///< 13 - true if fusion of the East position has encountered a numerical error
+	bool bad_pos_D;	     ///< 14 - true if fusion of the Down position has encountered a numerical error
+	bool bad_acc_bias;   ///< 15 - true if bad delta velocity bias estimates have been detected
 };
 
 // define structure used to communicate innovation test failures
-union innovation_fault_status_u {
-	struct {
-		bool reject_hor_vel: 1;		///< 0 - true if horizontal velocity observations have been rejected
-		bool reject_ver_vel: 1;		///< 1 - true if vertical velocity observations have been rejected
-		bool reject_hor_pos: 1;		///< 2 - true if horizontal position observations have been rejected
-		bool reject_ver_pos: 1;		///< 3 - true if true if vertical position observations have been rejected
-		bool reject_mag_x: 1;		///< 4 - true if the X magnetometer observation has been rejected
-		bool reject_mag_y: 1;		///< 5 - true if the Y magnetometer observation has been rejected
-		bool reject_mag_z: 1;		///< 6 - true if the Z magnetometer observation has been rejected
-		bool reject_yaw: 1;		///< 7 - true if the yaw observation has been rejected
-		bool reject_airspeed: 1;	///< 8 - true if the airspeed observation has been rejected
-		bool reject_sideslip: 1;	///< 9 - true if the synthetic sideslip observation has been rejected
-		bool reject_hagl: 1;		///< 10 - true if the height above ground observation has been rejected
-		bool reject_optflow_X: 1;	///< 11 - true if the X optical flow observation has been rejected
-		bool reject_optflow_Y: 1;	///< 12 - true if the Y optical flow observation has been rejected
-	} flags;
-	uint16_t value;
-
+struct innovation_fault_status {
+	bool reject_hor_vel;   ///<  0 - true if horizontal velocity observations have been rejected
+	bool reject_ver_vel;   ///<  1 - true if vertical velocity observations have been rejected
+	bool reject_hor_pos;   ///<  2 - true if horizontal position observations have been rejected
+	bool reject_ver_pos;   ///<  3 - true if true if vertical position observations have been rejected
+	bool reject_mag_x;     ///<  4 - true if the X magnetometer observation has been rejected
+	bool reject_mag_y;     ///<  5 - true if the Y magnetometer observation has been rejected
+	bool reject_mag_z;     ///<  6 - true if the Z magnetometer observation has been rejected
+	bool reject_yaw;       ///<  7 - true if the yaw observation has been rejected
+	bool reject_airspeed;  ///<  8 - true if the airspeed observation has been rejected
+	bool reject_sideslip;  ///<  9 - true if the synthetic sideslip observation has been rejected
+	bool reject_hagl;      ///< 10 - true if the height above ground observation has been rejected
+	bool reject_optflow_X; ///< 11 - true if the X optical flow observation has been rejected
+	bool reject_optflow_Y; ///< 12 - true if the Y optical flow observation has been rejected
 };
 
 // publish the status of various GPS quality checks
-union gps_check_fail_status_u {
-	struct {
-		uint16_t fix    : 1; ///< 0 - true if the fix type is insufficient (no 3D solution)
-		uint16_t nsats  : 1; ///< 1 - true if number of satellites used is insufficient
-		uint16_t pdop   : 1; ///< 2 - true if position dilution of precision is insufficient
-		uint16_t hacc   : 1; ///< 3 - true if reported horizontal accuracy is insufficient
-		uint16_t vacc   : 1; ///< 4 - true if reported vertical accuracy is insufficient
-		uint16_t sacc   : 1; ///< 5 - true if reported speed accuracy is insufficient
-		uint16_t hdrift : 1; ///< 6 - true if horizontal drift is excessive (can only be used when stationary on ground)
-		uint16_t vdrift : 1; ///< 7 - true if vertical drift is excessive (can only be used when stationary on ground)
-		uint16_t hspeed : 1; ///< 8 - true if horizontal speed is excessive (can only be used when stationary on ground)
-		uint16_t vspeed : 1; ///< 9 - true if vertical speed error is excessive
-	} flags;
-	uint16_t value;
+struct gps_check_fail_status {
+	bool fix;    ///< 0 - true if the fix type is insufficient (no 3D solution)
+	bool nsats;  ///< 1 - true if number of satellites used is insufficient
+	bool pdop;   ///< 2 - true if position dilution of precision is insufficient
+	bool hacc;   ///< 3 - true if reported horizontal accuracy is insufficient
+	bool vacc;   ///< 4 - true if reported vertical accuracy is insufficient
+	bool sacc;   ///< 5 - true if reported speed accuracy is insufficient
+	bool hdrift; ///< 6 - true if horizontal drift is excessive (can only be used when stationary on ground)
+	bool vdrift; ///< 7 - true if vertical drift is excessive (can only be used when stationary on ground)
+	bool hspeed; ///< 8 - true if horizontal speed is excessive (can only be used when stationary on ground)
+	bool vspeed; ///< 9 - true if vertical speed error is excessive
 };
 
 // bitmask containing filter control status
-union filter_control_status_u {
-	struct {
-		uint32_t tilt_align  : 1; ///< 0 - true if the filter tilt alignment is complete
-		uint32_t yaw_align   : 1; ///< 1 - true if the filter yaw alignment is complete
-		uint32_t gps         : 1; ///< 2 - true if GPS measurement fusion is intended
-		uint32_t opt_flow    : 1; ///< 3 - true if optical flow measurements fusion is intended
-		uint32_t mag_hdg     : 1; ///< 4 - true if a simple magnetic yaw heading fusion is intended
-		uint32_t mag_3D      : 1; ///< 5 - true if 3-axis magnetometer measurement fusion is inteded
-		uint32_t mag_dec     : 1; ///< 6 - true if synthetic magnetic declination measurements fusion is intended
-		uint32_t in_air      : 1; ///< 7 - true when the vehicle is airborne
-		uint32_t wind        : 1; ///< 8 - true when wind velocity is being estimated
-		uint32_t baro_hgt    : 1; ///< 9 - true when baro height is being fused as a primary height reference
-		uint32_t rng_hgt     : 1; ///< 10 - true when range finder height is being fused as a primary height reference
-		uint32_t gps_hgt     : 1; ///< 11 - true when GPS height is being fused as a primary height reference
-		uint32_t ev_pos      : 1; ///< 12 - true when local position data fusion from external vision is intended
-		uint32_t ev_yaw      : 1; ///< 13 - true when yaw data from external vision measurements fusion is intended
-		uint32_t ev_hgt      : 1; ///< 14 - true when height data from external vision measurements is being fused
-		uint32_t fuse_beta   : 1; ///< 15 - true when synthetic sideslip measurements are being fused
-		uint32_t mag_field_disturbed : 1; ///< 16 - true when the mag field does not match the expected strength
-		uint32_t fixed_wing  : 1; ///< 17 - true when the vehicle is operating as a fixed wing vehicle
-		uint32_t mag_fault   : 1; ///< 18 - true when the magnetometer has been declared faulty and is no longer being used
-		uint32_t fuse_aspd   : 1; ///< 19 - true when airspeed measurements are being fused
-		uint32_t gnd_effect  : 1; ///< 20 - true when protection from ground effect induced static pressure rise is active
-		uint32_t rng_stuck   : 1; ///< 21 - true when rng data wasn't ready for more than 10s and new rng values haven't changed enough
-		uint32_t gps_yaw     : 1; ///< 22 - true when yaw (not ground course) data fusion from a GPS receiver is intended
-		uint32_t mag_aligned_in_flight   : 1; ///< 23 - true when the in-flight mag field alignment has been completed
-		uint32_t ev_vel      : 1; ///< 24 - true when local frame velocity data fusion from external vision measurements is intended
-		uint32_t synthetic_mag_z : 1; ///< 25 - true when we are using a synthesized measurement for the magnetometer Z component
-		uint32_t vehicle_at_rest : 1; ///< 26 - true when the vehicle is at rest
-	} flags;
-	uint32_t value;
-};
-
- // Mavlink bitmask containing state of estimator solution
-union ekf_solution_status {
-	struct {
-		uint16_t attitude           : 1; ///< 0 - True if the attitude estimate is good
-		uint16_t velocity_horiz     : 1; ///< 1 - True if the horizontal velocity estimate is good
-		uint16_t velocity_vert      : 1; ///< 2 - True if the vertical velocity estimate is good
-		uint16_t pos_horiz_rel      : 1; ///< 3 - True if the horizontal position (relative) estimate is good
-		uint16_t pos_horiz_abs      : 1; ///< 4 - True if the horizontal position (absolute) estimate is good
-		uint16_t pos_vert_abs       : 1; ///< 5 - True if the vertical position (absolute) estimate is good
-		uint16_t pos_vert_agl       : 1; ///< 6 - True if the vertical position (above ground) estimate is good
-		uint16_t const_pos_mode     : 1; ///< 7 - True if the EKF is in a constant position mode and is not using external measurements (eg GPS or optical flow)
-		uint16_t pred_pos_horiz_rel : 1; ///< 8 - True if the EKF has sufficient data to enter a mode that will provide a (relative) position estimate
-		uint16_t pred_pos_horiz_abs : 1; ///< 9 - True if the EKF has sufficient data to enter a mode that will provide a (absolute) position estimate
-		uint16_t gps_glitch         : 1; ///< 10 - True if the EKF has detected a GPS glitch
-		uint16_t accel_error        : 1; ///< 11 - True if the EKF has detected bad accelerometer data
-	} flags;
-	uint16_t value;
+struct filter_control_status {
+	bool tilt_align;            ///<  0 - true if the filter tilt alignment is complete
+	bool yaw_align;             ///<  1 - true if the filter yaw alignment is complete
+	bool gps;                   ///<  2 - true if GPS measurement fusion is intended
+	bool opt_flow;              ///<  3 - true if optical flow measurements fusion is intended
+	bool mag_hdg;               ///<  4 - true if a simple magnetic yaw heading fusion is intended
+	bool mag_3D;                ///<  5 - true if 3-axis magnetometer measurement fusion is inteded
+	bool mag_dec;               ///<  6 - true if synthetic magnetic declination measurements fusion is intended
+	bool in_air;                ///<  7 - true when the vehicle is airborne
+	bool wind;                  ///<  8 - true when wind velocity is being estimated
+	bool baro_hgt;              ///<  9 - true when baro height is being fused as a primary height reference
+	bool rng_hgt;               ///< 10 - true when range finder height is being fused as a primary height reference
+	bool gps_hgt;               ///< 11 - true when GPS height is being fused as a primary height reference
+	bool ev_pos;                ///< 12 - true when local position data fusion from external vision is intended
+	bool ev_yaw;                ///< 13 - true when yaw data from external vision measurements fusion is intended
+	bool ev_hgt;                ///< 14 - true when height data from external vision measurements is being fused
+	bool fuse_beta;             ///< 15 - true when synthetic sideslip measurements are being fused
+	bool mag_field_disturbed;   ///< 16 - true when the mag field does not match the expected strength
+	bool fixed_wing;            ///< 17 - true when the vehicle is operating as a fixed wing vehicle
+	bool mag_fault;             ///< 18 - true when the magnetometer has been declared faulty and is no longer being used
+	bool fuse_aspd;             ///< 19 - true when airspeed measurements are being fused
+	bool gnd_effect;            ///< 20 - true when protection from ground effect induced static pressure rise is active
+	bool rng_stuck;             ///< 21 - true when rng data wasn't ready for more than 10s and new rng values haven't changed enough
+	bool gps_yaw;               ///< 22 - true when yaw (not ground course) data fusion from a GPS receiver is intended
+	bool mag_aligned_in_flight; ///< 23 - true when the in-flight mag field alignment has been completed
+	bool ev_vel;                ///< 24 - true when local frame velocity data fusion from external vision measurements is intended
+	bool synthetic_mag_z;       ///< 25 - true when we are using a synthesized measurement for the magnetometer Z component
+	bool vehicle_at_rest;       ///< 26 - true when the vehicle is at rest
 };
 
 }

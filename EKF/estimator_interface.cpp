@@ -66,7 +66,7 @@ void EstimatorInterface::setIMUData(const imuSample &imu_sample)
 
 	// Do not change order of computeVibrationMetric and checkIfVehicleAtRest
 	computeVibrationMetric();
-	_control_status.flags.vehicle_at_rest = checkIfVehicleAtRest(dt);
+	_control_status.vehicle_at_rest = checkIfVehicleAtRest(dt);
 
 	const bool new_downsampled_imu_sample_ready = _imu_down_sampler.update(_newest_high_rate_imu_sample);
 	_imu_updated = new_downsampled_imu_sample_ready;
@@ -107,7 +107,7 @@ void EstimatorInterface::computeVibrationMetric()
 bool EstimatorInterface::checkIfVehicleAtRest(float dt)
 {
 	// detect if the vehicle is not moving when on ground
-	if (!_control_status.flags.in_air) {
+	if (!_control_status.in_air) {
 		if ((_vibe_metrics(1) * 4.0E4f > _params.is_moving_scaler)
 				|| (_vibe_metrics(2) * 2.1E2f > _params.is_moving_scaler)
 				|| ((_newest_high_rate_imu_sample.delta_ang.norm() / dt) > 0.05f * _params.is_moving_scaler)) {
@@ -372,14 +372,14 @@ void EstimatorInterface::setOpticalFlowData(const flowSample& flow)
 			delta_time = delta_time_min;
 		}
 
-		const bool relying_on_flow = !isOtherSourceOfHorizontalAidingThan(_control_status.flags.opt_flow);
+		const bool relying_on_flow = !isOtherSourceOfHorizontalAidingThan(_control_status.opt_flow);
 
 		const bool flow_quality_good = (flow.quality >= _params.flow_qual_min);
 
 		// Check data validity and write to buffers
 		// Invalid flow data is allowed when on ground and is handled as a special case in controlOpticalFlowFusion()
 		bool use_flow_data_to_navigate = delta_time_good && flow_quality_good && (flow_magnitude_good || relying_on_flow);
-		if (use_flow_data_to_navigate || (!_control_status.flags.in_air && relying_on_flow)) {
+		if (use_flow_data_to_navigate || (!_control_status.in_air && relying_on_flow)) {
 
 			_time_last_optflow = flow.time_us;
 
@@ -544,7 +544,7 @@ bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 	_imu_sample_delayed.delta_vel_clipping[1] = false;
 	_imu_sample_delayed.delta_vel_clipping[2] = false;
 
-	_fault_status.value = 0;
+	_fault_status = fault_status{};
 
 	return true;
 }
@@ -585,10 +585,10 @@ bool EstimatorInterface::isOtherSourceOfHorizontalAidingThan(const bool aiding_f
 
 int EstimatorInterface::getNumberOfActiveHorizontalAidingSources() const
 {
-	return int(_control_status.flags.gps)
-	+ int(_control_status.flags.opt_flow)
-	+ int(_control_status.flags.ev_pos)
-	+ int(_control_status.flags.ev_vel);
+	return int(_control_status.gps)
+	+ int(_control_status.opt_flow)
+	+ int(_control_status.ev_pos)
+	+ int(_control_status.ev_vel);
 }
 
 bool EstimatorInterface::isHorizontalAidingActive() const

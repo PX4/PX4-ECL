@@ -165,12 +165,12 @@ void Ekf::fuseGpsAntYaw()
 	// check if the innovation variance calculation is badly conditioned
 	if (_heading_innov_var >= R_YAW) {
 		// the innovation variance contribution from the state covariances is not negative, no fault
-		_fault_status.flags.bad_hdg = false;
+		_fault_status.bad_hdg = false;
 		heading_innov_var_inv = 1.0f / _heading_innov_var;
 
 	} else {
 		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
-		_fault_status.flags.bad_hdg = true;
+		_fault_status.bad_hdg = true;
 
 		// we reinitialise the covariance matrix and abort this fusion step
 		initialiseCovariance();
@@ -192,7 +192,7 @@ void Ekf::fuseGpsAntYaw()
 		Kfusion[row] *= heading_innov_var_inv;
 	}
 
-	if (_control_status.flags.wind) {
+	if (_control_status.wind) {
 		for (uint8_t row = 22; row <= 23; row++) {
 			Kfusion[row] = 0.0f;
 
@@ -212,12 +212,12 @@ void Ekf::fuseGpsAntYaw()
 
 	// set the magnetometer unhealthy if the test fails
 	if (_yaw_test_ratio > 1.0f) {
-		_innov_check_fail_status.flags.reject_yaw = true;
+		_innov_check_fail_status.reject_yaw = true;
 
 		// if we are in air we don't want to fuse the measurement
 		// we allow to use it when on the ground because the large innovation could be caused
 		// by interference or a large initial gyro bias
-		if (_control_status.flags.in_air) {
+		if (_control_status.in_air) {
 			return;
 
 		} else {
@@ -227,7 +227,7 @@ void Ekf::fuseGpsAntYaw()
 		}
 
 	} else {
-		_innov_check_fail_status.flags.reject_yaw = false;
+		_innov_check_fail_status.reject_yaw = false;
 	}
 
 	// apply covariance correction via P_new = (I -K*H)*P
@@ -255,7 +255,7 @@ void Ekf::fuseGpsAntYaw()
 	// if the covariance correction will result in a negative variance, then
 	// the covariance matrix is unhealthy and must be corrected
 	bool healthy = true;
-	_fault_status.flags.bad_hdg = false;
+	_fault_status.bad_hdg = false;
 
 	for (int i = 0; i < _k_num_states; i++) {
 		if (P(i,i) < KHP(i,i)) {
@@ -266,7 +266,7 @@ void Ekf::fuseGpsAntYaw()
 			healthy = false;
 
 			// update individual measurement health status
-			_fault_status.flags.bad_hdg = true;
+			_fault_status.bad_hdg = true;
 
 		}
 	}
@@ -382,7 +382,7 @@ bool Ekf::resetGpsAntYaw()
 		delta_ang_error(2) = scalar * q_error(3);
 
 		// update the quaternion state estimates and corresponding covariances only if the change in angle has been large or the yaw is not yet aligned
-		if (delta_ang_error.norm() > math::radians(15.0f) || !_control_status.flags.yaw_align) {
+		if (delta_ang_error.norm() > math::radians(15.0f) || !_control_status.yaw_align) {
 			// update quaternion states
 			_state.quat_nominal = quat_after_reset;
 			uncorrelateQuatFromOtherStates();

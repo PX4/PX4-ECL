@@ -88,10 +88,10 @@ void Ekf::fuseAirspeed()
 
 		if (_airspeed_innov_var_temp >= R_TAS) { // Check for badly conditioned calculation
 			SK_TAS[0] = 1.0f / _airspeed_innov_var_temp;
-			_fault_status.flags.bad_airspeed = false;
+			_fault_status.bad_airspeed = false;
 
 		} else { // Reset the estimator covariance matrix
-			_fault_status.flags.bad_airspeed = true;
+			_fault_status.bad_airspeed = true;
 
 			// if we are getting aiding from other sources, warn and reset the wind states and covariances only
 			if (update_wind_only) {
@@ -157,11 +157,11 @@ void Ekf::fuseAirspeed()
 
 		// If the innovation consistency check fails then don't fuse the sample and indicate bad airspeed health
 		if (_tas_test_ratio > 1.0f) {
-			_innov_check_fail_status.flags.reject_airspeed = true;
+			_innov_check_fail_status.reject_airspeed = true;
 			return;
 
 		} else {
-			_innov_check_fail_status.flags.reject_airspeed = false;
+			_innov_check_fail_status.reject_airspeed = false;
 		}
 
 		// Airspeed measurement sample has passed check so record it
@@ -194,7 +194,7 @@ void Ekf::fuseAirspeed()
 		// if the covariance correction will result in a negative variance, then
 		// the covariance matrix is unhealthy and must be corrected
 		bool healthy = true;
-		_fault_status.flags.bad_airspeed = false;
+		_fault_status.bad_airspeed = false;
 
 		for (int i = 0; i < _k_num_states; i++) {
 			if (P(i,i) < KHP(i,i)) {
@@ -205,7 +205,7 @@ void Ekf::fuseAirspeed()
 				healthy = false;
 
 				// update individual measurement health status
-				_fault_status.flags.bad_airspeed = true;
+				_fault_status.bad_airspeed = true;
 
 			}
 		}

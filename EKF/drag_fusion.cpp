@@ -277,7 +277,7 @@ void Ekf::fuseDrag()
 			// the covariance matrix is unhealthy and must be corrected
 			bool healthy = true;
 
-			//_fault_status.flags.bad_sideslip = false;
+			//_fault_status.bad_sideslip = false;
 			for (int i = 0; i < _k_num_states; i++) {
 				if (P(i,i) < KHP(i,i)) {
 					// zero rows and columns
@@ -287,7 +287,7 @@ void Ekf::fuseDrag()
 					healthy = false;
 
 					// update individual measurement health status
-					//_fault_status.flags.bad_sideslip = true;
+					//_fault_status.bad_sideslip = true;
 
 				}
 			}

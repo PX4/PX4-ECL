@@ -120,20 +120,20 @@ bool Ekf::collect_gps(const gps_message &gps)
 bool Ekf::gps_is_good(const gps_message &gps)
 {
 	// Check the fix type
-	_gps_check_fail_status.flags.fix = (gps.fix_type < 3);
+	_gps_check_fail_status.fix = (gps.fix_type < 3);
 
 	// Check the number of satellites
-	_gps_check_fail_status.flags.nsats = (gps.nsats < _params.req_nsats);
+	_gps_check_fail_status.nsats = (gps.nsats < _params.req_nsats);
 
 	// Check the position dilution of precision
-	_gps_check_fail_status.flags.pdop = (gps.pdop > _params.req_pdop);
+	_gps_check_fail_status.pdop = (gps.pdop > _params.req_pdop);
 
 	// Check the reported horizontal and vertical position accuracy
-	_gps_check_fail_status.flags.hacc = (gps.eph > _params.req_hacc);
-	_gps_check_fail_status.flags.vacc = (gps.epv > _params.req_vacc);
+	_gps_check_fail_status.hacc = (gps.eph > _params.req_hacc);
+	_gps_check_fail_status.vacc = (gps.epv > _params.req_vacc);
 
 	// Check the reported speed accuracy
-	_gps_check_fail_status.flags.sacc = (gps.sacc > _params.req_sacc);
+	_gps_check_fail_status.sacc = (gps.sacc > _params.req_sacc);
 
 	// check if GPS quality is degraded
 	_gps_error_norm = fmaxf((gps.eph / _params.req_hacc) , (gps.epv / _params.req_vacc));
@@ -147,7 +147,7 @@ bool Ekf::gps_is_good(const gps_message &gps)
 	// The following checks are only valid when the vehicle is at rest
 	const double lat = gps.lat * 1.0e-7;
 	const double lon = gps.lon * 1.0e-7;
-	if (!_control_status.flags.in_air && _control_status.flags.vehicle_at_rest) {
+	if (!_control_status.in_air && _control_status.vehicle_at_rest) {
 		// Calculate position movement since last measurement
 		float delta_pos_n = 0.0f;
 		float delta_pos_e = 0.0f;
@@ -172,11 +172,11 @@ bool Ekf::gps_is_good(const gps_message &gps)
 
 		// Calculate the horizontal drift speed and fail if too high
 		_gps_drift_metrics[0] = Vector2f(_gps_pos_deriv_filt.xy()).norm();
-		_gps_check_fail_status.flags.hdrift = (_gps_drift_metrics[0] > _params.req_hdrift);
+		_gps_check_fail_status.hdrift = (_gps_drift_metrics[0] > _params.req_hdrift);
 
 		// Fail if the vertical drift speed is too high
 		_gps_drift_metrics[1] = fabsf(_gps_pos_deriv_filt(2));
-		_gps_check_fail_status.flags.vdrift = (_gps_drift_metrics[1] > _params.req_vdrift);
+		_gps_check_fail_status.vdrift = (_gps_drift_metrics[1] > _params.req_vdrift);
 
 		// Check the magnitude of the filtered horizontal GPS velocity
 		Vector2f gps_velNE = matrix::constrain(Vector2f(gps.vel_ned.xy()),
@@ -184,16 +184,16 @@ bool Ekf::gps_is_good(const gps_message &gps)
 							 10.0f * _params.req_hdrift);
 		_gps_velNE_filt = gps_velNE * filter_coef + _gps_velNE_filt * (1.0f - filter_coef);
 		_gps_drift_metrics[2] = _gps_velNE_filt.norm();
-		_gps_check_fail_status.flags.hspeed = (_gps_drift_metrics[2] > _params.req_hdrift);
+		_gps_check_fail_status.hspeed = (_gps_drift_metrics[2] > _params.req_hdrift);
 
 		_gps_drift_updated = true;
 
-	} else if (_control_status.flags.in_air) {
+	} else if (_control_status.in_air) {
 		// These checks are always declared as passed when flying
 		// If on ground and moving, the last result before movement commenced is kept
-		_gps_check_fail_status.flags.hdrift = false;
-		_gps_check_fail_status.flags.vdrift = false;
-		_gps_check_fail_status.flags.hspeed = false;
+		_gps_check_fail_status.hdrift = false;
+		_gps_check_fail_status.vdrift = false;
+		_gps_check_fail_status.hspeed = false;
 		_gps_drift_updated = false;
 
 	} else {
@@ -210,7 +210,7 @@ bool Ekf::gps_is_good(const gps_message &gps)
 	float vz_diff_limit = 10.0f * _params.req_vdrift;
 	float vertVel = fminf(fmaxf((gps.vel_ned(2) - _state.vel(2)), -vz_diff_limit), vz_diff_limit);
 	_gps_velD_diff_filt = vertVel * filter_coef + _gps_velD_diff_filt * (1.0f - filter_coef);
-	_gps_check_fail_status.flags.vspeed = (fabsf(_gps_velD_diff_filt) > _params.req_vdrift);
+	_gps_check_fail_status.vspeed = (fabsf(_gps_velD_diff_filt) > _params.req_vdrift);
 
 	// assume failed first time through
 	if (_last_gps_fail_us == 0) {
@@ -218,19 +218,19 @@ bool Ekf::gps_is_good(const gps_message &gps)
 	}
 
 	// if any user selected checks have failed, record the fail time
-	if (
-		_gps_check_fail_status.flags.fix ||
-		(_gps_check_fail_status.flags.nsats   && (_params.gps_check_mask & MASK_GPS_NSATS)) ||
-		(_gps_check_fail_status.flags.pdop    && (_params.gps_check_mask & MASK_GPS_PDOP)) ||
-		(_gps_check_fail_status.flags.hacc    && (_params.gps_check_mask & MASK_GPS_HACC)) ||
-		(_gps_check_fail_status.flags.vacc    && (_params.gps_check_mask & MASK_GPS_VACC)) ||
-		(_gps_check_fail_status.flags.sacc    && (_params.gps_check_mask & MASK_GPS_SACC)) ||
-		(_gps_check_fail_status.flags.hdrift  && (_params.gps_check_mask & MASK_GPS_HDRIFT)) ||
-		(_gps_check_fail_status.flags.vdrift  && (_params.gps_check_mask & MASK_GPS_VDRIFT)) ||
-		(_gps_check_fail_status.flags.hspeed  && (_params.gps_check_mask & MASK_GPS_HSPD)) ||
-		(_gps_check_fail_status.flags.vspeed  && (_params.gps_check_mask & MASK_GPS_VSPD))
+	if (_gps_check_fail_status.fix ||
+		(_gps_check_fail_status.nsats   && (_params.gps_check_mask & MASK_GPS_NSATS)) ||
+		(_gps_check_fail_status.pdop    && (_params.gps_check_mask & MASK_GPS_PDOP)) ||
+		(_gps_check_fail_status.hacc    && (_params.gps_check_mask & MASK_GPS_HACC)) ||
+		(_gps_check_fail_status.vacc    && (_params.gps_check_mask & MASK_GPS_VACC)) ||
+		(_gps_check_fail_status.sacc    && (_params.gps_check_mask & MASK_GPS_SACC)) ||
+		(_gps_check_fail_status.hdrift  && (_params.gps_check_mask & MASK_GPS_HDRIFT)) ||
+		(_gps_check_fail_status.vdrift  && (_params.gps_check_mask & MASK_GPS_VDRIFT)) ||
+		(_gps_check_fail_status.hspeed  && (_params.gps_check_mask & MASK_GPS_HSPD)) ||
+		(_gps_check_fail_status.vspeed  && (_params.gps_check_mask & MASK_GPS_VSPD))
 	) {
 		_last_gps_fail_us = _time_last_imu;
+
 	} else {
 		_last_gps_pass_us = _time_last_imu;
 	}

@@ -236,7 +236,7 @@ public:
 	Vector3f getGyroBias() const override;
 
 	// get GPS check status
-	void get_gps_check_status(uint16_t *val) override;
+	const gps_check_fail_status& getGPSCheckStatus() const { return _gps_check_fail_status; };
 
 	// return the amount the local vertical position changed in the last reset and the number of reset events
 	void get_posD_reset(float *delta, uint8_t *counter) override {*delta = _state_reset_status.posD_change; *counter = _state_reset_status.posD_counter;}
@@ -271,9 +271,6 @@ public:
 	// A value > 1 indicates that the sensor measurement has exceeded the maximum acceptable level and has been rejected by the EKF
 	// Where a measurement type is a vector quantity, eg magnetometer, GPS position, etc, the maximum value is returned.
 	void get_innovation_test_status(uint16_t &status, float &mag, float &vel, float &pos, float &hgt, float &tas, float &hagl, float &beta) override;
-
-	// return a bitmask integer that describes which state estimates can be used for flight control
-	void get_ekf_soln_status(uint16_t *status) override;
 
 	// return the quaternion defining the rotation from the External Vision to the EKF reference frame
 	matrix::Quatf getVisionAlignmentQuaternion() const override;
@@ -475,7 +472,7 @@ private:
 	float _saved_mag_ef_covmat[2][2] {};    ///< NE magnetic field state covariance sub-matrix saved for use at the next initialisation (Gauss**2)
 	bool _velpos_reset_request{false};	///< true when a large yaw error has been fixed and a velocity and position state reset is required
 
-	gps_check_fail_status_u _gps_check_fail_status{};
+	gps_check_fail_status _gps_check_fail_status{};
 
 	// variables used to inhibit accel bias learning
 	bool _accel_bias_inhibit{false};	///< true when the accel bias learning is being inhibited

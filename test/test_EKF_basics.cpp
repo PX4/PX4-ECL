@@ -78,34 +78,33 @@ TEST_F(EkfBasicsTest, initialControlMode)
 {
 	// GIVEN: reasonable static sensor data for some duration
 	// THEN: EKF control status should be reasonable
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
+	filter_control_status_u control_status = _ekf->getControlMode();
 
-	EXPECT_EQ(1, (int) control_status.flags.tilt_align);
-	EXPECT_EQ(1, (int) control_status.flags.yaw_align);
-	EXPECT_EQ(0, (int) control_status.flags.gps);
-	EXPECT_EQ(0, (int) control_status.flags.opt_flow);
-	EXPECT_EQ(1, (int) control_status.flags.mag_hdg);
-	EXPECT_EQ(0, (int) control_status.flags.mag_3D);
-	EXPECT_EQ(0, (int) control_status.flags.mag_dec);
-	EXPECT_EQ(0, (int) control_status.flags.in_air);
-	EXPECT_EQ(0, (int) control_status.flags.wind);
-	EXPECT_EQ(1, (int) control_status.flags.baro_hgt);
-	EXPECT_EQ(0, (int) control_status.flags.rng_hgt);
-	EXPECT_EQ(0, (int) control_status.flags.gps_hgt);
-	EXPECT_EQ(0, (int) control_status.flags.ev_pos);
-	EXPECT_EQ(0, (int) control_status.flags.ev_yaw);
-	EXPECT_EQ(0, (int) control_status.flags.ev_hgt);
-	EXPECT_EQ(0, (int) control_status.flags.fuse_beta);
-	EXPECT_EQ(0, (int) control_status.flags.mag_field_disturbed);
-	EXPECT_EQ(0, (int) control_status.flags.fixed_wing);
-	EXPECT_EQ(0, (int) control_status.flags.mag_fault);
-	EXPECT_EQ(0, (int) control_status.flags.gnd_effect);
-	EXPECT_EQ(0, (int) control_status.flags.rng_stuck);
-	EXPECT_EQ(0, (int) control_status.flags.gps_yaw);
-	EXPECT_EQ(0, (int) control_status.flags.mag_aligned_in_flight);
-	EXPECT_EQ(0, (int) control_status.flags.ev_vel);
-	EXPECT_EQ(0, (int) control_status.flags.synthetic_mag_z);
+	EXPECT_EQ(1, (int) control_status.tilt_align);
+	EXPECT_EQ(1, (int) control_status.yaw_align);
+	EXPECT_EQ(0, (int) control_status.gps);
+	EXPECT_EQ(0, (int) control_status.opt_flow);
+	EXPECT_EQ(1, (int) control_status.mag_hdg);
+	EXPECT_EQ(0, (int) control_status.mag_3D);
+	EXPECT_EQ(0, (int) control_status.mag_dec);
+	EXPECT_EQ(0, (int) control_status.in_air);
+	EXPECT_EQ(0, (int) control_status.wind);
+	EXPECT_EQ(1, (int) control_status.baro_hgt);
+	EXPECT_EQ(0, (int) control_status.rng_hgt);
+	EXPECT_EQ(0, (int) control_status.gps_hgt);
+	EXPECT_EQ(0, (int) control_status.ev_pos);
+	EXPECT_EQ(0, (int) control_status.ev_yaw);
+	EXPECT_EQ(0, (int) control_status.ev_hgt);
+	EXPECT_EQ(0, (int) control_status.fuse_beta);
+	EXPECT_EQ(0, (int) control_status.mag_field_disturbed);
+	EXPECT_EQ(0, (int) control_status.fixed_wing);
+	EXPECT_EQ(0, (int) control_status.mag_fault);
+	EXPECT_EQ(0, (int) control_status.gnd_effect);
+	EXPECT_EQ(0, (int) control_status.rng_stuck);
+	EXPECT_EQ(0, (int) control_status.gps_yaw);
+	EXPECT_EQ(0, (int) control_status.mag_aligned_in_flight);
+	EXPECT_EQ(0, (int) control_status.ev_vel);
+	EXPECT_EQ(0, (int) control_status.synthetic_mag_z);
 }
 
 TEST_F(EkfBasicsTest, convergesToZero)
@@ -135,33 +134,32 @@ TEST_F(EkfBasicsTest, gpsFusion)
 	_sensor_simulator.runSeconds(11);
 
 	// THEN: EKF should fuse GPS, but no other position sensor
-	filter_control_status_u control_status;
-	_ekf->get_control_mode(&control_status.value);
-	EXPECT_EQ(1, (int) control_status.flags.tilt_align);
-	EXPECT_EQ(1, (int) control_status.flags.yaw_align);
-	EXPECT_EQ(1, (int) control_status.flags.gps);
-	EXPECT_EQ(0, (int) control_status.flags.opt_flow);
-	EXPECT_EQ(1, (int) control_status.flags.mag_hdg);
-	EXPECT_EQ(0, (int) control_status.flags.mag_3D);
-	EXPECT_EQ(0, (int) control_status.flags.mag_dec);
-	EXPECT_EQ(0, (int) control_status.flags.in_air);
-	EXPECT_EQ(0, (int) control_status.flags.wind);
-	EXPECT_EQ(1, (int) control_status.flags.baro_hgt);
-	EXPECT_EQ(0, (int) control_status.flags.rng_hgt);
-	EXPECT_EQ(0, (int) control_status.flags.gps_hgt);
-	EXPECT_EQ(0, (int) control_status.flags.ev_pos);
-	EXPECT_EQ(0, (int) control_status.flags.ev_yaw);
-	EXPECT_EQ(0, (int) control_status.flags.ev_hgt);
-	EXPECT_EQ(0, (int) control_status.flags.fuse_beta);
-	EXPECT_EQ(0, (int) control_status.flags.mag_field_disturbed);
-	EXPECT_EQ(0, (int) control_status.flags.fixed_wing);
-	EXPECT_EQ(0, (int) control_status.flags.mag_fault);
-	EXPECT_EQ(0, (int) control_status.flags.gnd_effect);
-	EXPECT_EQ(0, (int) control_status.flags.rng_stuck);
-	EXPECT_EQ(0, (int) control_status.flags.gps_yaw);
-	EXPECT_EQ(0, (int) control_status.flags.mag_aligned_in_flight);
-	EXPECT_EQ(0, (int) control_status.flags.ev_vel);
-	EXPECT_EQ(0, (int) control_status.flags.synthetic_mag_z);
+	filter_control_status_u control_status = _ekf->getControlMode();
+	EXPECT_EQ(1, (int) control_status.tilt_align);
+	EXPECT_EQ(1, (int) control_status.yaw_align);
+	EXPECT_EQ(1, (int) control_status.gps);
+	EXPECT_EQ(0, (int) control_status.opt_flow);
+	EXPECT_EQ(1, (int) control_status.mag_hdg);
+	EXPECT_EQ(0, (int) control_status.mag_3D);
+	EXPECT_EQ(0, (int) control_status.mag_dec);
+	EXPECT_EQ(0, (int) control_status.in_air);
+	EXPECT_EQ(0, (int) control_status.wind);
+	EXPECT_EQ(1, (int) control_status.baro_hgt);
+	EXPECT_EQ(0, (int) control_status.rng_hgt);
+	EXPECT_EQ(0, (int) control_status.gps_hgt);
+	EXPECT_EQ(0, (int) control_status.ev_pos);
+	EXPECT_EQ(0, (int) control_status.ev_yaw);
+	EXPECT_EQ(0, (int) control_status.ev_hgt);
+	EXPECT_EQ(0, (int) control_status.fuse_beta);
+	EXPECT_EQ(0, (int) control_status.mag_field_disturbed);
+	EXPECT_EQ(0, (int) control_status.fixed_wing);
+	EXPECT_EQ(0, (int) control_status.mag_fault);
+	EXPECT_EQ(0, (int) control_status.gnd_effect);
+	EXPECT_EQ(0, (int) control_status.rng_stuck);
+	EXPECT_EQ(0, (int) control_status.gps_yaw);
+	EXPECT_EQ(0, (int) control_status.mag_aligned_in_flight);
+	EXPECT_EQ(0, (int) control_status.ev_vel);
+	EXPECT_EQ(0, (int) control_status.synthetic_mag_z);
 }
 
 TEST_F(EkfBasicsTest, accleBiasEstimation)
