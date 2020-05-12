@@ -1517,15 +1517,16 @@ Vector3f Ekf::getVisionVelocityInEkfFrame()
 	switch(_ev_sample_delayed.vel_frame) {
 		case BODY_FRAME_FRD:
 			vel = _R_to_earth * (_ev_sample_delayed.vel - vel_offset_body);
-
+			break;
 		case LOCAL_FRAME_FRD:
 			const Vector3f vel_offset_earth = _R_to_earth * vel_offset_body;
-			if(_params.fusion_mode & MASK_ROTATE_EV)
+			if (_params.fusion_mode & MASK_ROTATE_EV)
 			{
 				vel = _R_ev_to_ekf *_ev_sample_delayed.vel - vel_offset_earth;
 			} else {
 				vel = _ev_sample_delayed.vel - vel_offset_earth;
 			}
+			break;
 	}
 	return vel;
 }
