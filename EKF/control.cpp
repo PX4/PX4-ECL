@@ -606,7 +606,7 @@ void Ekf::controlGpsFusion()
 			if (_control_status.flags.ev_pos && !(_params.fusion_mode & MASK_ROTATE_EV)) {
 				resetPosition();
 			}
-			ECL_WARN_TIMESTAMPED("GPS data quality poor - stopping use");
+			ECL_WARN_TIMESTAMPED("GPS quality poor - stopping use");
 		}
 
 		// handle case where we are not currently using GPS, but need to align yaw angle using EKF-GSF before
