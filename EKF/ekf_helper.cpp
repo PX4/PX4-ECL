@@ -1508,6 +1508,7 @@ void Ekf::updateBaroHgtOffset()
 
 Vector3f Ekf::getVisionVelocityInEkfFrame()
 {
+	Vector3f vel;
 	// correct velocity for offset relative to IMU
 	const Vector3f pos_offset_body = _params.ev_pos_body - _params.imu_pos_body;
 	const Vector3f vel_offset_body = _ang_rate_delayed_raw % pos_offset_body;
@@ -1515,18 +1516,18 @@ Vector3f Ekf::getVisionVelocityInEkfFrame()
 	// rotate measurement into correct earth frame if required
 	switch(_ev_sample_delayed.vel_frame) {
 		case BODY_FRAME_FRD:
-			return _R_to_earth * (_ev_sample_delayed.vel - vel_offset_body);
+			vel = _R_to_earth * (_ev_sample_delayed.vel - vel_offset_body);
 
 		case LOCAL_FRAME_FRD:
 			const Vector3f vel_offset_earth = _R_to_earth * vel_offset_body;
 			if(_params.fusion_mode & MASK_ROTATE_EV)
 			{
-				return _R_ev_to_ekf *_ev_sample_delayed.vel - vel_offset_earth;
+				vel = _R_ev_to_ekf *_ev_sample_delayed.vel - vel_offset_earth;
+			} else {
+				vel = _ev_sample_delayed.vel - vel_offset_earth;
 			}
-			return _ev_sample_delayed.vel - vel_offset_earth;
 	}
-	// switch statement guarantees to return
-	return Vector3f(0.f, 0.f, 0.f);
+	return vel;
 }
 
 Vector3f Ekf::getVisionVelocityVarianceInEkfFrame()
