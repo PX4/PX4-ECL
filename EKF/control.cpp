@@ -220,7 +220,7 @@ void Ekf::controlExternalVisionFusion()
 			if (isRecent(_time_last_ext_vision, 2 * EV_MAX_INTERVAL)) {
 				// reset the yaw angle to the value from the vision quaternion
 				const Eulerf euler_obs(_ev_sample_delayed.quat);
-				const float& yaw = euler_obs(2);
+				const float yaw = euler_obs(2);
 				const float yaw_variance = fmaxf(_ev_sample_delayed.angVar, sq(1.0e-2f));
 
 				resetQuatStateYaw(yaw, yaw_variance, true);
