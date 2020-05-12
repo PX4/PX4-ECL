@@ -1003,16 +1003,16 @@ void Ekf::controlHeightFusion()
 
 	case VDIST_SENSOR_GPS:
 
-		// Do switching between GPS and rangefinder if using range finder as
-		// a height source when close to ground and moving slowly
+		// NOTE: emergency fallback due to extended loss of currently selected sensor data or failure
+		// to pass innovation cinsistency checks is handled elsewhere in Ekf::controlHeightSensorTimeouts.
+		// Do switching between GPS and rangefinder if using range finder as a height source when close
+		// to ground and moving slowly. Also handle switch back from emergency Baro sensor when GPS recovers.
 		if (!_control_status_prev.flags.rng_hgt && do_range_aid && _range_sensor.isDataHealthy()) {
 			setControlRangeHeight();
 
 			// we have just switched to using range finder, calculate height sensor offset such that current
 			// measurement matches our current height estimate
-			if (_control_status_prev.flags.rng_hgt != _control_status.flags.rng_hgt) {
-				_hgt_sensor_offset = _terrain_vpos;
-			}
+			_hgt_sensor_offset = _terrain_vpos;
 
 		} else if (_control_status_prev.flags.rng_hgt && !do_range_aid) {
 			// must stop using range finder so find another sensor now
