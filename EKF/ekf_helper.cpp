@@ -394,11 +394,11 @@ bool Ekf::realignYawGPS()
 
 		// correct yaw angle using GPS ground course if compass yaw bad or yaw is previously not aligned
 		if (badMagYaw || !_control_status.flags.yaw_align) {
-			ECL_WARN_TIMESTAMPED("bad yaw corrected using GPS course");
+			ECL_WARN_TIMESTAMPED("bad yaw, using GPS course");
 
 			// declare the magnetometer as failed if a bad yaw has occurred more than once
 			if (_control_status.flags.mag_aligned_in_flight && (_num_bad_flight_yaw_events >= 2) && !_control_status.flags.mag_fault) {
-				ECL_WARN_TIMESTAMPED("stopping magnetometer use");
+				ECL_WARN_TIMESTAMPED("stopping mag use");
 				_control_status.flags.mag_fault = true;
 			}
 
@@ -1800,7 +1800,7 @@ bool Ekf::resetYawToEKFGSF()
 			// stop using the magnetometer in the main EKF otherwise it's fusion could drag the yaw around
 			// and cause another navigation failure
 			_control_status.flags.mag_fault = true;
-			ECL_INFO_TIMESTAMPED("Emergency yaw reset - magnetometer use stopped");
+			ECL_INFO_TIMESTAMPED("Emergency yaw reset - mag use stopped");
 		}
 
 		return true;

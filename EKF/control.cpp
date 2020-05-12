@@ -202,14 +202,14 @@ void Ekf::controlExternalVisionFusion()
 				if (_params.fusion_mode & MASK_USE_EVPOS && !_control_status.flags.ev_pos) {
 					_control_status.flags.ev_pos = true;
 					resetPosition();
-					ECL_INFO_TIMESTAMPED("commencing external vision position fusion");
+					ECL_INFO_TIMESTAMPED("commencing vision position fusion");
 				}
 
 				// turn on use of external vision measurements for velocity
 				if (_params.fusion_mode & MASK_USE_EVVEL && !_control_status.flags.ev_vel) {
 					_control_status.flags.ev_vel = true;
 					resetVelocity();
-					ECL_INFO_TIMESTAMPED("commencing external vision velocity fusion");
+					ECL_INFO_TIMESTAMPED("commencing vision velocity fusion");
 				}
 			}
 		}
@@ -235,7 +235,7 @@ void Ekf::controlExternalVisionFusion()
 				stopMagHdgFusion();
 				stopMag3DFusion();
 
-				ECL_INFO_TIMESTAMPED("commencing external vision yaw fusion");
+				ECL_INFO_TIMESTAMPED("commencing vision yaw fusion");
 			}
 		}
 
@@ -353,7 +353,7 @@ void Ekf::controlExternalVisionFusion()
 
 		// Turn off EV fusion mode if no data has been received
 		stopEvFusion();
-		ECL_INFO_TIMESTAMPED("External Vision Data Stopped");
+		ECL_INFO_TIMESTAMPED("Vision Data Stopped");
 
 	}
 }
