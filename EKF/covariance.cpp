@@ -156,28 +156,47 @@ void Ekf::predictCovariance()
 	const bool is_maneuvre_level_high = _ang_rate_magnitude_filt > _params.acc_bias_learn_gyr_lim
 					    || _accel_magnitude_filt > _params.acc_bias_learn_acc_lim;
 
-	const bool do_inhibit_xy = (_params.fusion_mode & MASK_INHIBIT_ACC_BIAS)
-				   || is_maneuvre_level_high
-				   || _bad_vert_accel_detected
-				   || !_control_status.flags.in_air;
+	const bool do_inhibit_all_axes = (_params.fusion_mode & MASK_INHIBIT_ACC_BIAS)
+				   	 || is_maneuvre_level_high
+					 || _bad_vert_accel_detected;
 
-	const bool do_inhibit_z = (_params.fusion_mode & MASK_INHIBIT_ACC_BIAS)
-				  || is_maneuvre_level_high
-				  || _bad_vert_accel_detected;
+	// When on ground, only consider an accel bias observable if aligned with the gravity vector
+	// TODO: put everything in a arrays ang loop through: bool is_bias_observable[3]
+	const bool is_x_bias_observable = (_R_to_earth(2, 0) > 0.8f) || _control_status.flags.in_air;
+	const bool is_y_bias_observable = (_R_to_earth(2, 1) > 0.8f) || _control_status.flags.in_air;
+	const bool is_z_bias_observable = (_R_to_earth(2, 2) > 0.8f) || _control_status.flags.in_air;
+	printf("cos x = %.3f\tcos y = %.3f\tcos z = %.3f\n", (double)_R_to_earth(2, 0), (double)_R_to_earth(2, 1), (double)_R_to_earth(2, 2));
 
-	if (do_inhibit_xy) {
+	const bool do_inhibit_x = do_inhibit_all_axes || !is_x_bias_observable;
+	const bool do_inhibit_y = do_inhibit_all_axes || !is_y_bias_observable;
+
+	const bool do_inhibit_z = do_inhibit_all_axes || !is_z_bias_observable;
+
+	if (do_inhibit_x) {
 		// store the bias state variances to be reinstated later
-		if (!_accel_bias_inhibit_xy) {
-			_prev_dvel_bias_var.xy() = P.slice<2,2>(13,13).diag();
-			_accel_bias_inhibit_xy = true;
+		if (!_accel_bias_inhibit_x) {
+			_prev_dvel_bias_var(0) = P(13,13);
+			_accel_bias_inhibit_x = true;
 		}
 
 	} else {
-		if (_accel_bias_inhibit_xy) {
+		if (_accel_bias_inhibit_x) {
 			// reinstate the bias state variances
 			P(13,13) = _prev_dvel_bias_var(0);
+			_accel_bias_inhibit_x = false;
+		}
+	}
+
+	if (do_inhibit_y) {
+		if (!_accel_bias_inhibit_y) {
+			_prev_dvel_bias_var(1) = P(14,14);
+			_accel_bias_inhibit_y = true;
+		}
+
+	} else {
+		if (_accel_bias_inhibit_x) {
 			P(14,14) = _prev_dvel_bias_var(1);
-			_accel_bias_inhibit_xy = false;
+			_accel_bias_inhibit_y = false;
 		}
 	}
 
@@ -446,7 +465,7 @@ void Ekf::predictCovariance()
 		nextP(i,i) = kahanSummation(nextP(i,i), process_noise(i), _delta_angle_bias_var_accum(index));
 	}
 
-	if (!_accel_bias_inhibit_xy) {
+	if (!_accel_bias_inhibit_x) {
 		// calculate variances and upper diagonal covariances for IMU delta velocity bias states
 		nextP(0,13) = P(0,13) + P(1,13)*SF[9] + P(2,13)*SF[11] + P(3,13)*SF[10] + P(10,13)*SF[14] + P(11,13)*SF[15] + P(12,13)*SPP[10];
 		nextP(1,13) = P(1,13) + P(0,13)*SF[8] + P(2,13)*SF[7] + P(3,13)*SF[11] - P(12,13)*SF[15] + P(11,13)*SPP[10] - (P(10,13)*q0)/2;
@@ -463,6 +482,16 @@ void Ekf::predictCovariance()
 		nextP(12,13) = P(12,13);
 		nextP(13,13) = P(13,13);
 
+		// add process noise that is not from the IMU
+		// process noise contributiton for delta velocity states can be very small compared to
+		// the variances, therefore use algorithm to minimise numerical error
+		nextP(13,13) = kahanSummation(nextP(13,13), process_noise(13), _delta_vel_bias_var_accum(0));
+
+	} else {
+		nextP.uncorrelateCovarianceSetVariance<1>(13, 0.f);
+		_delta_vel_bias_var_accum(0) = 0.f;
+	}
+	if (!_accel_bias_inhibit_y) {
 		nextP(0,14) = P(0,14) + P(1,14)*SF[9] + P(2,14)*SF[11] + P(3,14)*SF[10] + P(10,14)*SF[14] + P(11,14)*SF[15] + P(12,14)*SPP[10];
 		nextP(1,14) = P(1,14) + P(0,14)*SF[8] + P(2,14)*SF[7] + P(3,14)*SF[11] - P(12,14)*SF[15] + P(11,14)*SPP[10] - (P(10,14)*q0)/2;
 		nextP(2,14) = P(2,14) + P(0,14)*SF[6] + P(1,14)*SF[10] + P(3,14)*SF[8] + P(12,14)*SF[14] - P(10,14)*SPP[10] - (P(11,14)*q0)/2;
@@ -482,14 +511,11 @@ void Ekf::predictCovariance()
 		// add process noise that is not from the IMU
 		// process noise contributiton for delta velocity states can be very small compared to
 		// the variances, therefore use algorithm to minimise numerical error
-		for (unsigned i = 13; i <= 14; i++) {
-			const int index = i-13;
-			nextP(i,i) = kahanSummation(nextP(i,i), process_noise(i), _delta_vel_bias_var_accum(index));
-		}
+		nextP(14,14) = kahanSummation(nextP(14,14), process_noise(14), _delta_vel_bias_var_accum(1));
 
 	} else {
-		nextP.uncorrelateCovarianceSetVariance<2>(13, 0.f);
-		_delta_vel_bias_var_accum.xy() = Vector2f(0.f, 0.f);
+		nextP.uncorrelateCovarianceSetVariance<1>(14, 0.f);
+		_delta_vel_bias_var_accum(1) = 0.f;
 	}
 
 	if (!_accel_bias_inhibit_z) {
@@ -782,14 +808,18 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 	// by ensuring the corresponding covariance matrix values are kept at zero
 
 	// accelerometer bias states
-	if (!_accel_bias_inhibit_xy || !_accel_bias_inhibit_z) {
+	if (!_accel_bias_inhibit_x || !_accel_bias_inhibit_y || !_accel_bias_inhibit_z) {
 		// Find the maximum delta velocity bias state variance and request a covariance reset if any variance is below the safe minimum
 		const float minSafeStateVar = 1e-9f;
 		float maxStateVar = minSafeStateVar;
 		bool resetRequired = false;
-		const uint8_t start_index = _accel_bias_inhibit_xy ? 15 : 13;
 
-		for (uint8_t stateIndex = start_index; stateIndex <= 15; stateIndex++) {
+		for (uint8_t stateIndex = 13; stateIndex <= 15; stateIndex++) {
+			if ((stateIndex == 13 && _accel_bias_inhibit_x)
+					|| (stateIndex == 14 && _accel_bias_inhibit_y)
+					|| (stateIndex == 15 && _accel_bias_inhibit_z)) {
+				continue;
+			}
 			if (P(stateIndex,stateIndex) > maxStateVar) {
 				maxStateVar = P(stateIndex,stateIndex);
 
@@ -804,7 +834,12 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 		const float minStateVarTarget = 5E-8f;
 		float minAllowedStateVar = fmaxf(0.01f * maxStateVar, minStateVarTarget);
 
-		for (uint8_t stateIndex = start_index; stateIndex <= 15; stateIndex++) {
+		for (uint8_t stateIndex = 13; stateIndex <= 15; stateIndex++) {
+			if ((stateIndex == 13 && _accel_bias_inhibit_x)
+					|| (stateIndex == 14 && _accel_bias_inhibit_y)
+					|| (stateIndex == 15 && _accel_bias_inhibit_z)) {
+				continue;
+			}
 			P(stateIndex,stateIndex) = math::constrain(P(stateIndex,stateIndex), minAllowedStateVar, sq(0.1f * CONSTANTS_ONE_G * _dt_ekf_avg));
 		}
 
