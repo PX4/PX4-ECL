@@ -153,15 +153,15 @@ void Ekf::predictCovariance()
 	_accel_magnitude_filt = fmaxf(dt_inv * _imu_sample_delayed.delta_vel.norm(), beta * _accel_magnitude_filt);
 	_accel_vec_filt = alpha * dt_inv * _imu_sample_delayed.delta_vel + beta * _accel_vec_filt;
 
-	const bool is_maneuvre_level_high = _ang_rate_magnitude_filt > _params.acc_bias_learn_gyr_lim
+	const bool is_manoeuvre_level_high = _ang_rate_magnitude_filt > _params.acc_bias_learn_gyr_lim
 					    || _accel_magnitude_filt > _params.acc_bias_learn_acc_lim;
 
 	const bool do_inhibit_all_axes = (_params.fusion_mode & MASK_INHIBIT_ACC_BIAS)
-				   	 || is_maneuvre_level_high
+					 || is_manoeuvre_level_high
 					 || _bad_vert_accel_detected;
 
 	for (unsigned stateIndex = 13; stateIndex <= 15; stateIndex++) {
-		const int index = stateIndex - 13;
+		const unsigned index = stateIndex - 13;
 
 		// TODO: When on ground, only consider an accel bias observable if aligned with the gravity vector
 		// const bool is_bias_observable = (fabsf(_R_to_earth(2, index)) > 0.8f) || _control_status.flags.in_air;
@@ -437,7 +437,7 @@ void Ekf::predictCovariance()
 	}
 
 	for (unsigned i = 13; i <= 15; i++) {
-		const int index = i - 13;
+		const unsigned index = i - 13;
 
 		if (!_accel_bias_inhibit[index]) {
 			// calculate variances and upper diagonal covariances for IMU delta velocity bias states
