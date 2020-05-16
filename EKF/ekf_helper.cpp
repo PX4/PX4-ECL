@@ -1212,7 +1212,7 @@ void Ekf::update_deadreckoning_status()
 		_time_last_aiding = _time_last_imu - _params.no_aid_timeout_max;
 	}
 
-	// report if we have been deadreckoning for too long, intial state is deadreckoning until aiding is present
+	// report if we have been deadreckoning for too long, initial state is deadreckoning until aiding is present
 	_deadreckon_time_exceeded = (_time_last_aiding == 0) || isTimedOut(_time_last_aiding, (uint64_t)_params.valid_timeout_max);
 }
 
