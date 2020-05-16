@@ -62,7 +62,6 @@ bool Ekf::resetVelocity()
 	} else {
 		resetHorizontalVelocityToZero();
 	}
-
 	return true;
 }
 
@@ -159,24 +158,12 @@ bool Ekf::resetPosition()
 	_hpos_prev_available = false;
 
 	if (_control_status.flags.gps) {
-		ECL_INFO_TIMESTAMPED("reset position to GPS");
-
 		// this reset is only called if we have new gps data at the fusion time horizon
-		resetHorizontalPositionTo(Vector2f(_gps_sample_delayed.pos));
-
-		// use GPS accuracy to reset variances
-		P.uncorrelateCovarianceSetVariance<2>(7, sq(_gps_sample_delayed.hacc));
+		resetHorizontalPositionToGps();
 
 	} else if (_control_status.flags.ev_pos) {
-		ECL_INFO_TIMESTAMPED("reset position to ev position");
-
 		// this reset is only called if we have new ev data at the fusion time horizon
-		Vector3f _ev_pos = _ev_sample_delayed.pos;
-		if(_params.fusion_mode & MASK_ROTATE_EV){
-			_ev_pos = _R_ev_to_ekf *_ev_sample_delayed.pos;
-		}
-		resetHorizontalPositionTo(Vector2f(_ev_pos));
-		P.uncorrelateCovarianceSetVariance<2>(7, _ev_sample_delayed.posVar.slice<2, 1>(0, 0));
+		resetHorizontalPositionToVision();
 
 	} else if (_control_status.flags.opt_flow) {
 		ECL_INFO_TIMESTAMPED("reset position to last known position");
@@ -199,6 +186,22 @@ bool Ekf::resetPosition()
 	}
 
 	return true;
+}
+
+void Ekf::resetHorizontalPositionToGps() {
+	ECL_INFO_TIMESTAMPED("reset position to GPS");
+	resetHorizontalPositionTo(_gps_sample_delayed.pos);
+	P.uncorrelateCovarianceSetVariance<2>(7, sq(_gps_sample_delayed.hacc));
+}
+
+void Ekf::resetHorizontalPositionToVision() {
+	ECL_INFO_TIMESTAMPED("reset position to ev position");
+	Vector3f _ev_pos = _ev_sample_delayed.pos;
+	if(_params.fusion_mode & MASK_ROTATE_EV){
+		_ev_pos = _R_ev_to_ekf *_ev_sample_delayed.pos;
+	}
+	resetHorizontalPositionTo(Vector2f(_ev_pos));
+	P.uncorrelateCovarianceSetVariance<2>(7, _ev_sample_delayed.posVar.slice<2, 1>(0, 0));
 }
 
 void Ekf::resetHorizontalPositionTo(const Vector2f &new_horz_pos) {
