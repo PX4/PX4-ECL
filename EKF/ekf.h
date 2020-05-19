@@ -588,8 +588,7 @@ private:
 
 	inline void resetVerticalVelocityTo(float new_vert_vel);
 
-	// reset position states of the ekf (only horizontal position)
-	bool resetPosition();
+	bool resetHorizontalPosition();
 
 	inline void resetHorizontalPositionToGps();
 

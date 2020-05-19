@@ -152,7 +152,7 @@ void Ekf::resetVerticalVelocityTo(float new_vert_vel) {
 
 // Reset position states. If we have a recent and valid
 // gps measurement then use for position initialisation
-bool Ekf::resetPosition()
+bool Ekf::resetHorizontalPosition()
 {
 	// let the next odometry update know that the previous value of states cannot be used to calculate the change in position
 	_hpos_prev_available = false;
@@ -1793,7 +1793,7 @@ bool Ekf::resetYawToEKFGSF()
 
 		// reset velocity and position states to GPS - if yaw is fixed then the filter should start to operate correctly
 		resetVelocity();
-		resetPosition();
+		resetHorizontalPosition();
 
 		// record a magnetic field alignment event to prevent possibility of the EKF trying to reset the yaw to the mag later in flight
 		_flt_mag_align_start_time = _imu_sample_delayed.time_us;
