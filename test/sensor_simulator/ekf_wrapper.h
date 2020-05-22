@@ -94,6 +94,8 @@ public:
 	matrix::Vector<float, 4> getQuaternionVariance() const;
 	int getQuaternionResetCounter() const;
 
+	matrix::Vector3f getDVelBiasVariance() const;
+
 private:
 	std::shared_ptr<Ekf> _ekf;
 
