@@ -71,6 +71,7 @@ void Ekf::controlMagFusion()
 	}
 
 	if (canRunMagFusion()) {
+		_mag_yaw_reset_req |= !_control_status.flags.mag_hdg;
 		if (_control_status.flags.in_air) {
 			checkHaglYawResetReq();
 			runInAirYawReset();
@@ -143,10 +144,7 @@ float Ekf::getTerrainVPos() const
 
 void Ekf::runOnGroundYawReset()
 {
-	const bool restarting_fusion = !_control_status.flags.mag_hdg && canRunMagFusion();
-
-	// Reset yaw if if we are restarting fusion or a reset was explicitly requested
-	if ((restarting_fusion || _mag_yaw_reset_req) && isYawResetAuthorized()) {
+	if (_mag_yaw_reset_req && isYawResetAuthorized()) {
 		const bool has_realigned_yaw = canResetMagHeading()
 					       ? resetMagHeading(_mag_lpf.getState())
 					       : false;
@@ -167,10 +165,7 @@ bool Ekf::canResetMagHeading() const
 
 void Ekf::runInAirYawReset()
 {
-	const bool restarting_fusion = !_control_status.flags.mag_hdg && canRunMagFusion();
-
-	// Reset yaw if if we are restarting fusion or a reset was explicitly requested
-	if ((restarting_fusion || _mag_yaw_reset_req) && isYawResetAuthorized()) {
+	if (_mag_yaw_reset_req && isYawResetAuthorized()) {
 		bool has_realigned_yaw = false;
 
 		if (canRealignYawUsingGps()) { has_realigned_yaw = realignYawGPS(); }
