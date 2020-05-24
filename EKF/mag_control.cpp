@@ -70,7 +70,7 @@ void Ekf::controlMagFusion()
 		return;
 	}
 
-	if (canRunMagFusion()) {
+	if (shouldRunMagFusion()) {
 		_mag_yaw_reset_req |= !_control_status.flags.mag_hdg;
 		if (_control_status.flags.in_air) {
 			checkHaglYawResetReq();
@@ -117,7 +117,7 @@ void Ekf::updateMagFilter()
 	}
 }
 
-bool Ekf::canRunMagFusion() const
+bool Ekf::shouldRunMagFusion() const
 {
 	// check for new magnetometer data that has fallen behind the fusion time horizon
 	// If we are using external vision data or GPS-heading for heading then no magnetometer fusion is used
