@@ -201,8 +201,7 @@ int EkfWrapper::getQuaternionResetCounter() const
 	return static_cast<int>(counter);
 }
 
-matrix::Vector3f EkfWrapper::getDVelBiasVariance() const
+matrix::Vector3f EkfWrapper::getDeltaVelBiasVariance() const
 {
-	matrix::Vector<float, 24> var = _ekf->covariances_diagonal();
-	return matrix::Vector3f(var(13), var(14), var(15));
+	return _ekf->covariances_diagonal().slice<3, 1>(13,0);
 }
