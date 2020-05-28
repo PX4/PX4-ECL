@@ -62,7 +62,7 @@ void EKFGSF_yaw::update(const imuSample& imu_sample,
 			initialiseEKFGSF();
 			ahrsAlignYaw();
 			// Initialise to gyro bias estimate from main filter because there could be a large
-			// uncorrected rate gyro bias error about the grabity vector
+			// uncorrected rate gyro bias error about the gravity vector
 			for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 				_ahrs_ekf_gsf[model_index].gyro_bias = imu_gyro_bias;
 			}
