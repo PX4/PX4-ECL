@@ -1,7 +1,7 @@
 #!/bin/bash
 do_format=$1
 files_to_format="""
-EKF/AlphaFilter.hpp
+filters/AlphaFilter.hpp
 EKF/RingBuffer.h
 EKF/vel_pos_fusion.cpp
 EKF/imu_down_sampler.*pp

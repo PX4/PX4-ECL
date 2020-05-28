@@ -57,6 +57,7 @@ public:
 	 * @param time_constant filter time constant determining convergence
 	 */
 	void setParameters(float sample_interval, float time_constant) {
+		_time_constant = time_constant;
 		setAlpha(sample_interval / (time_constant + sample_interval));
 	}
 
@@ -68,6 +69,13 @@ public:
 	void setAlpha(float alpha) { _alpha = alpha; }
 
 	/**
+	 * Set filter time constant
+	 *
+	 * @param time_constant filter time constant in seconds.
+	 */
+	void setTimeConstant(float time_constant) { _time_constant = time_constant; }
+
+	/**
 	 * Set filter state to an initial value
 	 *
 	 * @param sample new initial value
@@ -77,15 +85,27 @@ public:
 	/**
 	 * Add a new raw value to the filter
 	 *
-	 * @return retrieve the filtered result
+	 * @return the filtered result
 	 */
-	void update(const T &sample) { _filter_state = updateCalculation(sample); }
+	T update(const T &sample) {
+		_filter_state = (1.f - _alpha) * _filter_state + _alpha * sample;
+		return _filter_state;
+	}
+
+	/**
+	 * Add a new raw value to the filter with corresponding interval
+	 *
+	 * @return the filtered result
+	 */
+	T update(const T &sample, const float dt) {
+		_alpha = dt / (_time_constant + dt);
+		return update(sample);
+	}
 
 	const T &getState() const { return _filter_state; }
 
 protected:
-	T updateCalculation(const T &sample) { return (1.f - _alpha) * _filter_state + _alpha * sample; }
-
 	float _alpha{0.f};
+	float _time_constant{0.f};
 	T _filter_state{};
 };

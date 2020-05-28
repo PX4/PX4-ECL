@@ -41,7 +41,7 @@
 #include <cmath>
 #include <matrix/math.hpp>
 
-#include "EKF/AlphaFilter.hpp"
+#include "filters/AlphaFilter.hpp"
 
 using matrix::Vector3f;
 

@@ -42,14 +42,15 @@
 #pragma once
 
 #include <ecl.h>
+#include <filters/AlphaFilter.hpp>
+#include <geo/geo.h>
+
 #include "common.h"
 #include "RingBuffer.h"
-#include "AlphaFilter.hpp"
 #include "imu_down_sampler.hpp"
 #include "EKFGSF_yaw.h"
 #include "sensor_range_finder.hpp"
 
-#include <geo/geo.h>
 #include <matrix/math.hpp>
 #include <mathlib/mathlib.h>
 
