@@ -48,16 +48,12 @@ message(STATUS "build type is ${CMAKE_BUILD_TYPE}")
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug;Release;RelWithDebInfo;MinSizeRel;Coverage")
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
-        execute_process(
-                COMMAND git describe --always --tags
-                OUTPUT_VARIABLE git_tag
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                )
-elseif($ENV{ECL_LIB_GIT_TAG_STR})
-        set(git_tag $ENV{ECL_LIB_GIT_TAG_STR})
-else()
-        set(git_tag "")
+	execute_process(
+		COMMAND git describe --always --tags
+		OUTPUT_VARIABLE git_tag
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		)
 endif()
 
 message(STATUS "PX4 ECL: Very lightweight Estimation & Control Library ${git_tag}")
