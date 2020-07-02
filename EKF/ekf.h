@@ -537,20 +537,23 @@ private:
 	// yaw : angle observation defined as the first rotation in a 321 Tait-Bryan rotation sequence (rad)
 	// yaw_variance : variance of the yaw angle observation (rad^2)
 	// zero_innovation : Fuse data with innovation set to zero
-	void fuseYaw321(const float yaw, const float yaw_variance, bool zero_innovation);
+	// return true if the fusion was successful
+	bool fuseYaw321(const float yaw, const float yaw_variance, bool zero_innovation = false);
 
 	// fuse the yaw angle defined as the first rotation in a 312 Tait-Bryan rotation sequence
 	// yaw : angle observation defined as the first rotation in a 312 Tait-Bryan rotation sequence (rad)
 	// yaw_variance : variance of the yaw angle observation (rad^2)
 	// zero_innovation : Fuse data with innovation set to zero
-	void fuseYaw312(const float yaw, const float yaw_variance, bool zero_innovation);
+	// return true if the fusion was successful
+	bool fuseYaw312(const float yaw, const float yaw_variance, bool zero_innovation = false);
 
 	// update quaternion states and covariances using an innovation, observation variance and Jacobian vector
 	// innovation : prediction - measurement
 	// variance : observaton variance
 	// gate_sigma : innovation consistency check gate size (Sigma)
 	// jacobian : 4x1 vector of partial derivatives of observation wrt each quaternion state
-	void updateQuaternion(const float innovation, const float variance, const float gate_sigma, const float (&yaw_jacobian)[4]);
+	// return true if the fusion was successful
+	bool updateQuaternion(const float innovation, const float variance, const float gate_sigma, const float (&yaw_jacobian)[4]);
 
 	// fuse the yaw angle obtained from a dual antenna GPS unit
 	void fuseGpsYaw();

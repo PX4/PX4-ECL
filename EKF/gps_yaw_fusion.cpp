@@ -47,14 +47,8 @@
 
 void Ekf::fuseGpsYaw()
 {
-	// assign intermediate state variables
-	const float q0 = _state.quat_nominal(0);
-	const float q1 = _state.quat_nominal(1);
-	const float q2 = _state.quat_nominal(2);
-	const float q3 = _state.quat_nominal(3);
-
 	// calculate the observed yaw angle of antenna array, converting a from body to antenna yaw measurement
-	const float measured_hdg = wrap_pi(_gps_sample_delayed.yaw + _gps_yaw_offset);
+	const float measured_hdg = wrap_pi(_gps_sample_delayed.yaw);
 
 	// define the predicted antenna array vector and rotate into earth frame
 	const Vector3f ant_vec_bf = {cosf(_gps_yaw_offset), sinf(_gps_yaw_offset), 0.0f};
@@ -65,200 +59,20 @@ void Ekf::fuseGpsYaw()
 		return;
 	}
 
-	// calculate predicted antenna yaw angle
-	const float predicted_hdg =  atan2f(ant_vec_ef(1),ant_vec_ef(0));
-
-	// calculate observation jacobian
-	float t2 = sinf(_gps_yaw_offset);
-	float t3 = cosf(_gps_yaw_offset);
-	float t4 = q0*q3*2.0f;
-	float t5 = q0*q0;
-	float t6 = q1*q1;
-	float t7 = q2*q2;
-	float t8 = q3*q3;
-	float t9 = q1*q2*2.0f;
-	float t10 = t5+t6-t7-t8;
-	float t11 = t3*t10;
-	float t12 = t4+t9;
-	float t13 = t3*t12;
-	float t14 = t5-t6+t7-t8;
-	float t15 = t2*t14;
-	float t16 = t13+t15;
-	float t17 = t4-t9;
-	float t19 = t2*t17;
-	float t20 = t11-t19;
-	float t18 = (t20*t20);
-	if (t18 < 1e-6f) {
-		return;
-	}
-	t18 = 1.0f / t18;
-	float t21 = t16*t16;
-	float t22 = sq(t11-t19);
-	if (t22 < 1e-6f) {
-		return;
-	}
-	t22 = 1.0f/t22;
-	float t23 = q1*t3*2.0f;
-	float t24 = q2*t2*2.0f;
-	float t25 = t23+t24;
-	float t26 = 1.0f/t20;
-	float t27 = q1*t2*2.0f;
-	float t28 = t21*t22;
-	float t29 = t28+1.0f;
-	if (fabsf(t29) < 1e-6f) {
-		return;
-	}
-	float t30 = 1.0f/t29;
-	float t31 = q0*t3*2.0f;
-	float t32 = t31-q3*t2*2.0f;
-	float t33 = q3*t3*2.0f;
-	float t34 = q0*t2*2.0f;
-	float t35 = t33+t34;
-
-	float H_YAW[4];
-	H_YAW[0] = (t35/(t11-t2*(t4-q1*q2*2.0f))-t16*t18*t32)/(t18*t21+1.0f);
-	H_YAW[1] = -t30*(t26*(t27-q2*t3*2.0f)+t16*t22*t25);
-	H_YAW[2] = t30*(t25*t26-t16*t22*(t27-q2*t3*2.0f));
-	H_YAW[3] = t30*(t26*t32+t16*t22*t35);
-
 	// using magnetic heading tuning parameter
 	const float R_YAW = sq(fmaxf(_params.mag_heading_noise, 1.0e-2f));
 
-	// calculate the innovation and define the innovation gate
-	const float innov_gate = math::max(_params.heading_innov_gate, 1.0f);
-	_heading_innov = predicted_hdg - measured_hdg;
-
-	// wrap the innovation to the interval between +-pi
-	_heading_innov = wrap_pi(_heading_innov);
-
-	// Calculate innovation variance and Kalman gains, taking advantage of the fact that only the first 3 elements in H are non zero
-	// calculate the innovation variance
-	float PH[4];
-	_heading_innov_var = R_YAW;
-
-	for (unsigned row = 0; row <= 3; row++) {
-		PH[row] = 0.0f;
-
-		for (uint8_t col = 0; col <= 3; col++) {
-			PH[row] += P(row,col) * H_YAW[col];
-		}
-
-		_heading_innov_var += H_YAW[row] * PH[row];
-	}
-
-	float heading_innov_var_inv;
-
-	// check if the innovation variance calculation is badly conditioned
-	if (_heading_innov_var >= R_YAW) {
-		// the innovation variance contribution from the state covariances is not negative, no fault
-		_fault_status.flags.bad_hdg = false;
-		heading_innov_var_inv = 1.0f / _heading_innov_var;
+	// determine if a 321 or 312 Euler sequence is best
+	bool success;
+	if (fabsf(_R_to_earth(2, 0)) < fabsf(_R_to_earth(2, 1))) {
+		success = fuseYaw321(measured_hdg, R_YAW);
 
 	} else {
-		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
-		_fault_status.flags.bad_hdg = true;
-
-		// we reinitialise the covariance matrix and abort this fusion step
-		initialiseCovariance();
-		ECL_ERR_TIMESTAMPED("GPS yaw numerical error - covariance reset");
-		return;
+		success = fuseYaw312(measured_hdg, R_YAW);
 	}
 
-	// calculate the Kalman gains
-	// only calculate gains for states we are using
-	Vector24f Kfusion;
-
-	for (uint8_t row = 0; row <= 15; row++) {
-		for (uint8_t col = 0; col <= 3; col++) {
-			Kfusion(row) += P(row,col) * H_YAW[col];
-		}
-
-		Kfusion(row) *= heading_innov_var_inv;
-	}
-
-	if (_control_status.flags.wind) {
-		for (uint8_t row = 22; row <= 23; row++) {
-			for (uint8_t col = 0; col <= 3; col++) {
-				Kfusion(row) += P(row,col) * H_YAW[col];
-			}
-
-			Kfusion(row) *= heading_innov_var_inv;
-		}
-	}
-
-	// innovation test ratio
-	_yaw_test_ratio = sq(_heading_innov) / (sq(innov_gate) * _heading_innov_var);
-
-	// we are no longer using 3-axis fusion so set the reported test levels to zero
-	_mag_test_ratio.setZero();
-
-	if (_yaw_test_ratio > 1.0f) {
-		_innov_check_fail_status.flags.reject_yaw = true;
-
-		// if we are in air we don't want to fuse the measurement
-		// we allow to use it when on the ground because the large innovation could be caused
-		// by interference or a large initial gyro bias
-		if (_control_status.flags.in_air) {
-			return;
-
-		} else {
-			// constrain the innovation to the maximum set by the gate
-			float gate_limit = sqrtf((sq(innov_gate) * _heading_innov_var));
-			_heading_innov = math::constrain(_heading_innov, -gate_limit, gate_limit);
-		}
-
-	} else {
-		_innov_check_fail_status.flags.reject_yaw = false;
-	}
-
-	// apply covariance correction via P_new = (I -K*H)*P
-	// first calculate expression for KHP
-	// then calculate P - KHP
-	SquareMatrix24f KHP;
-	float KH[4];
-
-	for (unsigned row = 0; row < _k_num_states; row++) {
-
-		KH[0] = Kfusion(row) * H_YAW[0];
-		KH[1] = Kfusion(row) * H_YAW[1];
-		KH[2] = Kfusion(row) * H_YAW[2];
-		KH[3] = Kfusion(row) * H_YAW[3];
-
-		for (unsigned column = 0; column < _k_num_states; column++) {
-			float tmp = KH[0] * P(0,column);
-			tmp += KH[1] * P(1,column);
-			tmp += KH[2] * P(2,column);
-			tmp += KH[3] * P(3,column);
-			KHP(row,column) = tmp;
-		}
-	}
-
-	// if the covariance correction will result in a negative variance, then
-	// the covariance matrix is unhealthy and must be corrected
-	bool healthy = true;
-	_fault_status.flags.bad_hdg = false;
-
-	for (int i = 0; i < _k_num_states; i++) {
-		if (P(i,i) < KHP(i,i)) {
-			P.uncorrelateCovarianceSetVariance<1>(i, 0.0f);
-
-			healthy = false;
-
-			_fault_status.flags.bad_hdg = true;
-
-		}
-	}
-
-	if (healthy) {
+	if (success) {
 		_time_last_gps_yaw_fuse = _time_last_imu;
-		// apply the covariance corrections
-		P -= KHP;
-
-		fixCovarianceErrors(true);
-
-		// apply the state corrections
-		fuse(Kfusion, _heading_innov);
-
 	}
 }
 
