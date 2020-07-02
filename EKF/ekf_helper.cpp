@@ -45,8 +45,7 @@
 #include <mathlib/mathlib.h>
 #include <cstdlib>
 
-// Reset the velocity states. If we have a recent and valid
-// gps measurement then use for velocity initialisation
+
 void Ekf::resetVelocity()
 {
 	if (_control_status.flags.gps && isTimedOut(_last_gps_fail_us, (uint64_t)_min_gps_health_time_us)) {
@@ -149,8 +148,7 @@ void Ekf::resetVerticalVelocityTo(float new_vert_vel) {
 	_state_reset_status.velD_counter++;
 }
 
-// Reset position states. If we have a recent and valid
-// gps measurement then use for position initialisation
+
 void Ekf::resetHorizontalPosition()
 {
 	// let the next odometry update know that the previous value of states cannot be used to calculate the change in position
