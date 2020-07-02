@@ -1477,8 +1477,8 @@ void Ekf::increaseQuatYawErrVariance(float yaw_variance)
 	// Intermediate variables
 	float SG[3];
 	SG[0] = sq(_state.quat_nominal(0)) - sq(_state.quat_nominal(1)) - sq(_state.quat_nominal(2)) + sq(_state.quat_nominal(3));
-	SG[1] = 2*_state.quat_nominal(0)*_state.quat_nominal(2) - 2*_state.quat_nominal(1)*_state.quat_nominal(3);
-	SG[2] = 2*_state.quat_nominal(0)*_state.quat_nominal(1) + 2*_state.quat_nominal(2)*_state.quat_nominal(3);
+	SG[1] = 2.f*_state.quat_nominal(0)*_state.quat_nominal(2) - 2.f*_state.quat_nominal(1)*_state.quat_nominal(3);
+	SG[2] = 2.f*_state.quat_nominal(0)*_state.quat_nominal(1) + 2.f*_state.quat_nominal(2)*_state.quat_nominal(3);
 
 	float SQ[4];
 	SQ[0] = 0.5f * ((_state.quat_nominal(1)*SG[0]) - (_state.quat_nominal(0)*SG[2]) + (_state.quat_nominal(3)*SG[1]));
