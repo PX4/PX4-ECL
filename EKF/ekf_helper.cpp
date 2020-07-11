@@ -1407,7 +1407,7 @@ void Ekf::updateBaroHgtOffset()
 	}
 }
 
-Vector3f Ekf::getVisionVelocityInEkfFrame()
+Vector3f Ekf::getVisionVelocityInEkfFrame() const
 {
 	Vector3f vel;
 	// correct velocity for offset relative to IMU
@@ -1432,7 +1432,7 @@ Vector3f Ekf::getVisionVelocityInEkfFrame()
 	return vel;
 }
 
-Vector3f Ekf::getVisionVelocityVarianceInEkfFrame()
+Vector3f Ekf::getVisionVelocityVarianceInEkfFrame() const
 {
 	Matrix3f ev_vel_cov = _ev_sample_delayed.velCov;
 
