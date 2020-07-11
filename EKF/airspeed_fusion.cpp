@@ -156,26 +156,7 @@ void Ekf::fuseAirspeed()
 		// apply covariance correction via P_new = (I -K*H)*P
 		// first calculate expression for KHP
 		// then calculate P - KHP
-		SquareMatrix24f KHP;
-		float KH[5];
-
-		for (unsigned row = 0; row < _k_num_states; row++) {
-
-			KH[0] = Kfusion(row) * H_TAS(4);
-			KH[1] = Kfusion(row) * H_TAS(5);
-			KH[2] = Kfusion(row) * H_TAS(6);
-			KH[3] = Kfusion(row) * H_TAS(22);
-			KH[4] = Kfusion(row) * H_TAS(23);
-
-			for (unsigned column = 0; column < _k_num_states; column++) {
-				float tmp = KH[0] * P(4,column);
-				tmp += KH[1] * P(5,column);
-				tmp += KH[2] * P(6,column);
-				tmp += KH[3] * P(22,column);
-				tmp += KH[4] * P(23,column);
-				KHP(row,column) = tmp;
-			}
-		}
+		const SquareMatrix24f KHP = computeKHP<4, 5, 6, 22, 23>(Kfusion, H_TAS);
 
 		const bool healthy = isCovarianceUpdateHealthy(KHP);
 
