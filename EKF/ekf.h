@@ -769,6 +769,28 @@ private:
 	// return the square of two floating point numbers - used in auto coded sections
 	static constexpr float sq(float var) { return var * var; }
 
+	template<size_t idx>
+	float recursiveCumulativeSum(const Vector24f& H, unsigned column) {
+		return H(idx) * P(idx, column);
+	}
+
+	template<size_t idx1, size_t idx2, size_t ...rest>
+	float recursiveCumulativeSum(const Vector24f& H, unsigned column) {
+		return H(idx1) * P(idx1, column) + recursiveCumulativeSum<idx2, rest...>(H, column);
+	}
+
+	// Sparse matrix multiplication
+	template<size_t ...nonzero_elements>  // non zero elements in observation jacobian H
+	SquareMatrix24f computeKHP(const Vector24f& K, const Vector24f& H) {
+		SquareMatrix24f KHP;
+		for (unsigned row = 0; row < _k_num_states; row++) {
+			for (unsigned column = 0; column < _k_num_states; column++) {
+				KHP(row,column) = K(row) * recursiveCumulativeSum<nonzero_elements...>(H, column);
+			}
+		}
+		return KHP;
+	}
+
 	// set control flags to use baro height
 	void setControlBaroHeight();
 
