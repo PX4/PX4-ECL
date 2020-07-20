@@ -185,14 +185,8 @@ void Ekf::fuseSideslip()
 		Hfusion[8] = HK16*HK32;			// state index 23
 
 		// Calculate Kalman gains
-		if (update_wind_only) {
-			// If we are getting aiding from other sources, then don't allow the sideslip fusion to affect the non-windspeed states
-			for (unsigned row = 0; row <= 21; row++) {
-				Kfusion(row) = 0.0f;
+		if (!update_wind_only) {
 
-			}
-
-		} else {
 			Kfusion(0) = HK38*HK52;
 			Kfusion(1) = HK50*HK52;
 			Kfusion(2) = HK49*HK52;
@@ -213,10 +207,6 @@ void Ekf::fuseSideslip()
 			if (_control_status.flags.mag_3D && _control_status.flags.in_air) {
 				for (unsigned row = 16; row <= 21; row++) {
 					Kfusion(row) = HK52*(HK28*P(row,22) - HK28*P(4,row) + HK32*P(row,23) - HK32*P(5,row) + HK33*P(6,row) + HK34*P(2,row) + HK35*P(1,row) - HK36*P(3,row) + HK37*P(0,row));
-				}
-			} else {
-				for (int i = 16; i <= 21; i++) {
-					Kfusion(i) = 0.0f;
 				}
 			}
 		}

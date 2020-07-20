@@ -122,13 +122,7 @@ void Ekf::fuseAirspeed()
 	Hfusion[3] = -HK4;   // corresponds to state index 22
 	Hfusion[4] = -HK5;   // corresponds to state index 23
 
-	if (update_wind_only) {
-		// If we are getting aiding from other sources, then don't allow the airspeed measurements to affect the non-windspeed states
-		for (unsigned row = 0; row <= 21; row++) {
-			Kfusion(row) = 0.0f;
-		}
-
-	} else {
+	if (!update_wind_only) {
 		// we have no other source of aiding, so use airspeed measurements to correct states
 		for (unsigned row = 0; row <= 4; row++) {
 			Kfusion(row) = HK16*(-HK0*P(row,22) + HK0*P(row,4) - HK1*P(row,23) + HK1*P(row,5) + P(row,6)*vd);
