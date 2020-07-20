@@ -277,54 +277,50 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 	_ekf_gsf[model_index].X(0) += del_vel_NED(0);
 	_ekf_gsf[model_index].X(1) += del_vel_NED(1);
 
-	// predict covariance - autocode from https://github.com/priseborough/3_state_filter/blob/flightLogReplay-wip/calcPupdate.txt
+	// predict covariance - equations generated using EKF/python/gsf_ekf_yaw_estimator/main.py
 
 	// Local short variable name copies required for readability
-	// Compiler might be smart enough to optimise these out
 	const float &P00 = _ekf_gsf[model_index].P(0,0);
 	const float &P01 = _ekf_gsf[model_index].P(0,1);
 	const float &P02 = _ekf_gsf[model_index].P(0,2);
-	const float &P10 = _ekf_gsf[model_index].P(1,0);
 	const float &P11 = _ekf_gsf[model_index].P(1,1);
 	const float &P12 = _ekf_gsf[model_index].P(1,2);
-	const float &P20 = _ekf_gsf[model_index].P(2,0);
-	const float &P21 = _ekf_gsf[model_index].P(2,1);
 	const float &P22 = _ekf_gsf[model_index].P(2,2);
+	const float &psi = _ekf_gsf[model_index].X(2);
 
 	// Use fixed values for delta velocity and delta angle process noise variances
 	const float dvxVar = sq(_accel_noise * _delta_vel_dt); // variance of forward delta velocity - (m/s)^2
 	const float dvyVar = dvxVar; // variance of right delta velocity - (m/s)^2
 	const float dazVar = sq(_gyro_noise * _delta_ang_dt); // variance of yaw delta angle - rad^2
 
-	const float t2 = sinf(_ekf_gsf[model_index].X(2));
-	const float t3 = cosf(_ekf_gsf[model_index].X(2));
-	const float t4 = dvy*t3;
-	const float t5 = dvx*t2;
-	const float t6 = t4+t5;
-	const float t8 = P22*t6;
-	const float t7 = P02-t8;
-	const float t9 = dvx*t3;
-	const float t11 = dvy*t2;
-	const float t10 = t9-t11;
-	const float t12 = dvxVar*t2*t3;
-	const float t13 = t2*t2;
-	const float t14 = t3*t3;
-	const float t15 = P22*t10;
-	const float t16 = P12+t15;
+	const float S0 = cosf(psi);
+	const float S1 = powf(S0, 2);
+	const float S2 = sinf(psi);
+	const float S3 = powf(S2, 2);
+	const float S4 = S0*dvy + S2*dvx;
+	const float S5 = P02 - P22*S4;
+	const float S6 = S0*dvx - S2*dvy;
+	const float S7 = S0*S2;
+	const float S8 = P01 + S7*dvxVar - S7*dvyVar;
+	const float S9 = P12 + P22*S6;
 
-	constexpr float min_var = 1e-6f;
-	_ekf_gsf[model_index].P(0,0) = fmaxf(P00-P20*t6+dvxVar*t14+dvyVar*t13-t6*t7 , min_var);
-	_ekf_gsf[model_index].P(0,1) = P01+t12-P21*t6+t7*t10-dvyVar*t2*t3;
-	_ekf_gsf[model_index].P(0,2) = t7;
-	_ekf_gsf[model_index].P(1,0) = P10+t12+P20*t10-t6*t16-dvyVar*t2*t3;
-	_ekf_gsf[model_index].P(1,1) = fmaxf(P11+P21*t10+dvxVar*t13+dvyVar*t14+t10*t16 , min_var);
-	_ekf_gsf[model_index].P(1,2) = t16;
-	_ekf_gsf[model_index].P(2,0) = P20-t8;
-	_ekf_gsf[model_index].P(2,1) = P21+t15;
-	_ekf_gsf[model_index].P(2,2) = fmaxf(P22+dazVar , min_var);
+	_ekf_gsf[model_index].P(0,0) = P00 - P02*S4 + S1*dvxVar + S3*dvyVar - S4*S5;
+	_ekf_gsf[model_index].P(0,1) = -P12*S4 + S5*S6 + S8;
+	_ekf_gsf[model_index].P(1,1) = P11 + P12*S6 + S1*dvyVar + S3*dvxVar + S6*S9;
+	_ekf_gsf[model_index].P(0,2) = S5;
+	_ekf_gsf[model_index].P(1,2) = S9;
+	_ekf_gsf[model_index].P(2,2) = P22 + dazVar;
 
-	// force symmetry
-	_ekf_gsf[model_index].P.makeBlockSymmetric<3>(0);
+	// covariance matrix is symmetrical, so copy upper half to lower half
+	_ekf_gsf[model_index].P(1,0) = _ekf_gsf[model_index].P(0,1);
+	_ekf_gsf[model_index].P(2,0) = _ekf_gsf[model_index].P(0,2);
+	_ekf_gsf[model_index].P(2,1) = _ekf_gsf[model_index].P(1,2);
+
+	// constrain variances
+	const float min_var = 1e-6f;
+	for (unsigned index = 0; index < 3; index++) {
+		_ekf_gsf[model_index].P(index,index) = fmaxf(_ekf_gsf[model_index].P(index,index),min_var);
+	}
 }
 
 // Update EKF states and covariance for specified model index using velocity measurement
@@ -341,11 +337,8 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	const float &P00 = _ekf_gsf[model_index].P(0,0);
 	const float &P01 = _ekf_gsf[model_index].P(0,1);
 	const float &P02 = _ekf_gsf[model_index].P(0,2);
-	const float &P10 = _ekf_gsf[model_index].P(1,0);
 	const float &P11 = _ekf_gsf[model_index].P(1,1);
 	const float &P12 = _ekf_gsf[model_index].P(1,2);
-	const float &P20 = _ekf_gsf[model_index].P(2,0);
-	const float &P21 = _ekf_gsf[model_index].P(2,1);
 	const float &P22 = _ekf_gsf[model_index].P(2,2);
 
 	// calculate innovation variance
@@ -365,80 +358,70 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	// This protects from large measurement spikes
 	const float innov_comp_scale_factor = test_ratio > 25.f ? sqrtf(25.0f / test_ratio) : 1.f;
 
-	// calculate Kalman gain K  nd covariance matrix P
-	// autocode from https://github.com/priseborough/3_state_filter/blob/flightLogReplay-wip/calcK.txt
-	// and https://github.com/priseborough/3_state_filter/blob/flightLogReplay-wip/calcPmat.txt
-	const float t2 = P00*velObsVar;
- 	const float t3 = P11*velObsVar;
-	const float t4 = velObsVar*velObsVar;
-	const float t5 = P00*P11;
-	const float t9 = P01*P10;
-	const float t6 = t2+t3+t4+t5-t9;
-	if (fabsf(t6) < 1e-6f) {
-		// skip the fusion step
-		return false;
-	}
-	const float t7 = 1.f / t6;
-	const float t8 = P11+velObsVar;
-	const float t10 = P00+velObsVar;
+	// Equations for NE velocity Kalman gain
+	const float SK0 = powf(P01, 2);
+	const float SK1 = P11 + velObsVar;
+	const float SK2 = P00 + velObsVar;
+	const float SK3 = 1.0F/(SK0 - SK1*SK2);
+	const float SK4 = -P01*SK3*velObsVar;
 
 	matrix::Matrix<float, 3, 2> K;
- 	K(0,0) = -P01*P10*t7+P00*t7*t8;
-	K(0,1) = -P00*P01*t7+P01*t7*t10;
-	K(1,0) = -P10*P11*t7+P10*t7*t8;
-	K(1,1) = -P01*P10*t7+P11*t7*t10;
-	K(2,0) = -P10*P21*t7+P20*t7*t8;
-	K(2,1) = -P01*P20*t7+P21*t7*t10;
+	K(0,0) = SK3*(-P00*SK1 + SK0);
+	K(1,0) = SK4;
+	K(2,0) = SK3*(P01*P12 - P02*SK1);
+	K(0,1) = SK4;
+	K(1,1) = SK3*(-P11*SK2 + SK0);
+	K(2,1) = SK3*(P01*P02 - P12*SK2);
 
-	const float t11 = P00*P01*t7;
-	const float t15 = P01*t7*t10;
-	const float t12 = t11-t15;
-	const float t13 = P01*P10*t7;
-	const float t16 = P00*t7*t8;
-	const float t14 = t13-t16;
-	const float t17 = t8*t12;
-	const float t18 = P01*t14;
-	const float t19 = t17+t18;
-	const float t20 = t10*t14;
-	const float t21 = P10*t12;
-	const float t22 = t20+t21;
-	const float t27 = P11*t7*t10;
-	const float t23 = t13-t27;
-	const float t24 = P10*P11*t7;
-	const float t26 = P10*t7*t8;
-	const float t25 = t24-t26;
-	const float t28 = t8*t23;
-	const float t29 = P01*t25;
-	const float t30 = t28+t29;
-	const float t31 = t10*t25;
-	const float t32 = P10*t23;
-	const float t33 = t31+t32;
-	const float t34 = P01*P20*t7;
-	const float t38 = P21*t7*t10;
-	const float t35 = t34-t38;
-	const float t36 = P10*P21*t7;
-	const float t39 = P20*t7*t8;
-	const float t37 = t36-t39;
-	const float t40 = t8*t35;
-	const float t41 = P01*t37;
-	const float t42 = t40+t41;
-	const float t43 = t10*t37;
-	const float t44 = P10*t35;
-	const float t45 = t43+t44;
+	const float SP0 = P11 + velObsVar;
+	const float SP1 = powf(P01, 2);
+	const float SP2 = -SP1;
+	const float SP3 = P00 + velObsVar;
+	const float SP4 = SP0*SP3;
+	const float SP5 = SP2 + SP4;
+	if (fabsf(SP5) < 1e-3f) {
+		// skip this fusion step
+		return false;
+	}
+	const float SP6 = 1.0F/SP5;
+	const float SP7 = SP6*velObsVar;
+	const float SP8 = (-P00*SP0 + SP1)/(SP1 - SP4);
+	const float SP9 = SP0*SP7 + SP8;
+	const float SP10 = SP1*velObsVar;
+	const float SP11 = SP10*SP6;
+	const float SP12 = SP11 + SP3*SP8;
+	const float SP13 = P11*SP3;
+	const float SP14 = SP1 - SP13;
+	const float SP15 = SP6*SP9;
+	const float SP16 = P01*P02 - P12*SP3;
+	const float SP17 = P01*SP16;
+	const float SP18 = P01*P12 - P02*SP0;
+	const float SP19 = 1.0F/powf(SP5, 2); //powf(SP5, -2);
+	const float SP20 = SP19*(-SP0*SP14 + SP10);
+	const float SP21 = SP13 + SP2 + SP3*velObsVar;
+	const float SP23 = SP19*SP21;
+	const float SP24 = P01*SP18;
+	const float SP25 = SP19*(SP0*SP16 + SP24);
+	const float SP27 = SP17 + SP18*SP3;
+	const float SP28 = SP19*SP27;
 
+	_ekf_gsf[model_index].P(0,0) = P00 - SP11*SP9 - SP12*SP8;
+	_ekf_gsf[model_index].P(0,1) = P01*(-SP12*SP7 + SP14*SP15 + 1);
+	_ekf_gsf[model_index].P(1,1) = P11 - SP10*SP23 + SP14*SP20;
+	_ekf_gsf[model_index].P(0,2) = P02 + SP12*SP18*SP6 + SP15*SP17;
+	_ekf_gsf[model_index].P(1,2) = P12 + SP16*SP20 + SP23*SP24;
+	_ekf_gsf[model_index].P(2,2) = P22 - SP16*SP25 - SP18*SP28;
+
+	// covariance matrix is symmetrical, so copy upper half to lower half
+	_ekf_gsf[model_index].P(1,0) = _ekf_gsf[model_index].P(0,1);
+	_ekf_gsf[model_index].P(2,0) = _ekf_gsf[model_index].P(0,2);
+	_ekf_gsf[model_index].P(2,1) = _ekf_gsf[model_index].P(1,2);
+
+	// constrain variances
 	const float min_var = 1e-6f;
-	_ekf_gsf[model_index].P(0,0) = fmaxf(P00-t12*t19-t14*t22 , min_var);
-	_ekf_gsf[model_index].P(0,1) = P01-t19*t23-t22*t25;
-	_ekf_gsf[model_index].P(0,2) = P02-t19*t35-t22*t37;
-	_ekf_gsf[model_index].P(1,0) = P10-t12*t30-t14*t33;
-	_ekf_gsf[model_index].P(1,1) = fmaxf(P11-t23*t30-t25*t33 , min_var);
-	_ekf_gsf[model_index].P(1,2) = P12-t30*t35-t33*t37;
-	_ekf_gsf[model_index].P(2,0) = P20-t12*t42-t14*t45;
-	_ekf_gsf[model_index].P(2,1) = P21-t23*t42-t25*t45;
-	_ekf_gsf[model_index].P(2,2) = fmaxf(P22-t35*t42-t37*t45 , min_var);
-
-	// force symmetry
-	_ekf_gsf[model_index].P.makeBlockSymmetric<3>(0);
+	for (unsigned index = 0; index < 3; index++) {
+		_ekf_gsf[model_index].P(index,index) = fmaxf(_ekf_gsf[model_index].P(index,index),min_var);
+	}
 
 	// Correct the state vector and capture the change in yaw angle
 	const float oldYaw = _ekf_gsf[model_index].X(2);
