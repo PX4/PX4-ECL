@@ -273,7 +273,11 @@ int main()
             }
         }
 
-        printf("X axis Hfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Magnetomer X axis Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Magnetomer X axis Hfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
         // find largest Kalman gain difference as a fraction of the matlab value
         max_diff_fraction = 0.0f;
@@ -294,7 +298,11 @@ int main()
             }
         }
 
-        printf("X axis Kfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Magnetomer X axis Kfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Magnetomer X axis Kfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
     }
 
@@ -425,7 +433,11 @@ int main()
             }
         }
 
-        printf("Y axis Hfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Magnetomer Y axis Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Magnetomer Y axis Hfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
         // find largest Kalman gain difference as a fraction of the matlab value
         max_diff_fraction = 0.0f;
@@ -446,7 +458,11 @@ int main()
             }
         }
 
-        printf("Y axis Kfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Magnetomer Y axis Kfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Magnetomer Y axis Kfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
     }
 
@@ -580,7 +596,11 @@ int main()
             }
         }
 
-        printf("Z axis Hfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Magnetomer Z axis Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Magnetomer Z axis Hfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
         // find largest Kalman gain difference as a fraction of the matlab value
         max_diff_fraction = 0.0f;
@@ -601,7 +621,11 @@ int main()
             }
         }
 
-        printf("Z axis Kfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Magnetomer Z axis Kfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Magnetomer Z axis Kfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
     }
 

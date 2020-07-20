@@ -192,7 +192,11 @@ int main()
         }
     }
 
-    printf("GPS yaw Hfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+	if (max_diff_fraction > 1E-5f) {
+		printf("Fail: Mag Declination Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+	} else {
+		printf("Pass: Mag Declination Hfusion max diff fraction = %e\n",max_diff_fraction);
+	}
 
     // find largest Kalman gain difference as a fraction of the matlab value
     max_diff_fraction = 0.0f;
@@ -213,7 +217,11 @@ int main()
         }
     }
 
-    printf("GPS yaw Kfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+	if (max_diff_fraction > 1E-5f) {
+		printf("Fail: Mag Declination Kfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+	} else {
+		printf("Pass: Mag Declination Kfusion max diff fraction = %e\n",max_diff_fraction);
+	}
 
     return 0;
 }

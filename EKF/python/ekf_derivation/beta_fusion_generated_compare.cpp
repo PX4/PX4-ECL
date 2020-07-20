@@ -249,7 +249,11 @@ int main()
         }
     }
 
-    printf("Sideslip Hfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+    if (max_diff_fraction > 1E-5f) {
+        printf("Fail: Sideslip Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+    } else {
+        printf("Pass: Sideslip Hfusion max diff fraction = %e\n",max_diff_fraction);
+    }
 
     // find largest Kalman gain difference as a fraction of the matlab value
     max_diff_fraction = 0.0f;
@@ -270,7 +274,11 @@ int main()
         }
     }
 
-    printf("Sideslip Kfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+    if (max_diff_fraction > 1E-5f) {
+        printf("Fail: Sideslip Kfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+    } else {
+        printf("Pass: Sideslip Kfusion max diff fraction = %e\n",max_diff_fraction);
+    }
 
     return 0;
 }

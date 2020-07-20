@@ -110,7 +110,11 @@ int main()
             }
         }
 
-        printf("321 option A max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: 321 yaw option A Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: 321 yaw option A Hfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
         // This second comparison for the 321 sequence option B equations that have a singularity when
         // yaw is at 0 and +-190 deg
@@ -161,7 +165,11 @@ int main()
             }
         }
 
-        printf("321 option B max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: 321 yaw option B Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: 321 yaw option B Hfusion max diff fraction = %e\n",max_diff_fraction);
+        }
     }
 
     // calculate 312 yaw observation matrix using two computational paths to work around singularities
@@ -242,7 +250,11 @@ int main()
             }
         }
 
-        printf("312 option A max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: 312 yaw option A Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: 312 yaw option A Hfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
         // This second comparison for the 321 sequence option B equations that have a singularity when
         // yaw is at 0 and +-190 deg
@@ -292,7 +304,11 @@ int main()
             }
         }
 
-        printf("312 option B max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: 312 yaw option B Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: 312 yaw option B Hfusion max diff fraction = %e\n",max_diff_fraction);
+        }
     }
 
     return 0;

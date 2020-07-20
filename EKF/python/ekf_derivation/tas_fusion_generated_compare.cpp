@@ -180,7 +180,11 @@ int main()
         }
     }
 
-    printf("\nSideslip Hfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n\n",max_diff_fraction, max_old, max_new, max_row);
+	if (max_diff_fraction > 1E-5f) {
+		printf("Fail: Airspeed Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+	} else {
+		printf("Pass: Airspeed Hfusion max diff fraction = %e\n",max_diff_fraction);
+	}
 
     // find largest Kalman gain difference as a fraction of the matlab value
     max_diff_fraction = 0.0f;
@@ -193,9 +197,9 @@ int main()
         } else {
             diff_fraction = 0.0f;
         }
-        if (Kfusion_sympy(row) - Kfusion(row) != 0.0f) {
-            printf("new,old Kfusion(%i) = %e,%e\n",row,Kfusion_sympy(row),Kfusion(row));
-        }
+        // if (Kfusion_sympy(row) - Kfusion(row) != 0.0f) {
+        //     printf("new,old Kfusion(%i) = %e,%e\n",row,Kfusion_sympy(row),Kfusion(row));
+        // }
         if (diff_fraction > max_diff_fraction) {
             max_diff_fraction = diff_fraction;
             max_row = row;
@@ -204,7 +208,11 @@ int main()
         }
     }
 
-    printf("\nSideslip Kfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+	if (max_diff_fraction > 1E-5f) {
+		printf("Fail: Airspeed Kfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+	} else {
+		printf("Pass: Airspeed Kfusion max diff fraction = %e\n",max_diff_fraction);
+	}
 
     return 0;
 }

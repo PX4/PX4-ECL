@@ -357,7 +357,11 @@ int main()
             }
         }
 
-        printf("X axis Hfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Optical Flow X axis Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Optical Flow X axis Hfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
         // find largest Kalman gain difference as a fraction of the matlab value
         max_diff_fraction = 0.0f;
@@ -378,7 +382,11 @@ int main()
             }
         }
 
-        printf("X axis Kfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Optical Flow X axis Kfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Optical Flow X axis Kfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
     }
 
@@ -587,7 +595,11 @@ int main()
             }
         }
 
-        printf("Y axis Hfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Optical Flow Y axis Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Optical Flow Y axis Hfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
         // find largest Kalman gain difference as a fraction of the matlab value
         max_diff_fraction = 0.0f;
@@ -608,7 +620,11 @@ int main()
             }
         }
 
-        printf("Y axis Kfusion max_diff_fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        if (max_diff_fraction > 1E-5f) {
+            printf("Fail: Optical Flow Y axis Kfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
+        } else {
+            printf("Pass: Optical Flow Y axis Kfusion max diff fraction = %e\n",max_diff_fraction);
+        }
 
     }
 

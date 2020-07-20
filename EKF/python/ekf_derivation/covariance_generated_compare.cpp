@@ -925,7 +925,11 @@ int main()
         }
     }
 
-    printf("max_diff_fraction = %e , old = %e , new = %e , location index = %i,%i\n",max_diff_fraction, max_old, max_new, max_row, max_col);
+    if (max_diff_fraction > 1E-5f) {
+        printf("Fail: Covariance Prediction max diff fraction = %e , old = %e , new = %e , location index = %i,%i\n",max_diff_fraction, max_old, max_new, max_row, max_col);
+    } else {
+        printf("Pass: Covariance Prediction max diff fraction = %e , old = %e , new = %e , location index = %i,%i\n",max_diff_fraction, max_old, max_new, max_row, max_col);
+    }
 
     return 0;
 }
