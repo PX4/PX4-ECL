@@ -216,10 +216,6 @@ void Ekf::fuseMag()
 		_mag_innov(2) = 0.0f;
 	}
 
-	// Observation jacobian and Kalman gain vectors
-	float Hfusion[24];
-	Vector24f Kfusion;
-
 	// Perform an innovation consistency check and report the result
 	bool all_innovation_checks_passed = true;
 
@@ -248,7 +244,7 @@ void Ekf::fuseMag()
 	const bool update_all_states = ((_imu_sample_delayed.time_us - _flt_mag_align_start_time) > (uint64_t)5e6);
 
 	// Observation jacobian and Kalman gain vectors
-	Vector24f H_MAG;
+	float Hfusion[24];
 	Vector24f Kfusion;
 
 	// update the states and covariance using sequential fusion of the magnetometer components
