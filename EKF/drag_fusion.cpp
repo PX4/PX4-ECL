@@ -86,20 +86,21 @@ void Ekf::fuseDrag()
 		const float mea_acc = _drag_sample_delayed.accelXY(axis_index)  - _state.delta_vel_bias(axis_index) / _dt_ekf_avg;
 		const float airSpd = sqrtf((2.0f * fabsf(mea_acc)) / (ballistic_coef_inv_xy(axis_index) * rho));
 
-			// Estimate the derivative of specific force wrt airspeed along the X axis
-			// Limit lower value to prevent arithmetic exceptions
-			const float Kaccx = fmaxf(1e-1f, rho * BC_inv_x * airSpd);
+		// Estimate the derivative of specific force wrt airspeed along the X axis
+		// Limit lower value to prevent arithmetic exceptions
+		const float Kacc = fmaxf(1e-1f, rho * ballistic_coef_inv_xy(axis_index) * airSpd);
 
+		if (axis_index == 0) {
 			// intermediate variables
 			const float HK0 = vn - vwn;
 			const float HK1 = ve - vwe;
 			const float HK2 = HK0*q0 + HK1*q3 - q2*vd;
-			const float HK3 = 2*Kaccx;
+			const float HK3 = 2*Kacc;
 			const float HK4 = HK0*q1 + HK1*q2 + q3*vd;
 			const float HK5 = HK0*q2 - HK1*q1 + q0*vd;
 			const float HK6 = -HK0*q3 + HK1*q0 + q1*vd;
 			const float HK7 = powf(q0, 2) + powf(q1, 2) - powf(q2, 2) - powf(q3, 2);
-			const float HK8 = HK7*Kaccx;
+			const float HK8 = HK7*Kacc;
 			const float HK9 = q0*q3 + q1*q2;
 			const float HK10 = HK3*HK9;
 			const float HK11 = q0*q2 - q1*q3;
@@ -112,7 +113,7 @@ void Ekf::fuseDrag()
 			const float HK18 = -HK12*P(0,23) + HK12*P(0,5) - HK13*P(0,6) + HK14*P(0,1) + HK15*P(0,0) - HK16*P(0,2) + HK17*P(0,3) - HK7*P(0,22) + HK7*P(0,4);
 			const float HK19 = HK12*P(5,23);
 			const float HK20 = -HK12*P(23,23) - HK13*P(6,23) + HK14*P(1,23) + HK15*P(0,23) - HK16*P(2,23) + HK17*P(3,23) + HK19 - HK7*P(22,23) + HK7*P(4,23);
-			const float HK21 = powf(Kaccx, 2);
+			const float HK21 = powf(Kacc, 2);
 			const float HK22 = HK12*HK21;
 			const float HK23 = HK12*P(5,5) - HK13*P(5,6) + HK14*P(1,5) + HK15*P(0,5) - HK16*P(2,5) + HK17*P(3,5) - HK19 + HK7*P(4,5) - HK7*P(5,22);
 			const float HK24 = HK12*P(5,6) - HK12*P(6,23) - HK13*P(6,6) + HK14*P(1,6) + HK15*P(0,6) - HK16*P(2,6) + HK17*P(3,6) + HK7*P(4,6) - HK7*P(6,22);
@@ -130,7 +131,7 @@ void Ekf::fuseDrag()
 			if (_drag_innov_var[0] < R_ACC) {
 				return;
 			}
-			HK32 = Kaccx / _drag_innov_var[0];
+			HK32 = Kacc / _drag_innov_var[0];
 
 			// Observation Jacobians
 			// Note: indexing is different to state vector 
@@ -172,25 +173,18 @@ void Ekf::fuseDrag()
 			Kfusion(23) = -HK20*HK32;
 
 		} else if (axis_index == 1) {
-			// Estimate the airspeed from the measured drag force and ballistic coefficient
-			const float mea_acc = _drag_sample_delayed.accelXY(axis_index)  - _state.delta_vel_bias(axis_index) / _dt_ekf_avg;
-			const float airSpd = sqrtf((2.0f * fabsf(mea_acc)) / (BC_inv_y * rho));
-
-			// Estimate the derivative of specific force wrt airspeed along the X axis
-			// Limit lower value to prevent arithmetic exceptions
-			const float Kaccy = fmaxf(1e-1f, rho * BC_inv_y * airSpd);
-
+			// intermediate variables
 			const float HK0 = ve - vwe;
 			const float HK1 = vn - vwn;
 			const float HK2 = HK0*q0 - HK1*q3 + q1*vd;
-			const float HK3 = 2*Kaccy;
+			const float HK3 = 2*Kacc;
 			const float HK4 = -HK0*q1 + HK1*q2 + q0*vd;
 			const float HK5 = HK0*q2 + HK1*q1 + q3*vd;
 			const float HK6 = HK0*q3 + HK1*q0 - q2*vd;
 			const float HK7 = q0*q3 - q1*q2;
 			const float HK8 = HK3*HK7;
 			const float HK9 = powf(q0, 2) - powf(q1, 2) + powf(q2, 2) - powf(q3, 2);
-			const float HK10 = HK9*Kaccy;
+			const float HK10 = HK9*Kacc;
 			const float HK11 = q0*q1 + q2*q3;
 			const float HK12 = 2*HK11;
 			const float HK13 = 2*HK7;
@@ -199,7 +193,7 @@ void Ekf::fuseDrag()
 			const float HK16 = 2*HK4;
 			const float HK17 = 2*HK6;
 			const float HK18 = HK12*P(0,6) + HK13*P(0,22) - HK13*P(0,4) + HK14*P(0,2) + HK15*P(0,0) + HK16*P(0,1) - HK17*P(0,3) - HK9*P(0,23) + HK9*P(0,5);
-			const float HK19 = powf(Kaccy, 2);
+			const float HK19 = powf(Kacc, 2);
 			const float HK20 = HK12*P(6,6) - HK13*P(4,6) + HK13*P(6,22) + HK14*P(2,6) + HK15*P(0,6) + HK16*P(1,6) - HK17*P(3,6) + HK9*P(5,6) - HK9*P(6,23);
 			const float HK21 = HK13*P(4,22);
 			const float HK22 = HK12*P(6,22) + HK13*P(22,22) + HK14*P(2,22) + HK15*P(0,22) + HK16*P(1,22) - HK17*P(3,22) - HK21 - HK9*P(22,23) + HK9*P(5,22);
@@ -218,7 +212,7 @@ void Ekf::fuseDrag()
 				// calculation is badly conditioned
 				return;
 			}
-			HK32 = Kaccy / _drag_innov_var[1];
+			HK32 = Kacc / _drag_innov_var[1];
 
 			// Observation Jacobians
 			// Note: indexing is different to state vector 
@@ -258,6 +252,8 @@ void Ekf::fuseDrag()
 			// Kfusion(21) = -HK32*(HK12*P(6,21) + HK13*P(21,22) - HK13*P(4,21) + HK14*P(2,21) + HK15*P(0,21) + HK16*P(1,21) - HK17*P(3,21) - HK9*P(21,23) + HK9*P(5,21));
 			Kfusion(22) = -HK22*HK32;
 			Kfusion(23) = -HK28*HK32;
+
+		}
 
 		// calculate the predicted acceleration and innovation measured along body axis
 		const float drag_sign = (rel_wind_body(axis_index) >= 0.f) ? 1.f : -1.f;
