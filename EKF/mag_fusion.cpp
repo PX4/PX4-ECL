@@ -77,11 +77,11 @@ void Ekf::fuseMag()
 	const float HK12 = magN*q3;
 	const float HK13 = HK10 + HK11 - HK12;
 	const float HK14 = 2*HK13;
-	const float HK15 = powf(q1, 2);
-	const float HK16 = powf(q2, 2);
+	const float HK15 = ecl::powf(q1, 2);
+	const float HK16 = ecl::powf(q2, 2);
 	const float HK17 = -HK16;
-	const float HK18 = powf(q0, 2);
-	const float HK19 = powf(q3, 2);
+	const float HK18 = ecl::powf(q0, 2);
+	const float HK19 = ecl::powf(q3, 2);
 	const float HK20 = HK18 - HK19;
 	const float HK21 = HK15 + HK17 + HK20;
 	const float HK22 = q0*q3;

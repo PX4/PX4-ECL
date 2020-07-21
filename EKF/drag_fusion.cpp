@@ -99,7 +99,7 @@ void Ekf::fuseDrag()
 			const float HK4 = HK0*q1 + HK1*q2 + q3*vd;
 			const float HK5 = HK0*q2 - HK1*q1 + q0*vd;
 			const float HK6 = -HK0*q3 + HK1*q0 + q1*vd;
-			const float HK7 = powf(q0, 2) + powf(q1, 2) - powf(q2, 2) - powf(q3, 2);
+			const float HK7 = ecl::powf(q0, 2) + ecl::powf(q1, 2) - ecl::powf(q2, 2) - ecl::powf(q3, 2);
 			const float HK8 = HK7*Kacc;
 			const float HK9 = q0*q3 + q1*q2;
 			const float HK10 = HK3*HK9;
@@ -113,7 +113,7 @@ void Ekf::fuseDrag()
 			const float HK18 = -HK12*P(0,23) + HK12*P(0,5) - HK13*P(0,6) + HK14*P(0,1) + HK15*P(0,0) - HK16*P(0,2) + HK17*P(0,3) - HK7*P(0,22) + HK7*P(0,4);
 			const float HK19 = HK12*P(5,23);
 			const float HK20 = -HK12*P(23,23) - HK13*P(6,23) + HK14*P(1,23) + HK15*P(0,23) - HK16*P(2,23) + HK17*P(3,23) + HK19 - HK7*P(22,23) + HK7*P(4,23);
-			const float HK21 = powf(Kacc, 2);
+			const float HK21 = ecl::powf(Kacc, 2);
 			const float HK22 = HK12*HK21;
 			const float HK23 = HK12*P(5,5) - HK13*P(5,6) + HK14*P(1,5) + HK15*P(0,5) - HK16*P(2,5) + HK17*P(3,5) - HK19 + HK7*P(4,5) - HK7*P(5,22);
 			const float HK24 = HK12*P(5,6) - HK12*P(6,23) - HK13*P(6,6) + HK14*P(1,6) + HK15*P(0,6) - HK16*P(2,6) + HK17*P(3,6) + HK7*P(4,6) - HK7*P(6,22);
@@ -134,7 +134,7 @@ void Ekf::fuseDrag()
 			HK32 = Kacc / _drag_innov_var[0];
 
 			// Observation Jacobians
-			// Note: indexing is different to state vector 
+			// Note: indexing is different to state vector
 			Hfusion[0] = -HK2*HK3;	// state index 0
 			Hfusion[1] = -HK3*HK4;	// state index 1
 			Hfusion[2] = HK3*HK5;	// state index 2
@@ -183,7 +183,7 @@ void Ekf::fuseDrag()
 			const float HK6 = HK0*q3 + HK1*q0 - q2*vd;
 			const float HK7 = q0*q3 - q1*q2;
 			const float HK8 = HK3*HK7;
-			const float HK9 = powf(q0, 2) - powf(q1, 2) + powf(q2, 2) - powf(q3, 2);
+			const float HK9 = ecl::powf(q0, 2) - ecl::powf(q1, 2) + ecl::powf(q2, 2) - ecl::powf(q3, 2);
 			const float HK10 = HK9*Kacc;
 			const float HK11 = q0*q1 + q2*q3;
 			const float HK12 = 2*HK11;
@@ -193,7 +193,7 @@ void Ekf::fuseDrag()
 			const float HK16 = 2*HK4;
 			const float HK17 = 2*HK6;
 			const float HK18 = HK12*P(0,6) + HK13*P(0,22) - HK13*P(0,4) + HK14*P(0,2) + HK15*P(0,0) + HK16*P(0,1) - HK17*P(0,3) - HK9*P(0,23) + HK9*P(0,5);
-			const float HK19 = powf(Kacc, 2);
+			const float HK19 = ecl::powf(Kacc, 2);
 			const float HK20 = HK12*P(6,6) - HK13*P(4,6) + HK13*P(6,22) + HK14*P(2,6) + HK15*P(0,6) + HK16*P(1,6) - HK17*P(3,6) + HK9*P(5,6) - HK9*P(6,23);
 			const float HK21 = HK13*P(4,22);
 			const float HK22 = HK12*P(6,22) + HK13*P(22,22) + HK14*P(2,22) + HK15*P(0,22) + HK16*P(1,22) - HK17*P(3,22) - HK21 - HK9*P(22,23) + HK9*P(5,22);
@@ -215,7 +215,7 @@ void Ekf::fuseDrag()
 			HK32 = Kacc / _drag_innov_var[1];
 
 			// Observation Jacobians
-			// Note: indexing is different to state vector 
+			// Note: indexing is different to state vector
 			Hfusion[0] = -HK2*HK3;	// state index 0
 			Hfusion[1] = -HK3*HK4;	// state index 1
 			Hfusion[2] = -HK3*HK5;	// state index 2

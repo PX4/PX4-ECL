@@ -294,9 +294,9 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 	const float dazVar = sq(_gyro_noise * _delta_ang_dt); // variance of yaw delta angle - rad^2
 
 	const float S0 = cosf(psi);
-	const float S1 = powf(S0, 2);
+	const float S1 = sq(S0);
 	const float S2 = sinf(psi);
-	const float S3 = powf(S2, 2);
+	const float S3 = sq(S2);
 	const float S4 = S0*dvy + S2*dvx;
 	const float S5 = P02 - P22*S4;
 	const float S6 = S0*dvx - S2*dvy;
@@ -359,7 +359,7 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	const float innov_comp_scale_factor = test_ratio > 25.f ? sqrtf(25.0f / test_ratio) : 1.f;
 
 	// Equations for NE velocity Kalman gain
-	const float SK0 = powf(P01, 2);
+	const float SK0 = sq(P01);
 	const float SK1 = P11 + velObsVar;
 	const float SK2 = P00 + velObsVar;
 	const float SK3 = 1.0F/(SK0 - SK1*SK2);
@@ -374,7 +374,7 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	K(2,1) = SK3*(P01*P02 - P12*SK2);
 
 	const float SP0 = P11 + velObsVar;
-	const float SP1 = powf(P01, 2);
+	const float SP1 = sq(P01);
 	const float SP2 = -SP1;
 	const float SP3 = P00 + velObsVar;
 	const float SP4 = SP0*SP3;
@@ -396,7 +396,7 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	const float SP16 = P01*P02 - P12*SP3;
 	const float SP17 = P01*SP16;
 	const float SP18 = P01*P12 - P02*SP0;
-	const float SP19 = 1.0F/powf(SP5, 2); //powf(SP5, -2);
+	const float SP19 = 1.0F/sq(SP5); //ecl::powf(SP5, -2);
 	const float SP20 = SP19*(-SP0*SP14 + SP10);
 	const float SP21 = SP13 + SP2 + SP3*velObsVar;
 	const float SP23 = SP19*SP21;

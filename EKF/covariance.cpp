@@ -271,11 +271,11 @@ void Ekf::predictCovariance()
 	// equations generated using EKF/python/ekf_derivation/main.py
 
 	// intermediate calculations
-	const float PS0 = powf(q1, 2);
+	const float PS0 = ecl::powf(q1, 2);
 	const float PS1 = 0.25F*daxVar;
-	const float PS2 = powf(q2, 2);
+	const float PS2 = ecl::powf(q2, 2);
 	const float PS3 = 0.25F*dayVar;
-	const float PS4 = powf(q3, 2);
+	const float PS4 = ecl::powf(q3, 2);
 	const float PS5 = 0.25F*dazVar;
 	const float PS6 = 0.5F*q1;
 	const float PS7 = 0.5F*q2;
@@ -313,7 +313,7 @@ void Ekf::predictCovariance()
 	const float PS39 = q1*q2;
 	const float PS40 = q0*q3;
 	const float PS41 = -PS2;
-	const float PS42 = powf(q0, 2);
+	const float PS42 = ecl::powf(q0, 2);
 	const float PS43 = -PS4 + PS42;
 	const float PS44 = PS0 + PS41 + PS43;
 	const float PS45 = P(0,13) - P(1,13)*PS11 + P(10,13)*PS6 + P(11,13)*PS7 + P(12,13)*PS9 - P(2,13)*PS12 - P(3,13)*PS13;
@@ -477,20 +477,20 @@ void Ekf::predictCovariance()
 	nextP(1,4) = -PS44*PS93 - PS46*PS95 + PS54*PS97 + PS60*PS82 + PS62*PS92 + PS72*PS80 - PS74*PS89 + PS98;
 	nextP(2,4) = -PS104*PS74 + PS106*PS72 + PS111*PS62 + PS113*PS60 - PS114*PS44 - PS116*PS46 + PS118*PS54 + PS119;
 	nextP(3,4) = PS124*PS62 + PS125*PS72 + PS128*PS60 - PS129*PS74 - PS130*PS44 - PS132*PS46 + PS134*PS54 + PS135;
-	nextP(4,4) = -PS139*PS142 + PS140*PS146 - PS141*PS44 - PS145*PS74 + PS149*PS72 + PS152*PS60 + PS155*PS62 + PS156*powf(PS54, 2) + PS157*powf(PS46, 2) + PS158 + powf(PS44, 2)*dvxVar;
+	nextP(4,4) = -PS139*PS142 + PS140*PS146 - PS141*PS44 - PS145*PS74 + PS149*PS72 + PS152*PS60 + PS155*PS62 + PS156*ecl::powf(PS54, 2) + PS157*ecl::powf(PS46, 2) + PS158 + ecl::powf(PS44, 2)*dvxVar;
 	nextP(0,5) = -PS23*PS60 + PS26*PS62 + PS48*PS68 + PS52*PS58 + PS53*PS57 - PS55*PS65 - PS66*PS67 + PS69;
 	nextP(1,5) = PS100 - PS60*PS92 + PS62*PS82 - PS65*PS96 - PS66*PS99 + PS68*PS95 + PS72*PS89 + PS74*PS80;
 	nextP(2,5) = PS104*PS72 + PS106*PS74 - PS111*PS60 + PS113*PS62 + PS116*PS68 - PS117*PS65 - PS120*PS66 + PS121;
 	nextP(3,5) = -PS124*PS60 + PS125*PS74 + PS128*PS62 + PS129*PS72 + PS132*PS68 - PS133*PS65 - PS136*PS66 + PS137;
 	nextP(4,5) = -PS140*PS161 + PS142*PS160 + PS145*PS72 - PS146*PS65 + PS149*PS74 + PS152*PS62 - PS155*PS60 - PS157*PS46*PS68 - PS159*PS66 + PS162*PS163 + PS164;
-	nextP(5,5) = PS157*powf(PS68, 2) + PS160*PS173 - PS162*PS170 - PS169*PS65 - PS172*PS60 + PS175*PS72 + PS177*PS74 + PS179*PS62 + PS180*powf(PS66, 2) + PS181 + powf(PS65, 2)*dvyVar;
+	nextP(5,5) = PS157*ecl::powf(PS68, 2) + PS160*PS173 - PS162*PS170 - PS169*PS65 - PS172*PS60 + PS175*PS72 + PS177*PS74 + PS179*PS62 + PS180*ecl::powf(PS66, 2) + PS181 + ecl::powf(PS65, 2)*dvyVar;
 	nextP(0,6) = PS23*PS74 - PS26*PS72 - PS47*PS70 + PS53*PS61 - PS56*PS71 + PS58*PS59 + PS67*PS73 + PS75;
 	nextP(1,6) = PS101 + PS60*PS80 + PS62*PS89 - PS70*PS94 - PS71*PS97 - PS72*PS82 + PS73*PS99 + PS74*PS92;
 	nextP(2,6) = PS104*PS62 + PS106*PS60 + PS111*PS74 - PS113*PS72 - PS115*PS70 - PS118*PS71 + PS120*PS73 + PS122;
 	nextP(3,6) = PS124*PS74 + PS125*PS60 - PS128*PS72 + PS129*PS62 - PS131*PS70 - PS134*PS71 + PS136*PS73 + PS138;
 	nextP(4,6) = PS139*PS167 - PS142*PS70 + PS145*PS62 - PS146*PS165 + PS149*PS60 - PS152*PS72 + PS155*PS74 - PS156*PS54*PS71 + PS159*PS73 - PS163*PS166 + PS168;
 	nextP(5,6) = -PS160*PS167 + PS161*PS165 - PS165*PS169 + PS166*PS170 + PS172*PS74 - PS173*PS70 + PS175*PS62 + PS177*PS60 - PS179*PS72 - PS180*PS66*PS73 + PS182;
-	nextP(6,6) = PS156*powf(PS71, 2) - PS165*PS184 + PS166*PS185 + PS180*powf(PS73, 2) - PS183*PS70 + PS186 + PS60*(P(0,0)*PS60 + P(0,13)*PS166 - P(0,14)*PS165 - P(0,15)*PS70 + P(0,3)*PS62 + P(0,6) - PS151 + PS171) + PS62*(P(0,3)*PS60 + P(3,13)*PS166 - P(3,14)*PS165 - P(3,15)*PS70 + P(3,3)*PS62 + P(3,6) + PS154 - PS178) + powf(PS70, 2)*dvzVar - PS72*(P(1,2)*PS74 + P(2,13)*PS166 - P(2,14)*PS165 - P(2,15)*PS70 - P(2,2)*PS72 + P(2,6) + PS147 + PS174) + PS74*(P(1,1)*PS74 + P(1,13)*PS166 - P(1,14)*PS165 - P(1,15)*PS70 - P(1,2)*PS72 + P(1,6) + PS143 + PS176);
+	nextP(6,6) = PS156*ecl::powf(PS71, 2) - PS165*PS184 + PS166*PS185 + PS180*ecl::powf(PS73, 2) - PS183*PS70 + PS186 + PS60*(P(0,0)*PS60 + P(0,13)*PS166 - P(0,14)*PS165 - P(0,15)*PS70 + P(0,3)*PS62 + P(0,6) - PS151 + PS171) + PS62*(P(0,3)*PS60 + P(3,13)*PS166 - P(3,14)*PS165 - P(3,15)*PS70 + P(3,3)*PS62 + P(3,6) + PS154 - PS178) + ecl::powf(PS70, 2)*dvzVar - PS72*(P(1,2)*PS74 + P(2,13)*PS166 - P(2,14)*PS165 - P(2,15)*PS70 - P(2,2)*PS72 + P(2,6) + PS147 + PS174) + PS74*(P(1,1)*PS74 + P(1,13)*PS166 - P(1,14)*PS165 - P(1,15)*PS70 - P(1,2)*PS72 + P(1,6) + PS143 + PS176);
 	nextP(0,7) = P(0,7) - P(1,7)*PS11 - P(2,7)*PS12 - P(3,7)*PS13 + P(7,10)*PS6 + P(7,11)*PS7 + P(7,12)*PS9 + PS63*dt;
 	nextP(1,7) = P(0,7)*PS11 + P(1,7) + P(2,7)*PS13 - P(3,7)*PS12 - P(7,10)*PS34 + P(7,11)*PS9 - P(7,12)*PS7 + PS98*dt;
 	nextP(2,7) = P(0,7)*PS12 - P(1,7)*PS13 + P(2,7) + P(3,7)*PS11 - P(7,10)*PS9 - P(7,11)*PS34 + P(7,12)*PS6 + PS119*dt;

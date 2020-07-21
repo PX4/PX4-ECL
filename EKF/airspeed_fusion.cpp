@@ -66,13 +66,13 @@ void Ekf::fuseAirspeed()
 	// Intermediate variables
 	const float HK0 = vn - vwn;
 	const float HK1 = ve - vwe;
-	const float HK2 = powf(HK0, 2) + powf(HK1, 2) + powf(vd, 2);
+	const float HK2 = ecl::powf(HK0, 2) + ecl::powf(HK1, 2) + ecl::powf(vd, 2);
 	if (HK2 < 1.0f) {
 		// calculation can be badly conditioned for very low airspeed values so don't fuse this time
 		return;
 	}
 	const float v_tas_pred = sqrtf(HK2); // predicted airspeed
-	//const float HK3 = powf(HK2, -1.0F/2.0F);
+	//const float HK3 = ecl::powf(HK2, -1.0F/2.0F);
 	const float HK3 = 1.0f / v_tas_pred;
 	const float HK4 = HK0*HK3;
 	const float HK5 = HK1*HK3;
@@ -115,7 +115,7 @@ void Ekf::fuseAirspeed()
 	}
 
 	// Observation Jacobians
-	// Note: indexing is different to state vector 
+	// Note: indexing is different to state vector
 	Hfusion[0] = HK4;    // corresponds to state index 4
 	Hfusion[1] = HK5;    // corresponds to state index 5
 	Hfusion[2] = HK3*vd; // corresponds to state index 6
