@@ -294,9 +294,9 @@ void EKFGSF_yaw::predictEKF(const uint8_t model_index)
 	const float dazVar = sq(_gyro_noise * _delta_ang_dt); // variance of yaw delta angle - rad^2
 
 	const float S0 = cosf(psi);
-	const float S1 = sq(S0);
+	const float S1 = ecl::powf(S0, 2);
 	const float S2 = sinf(psi);
-	const float S3 = sq(S2);
+	const float S3 = ecl::powf(S2, 2);
 	const float S4 = S0*dvy + S2*dvx;
 	const float S5 = P02 - P22*S4;
 	const float S6 = S0*dvx - S2*dvy;
@@ -362,7 +362,12 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	const float SK0 = sq(P01);
 	const float SK1 = P11 + velObsVar;
 	const float SK2 = P00 + velObsVar;
-	const float SK3 = 1.0F/(SK0 - SK1*SK2);
+	// const float SK3 = 1.0F/(SK0 - SK1*SK2);
+	const float SK3_inverse = SK0 - SK1*SK2;
+	if (fabsf(SK3_inverse) < 1e-6f) {
+		return false;
+	}
+	const float SK3 = 1.0F/SK3_inverse;
 	const float SK4 = -P01*SK3*velObsVar;
 
 	matrix::Matrix<float, 3, 2> K;
@@ -373,19 +378,24 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	K(1,1) = SK3*(-P11*SK2 + SK0);
 	K(2,1) = SK3*(P01*P02 - P12*SK2);
 
+	// Equations for covariance matrix update
 	const float SP0 = P11 + velObsVar;
-	const float SP1 = sq(P01);
+	const float SP1 = powf(P01, 2);
 	const float SP2 = -SP1;
 	const float SP3 = P00 + velObsVar;
 	const float SP4 = SP0*SP3;
 	const float SP5 = SP2 + SP4;
 	if (fabsf(SP5) < 1e-3f) {
-		// skip this fusion step
 		return false;
 	}
 	const float SP6 = 1.0F/SP5;
 	const float SP7 = SP6*velObsVar;
-	const float SP8 = (-P00*SP0 + SP1)/(SP1 - SP4);
+	// const float SP8 = (-P00*SP0 + SP1)/(SP1 - SP4);
+	const float SP8_denom = SP1 - SP4;
+	if (fabsf(SP8_denom) < 1e-6f) {
+		return false;
+	}
+	const float SP8 = (-P00*SP0 + SP1)/SP8_denom;
 	const float SP9 = SP0*SP7 + SP8;
 	const float SP10 = SP1*velObsVar;
 	const float SP11 = SP10*SP6;
@@ -396,7 +406,7 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	const float SP16 = P01*P02 - P12*SP3;
 	const float SP17 = P01*SP16;
 	const float SP18 = P01*P12 - P02*SP0;
-	const float SP19 = 1.0F/sq(SP5); //ecl::powf(SP5, -2);
+	const float SP19 = powf(SP5, -2);
 	const float SP20 = SP19*(-SP0*SP14 + SP10);
 	const float SP21 = SP13 + SP2 + SP3*velObsVar;
 	const float SP23 = SP19*SP21;
