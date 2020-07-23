@@ -354,6 +354,8 @@ def beta_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
 
 symbol_name_list = []
 
+print('Starting code generation:')
+print('Creating symbolic variables ...')
 dt = create_symbol("dt", real=True)  # dt
 g = create_symbol("g", real=True) # gravity constant
 
@@ -454,7 +456,7 @@ w = Matrix([wx,wy])
 # state vector at arbitrary time t
 state = Matrix([q,v,p,d_ang_b,d_vel_b,i,ib,w])
 
-# define state propagation
+print('Defining state propagation ...')
 q_new = quat_mult(q, Matrix([1, 0.5 * d_ang_true[0],  0.5 * d_ang_true[1],  0.5 * d_ang_true[2]]))
 
 v_new = v + R_to_earth * d_vel_true + Matrix([0,0,g]) * dt
@@ -470,15 +472,13 @@ w_new = w
 # predicted state vector at time t + dt
 state_new = Matrix([q_new, v_new, p_new, d_ang_b_new, d_vel_b_new, i_new, ib_new, w_new])
 
-# state transition matrix
+print('Computing state propagation jacobian ...')
 A = state_new.jacobian(state)
-
-# B
 G = state_new.jacobian(u)
 
 P = create_symmetric_cov_matrix()
 
-# propagate covariance matrix
+print('Computing covariance propagation ...')
 P_new = A * P * A.T + G * var_u * G.T
 
 for index in range(24):
@@ -486,9 +486,10 @@ for index in range(24):
         if index > j:
             P_new[index,j] = 0
 
-
+print('Simplifying covariance propagation ...')
 P_new_simple = cse(P_new, symbols("PS0:400"), optimizations='basic')
 
+print('Writing covariance propagation to file ...')
 cov_code_generator = CodeGenerator("./generated/covariance_generated.cpp")
 cov_code_generator.print_string("Equations for covariance matrix prediction, without process noise!")
 cov_code_generator.write_subexpressions(P_new_simple[0])
@@ -497,12 +498,22 @@ cov_code_generator.write_matrix(Matrix(P_new_simple[1]), "nextP", True)
 cov_code_generator.close()
 
 # derive autocode for observation methods
+print('Generating heading observation code ...')
 yaw_observation(P,state,R_to_body)
+print('Generating gps heading observation code ...')
 gps_yaw_observation(P,state,R_to_body)
+print('Generating mag observation code ...')
 mag_observation(P,state,R_to_body,i,ib)
+print('Generating declination observation code ...')
 declination_observation(P,state,ix,iy)
+print('Generating airspeed observation code ...')
 tas_observation(P,state,vx,vy,vz,wx,wy)
+print('Generating sideslip observation code ...')
 beta_observation(P,state,R_to_body,vx,vy,vz,wx,wy)
+print('Generating optical flow observation code ...')
 optical_flow_observation(P,state,R_to_body,vx,vy,vz)
+print('Generating body frame velocity observation code ...')
 body_frame_velocity_observation(P,state,R_to_body,vx,vy,vz)
+print('Generating body frame acceleration observation code ...')
 body_frame_accel_observation(P,state,R_to_body,vx,vy,vz,wx,wy)
+print('Code generation finished!')
