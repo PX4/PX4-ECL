@@ -92,7 +92,7 @@ def write_equations_to_file(equations,code_generator_id,n_obs):
     else:
         code_generator_id.print_string("Sub Expressions")
         code_generator_id.write_subexpressions(equations[0])
-        for axis_index in range(n_obs): 
+        for axis_index in range(n_obs):
             start_index = axis_index*48
             code_generator_id.print_string("Observation Jacobians - axis %i" % axis_index)
             code_generator_id.write_matrix(Matrix(equations[1][0][start_index:start_index+24]), "Hfusion")
@@ -103,7 +103,7 @@ def write_equations_to_file(equations,code_generator_id,n_obs):
 
 # derive equations for sequential fusion of optical flow measurements
 def optical_flow_observation(P,state,R_to_body,vx,vy,vz):
-    flow_code_generator = CodeGenerator("./flow_generated.cpp")
+    flow_code_generator = CodeGenerator("./generated/flow_generated.cpp")
     range = create_symbol("range", real=True) # range from camera focal point to ground along sensor Z axis
     obs_var = create_symbol("R_LOS", real=True) # optical flow line of sight rate measurement noise variance
 
@@ -135,7 +135,7 @@ def optical_flow_observation(P,state,R_to_body,vx,vy,vz):
     # calculate a combined result for a possible reduction in operations, but will use more stack
     observation = Matrix([relVelSensor[1]/range,-relVelSensor[0]/range])
     equations = generate_observation_vector_equations(P,state,observation,obs_var,2)
-    flow_code_generator_alt = CodeGenerator("./flow_generated_alt.cpp")
+    flow_code_generator_alt = CodeGenerator("./generated/flow_generated_alt.cpp")
     write_equations_to_file(equations,flow_code_generator_alt,2)
     flow_code_generator_alt.close()
 
@@ -148,7 +148,7 @@ def body_frame_velocity_observation(P,state,R_to_body,vx,vy,vz):
     # Calculate earth relative velocity in a non-rotating sensor frame
     vel_bf = R_to_body * Matrix([vx,vy,vz])
 
-    vel_bf_code_generator = CodeGenerator("./vel_bf_generated.cpp")
+    vel_bf_code_generator = CodeGenerator("./generated/vel_bf_generated.cpp")
     axes = [0,1,2]
     H_obs = vel_bf.jacobian(state) # observation Jacobians
     K_gain = zeros(24,3)
@@ -165,7 +165,7 @@ def body_frame_velocity_observation(P,state,R_to_body,vx,vy,vz):
     # calculate a combined result for a possible reduction in operations, but will use more stack
     equations = generate_observation_vector_equations(P,state,vel_bf,obs_var,3)
 
-    vel_bf_code_generator_alt = CodeGenerator("./vel_bf_generated_alt.cpp")
+    vel_bf_code_generator_alt = CodeGenerator("./generated/vel_bf_generated_alt.cpp")
     write_equations_to_file(equations,vel_bf_code_generator_alt,3)
     vel_bf_code_generator_alt.close()
 
@@ -185,7 +185,7 @@ def gps_yaw_observation(P,state,R_to_body):
 
     equations = generate_observation_equations(P,state,observation,obs_var)
 
-    gps_yaw_code_generator = CodeGenerator("./gps_yaw_generated.cpp")
+    gps_yaw_code_generator = CodeGenerator("./generated/gps_yaw_generated.cpp")
     write_equations_to_file(equations,gps_yaw_code_generator,1)
     gps_yaw_code_generator.close()
 
@@ -201,7 +201,7 @@ def declination_observation(P,state,ix,iy):
 
     equations = generate_observation_equations(P,state,observation,obs_var)
 
-    mag_decl_code_generator = CodeGenerator("./mag_decl_generated.cpp")
+    mag_decl_code_generator = CodeGenerator("./generated/mag_decl_generated.cpp")
     write_equations_to_file(equations,mag_decl_code_generator,1)
     mag_decl_code_generator.close()
 
@@ -230,7 +230,7 @@ def body_frame_accel_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
     # The nonlinear equation will be used to calculate the predicted measurement in implementation
     observation = Matrix([-Kaccx*vrel[0],-Kaccy*vrel[1]])
 
-    acc_bf_code_generator  = CodeGenerator("./acc_bf_generated.cpp")
+    acc_bf_code_generator  = CodeGenerator("./generated/acc_bf_generated.cpp")
     H = observation.jacobian(state)
     K = zeros(24,2)
     axes = [0,1]
@@ -244,7 +244,7 @@ def body_frame_accel_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
     # calculate a combined result for a possible reduction in operations, but will use more stack
     equations = generate_observation_vector_equations(P,state,observation,obs_var,2)
 
-    acc_bf_code_generator_alt  = CodeGenerator("./acc_bf_generated_alt_.cpp")
+    acc_bf_code_generator_alt  = CodeGenerator("./generated/acc_bf_generated_alt_.cpp")
     write_equations_to_file(equations,acc_bf_code_generator_alt,3)
     acc_bf_code_generator_alt.close()
 
@@ -252,7 +252,7 @@ def body_frame_accel_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
 
 # yaw fusion
 def yaw_observation(P,state,R_to_body):
-    yaw_code_generator = CodeGenerator("./yaw_generated.cpp")
+    yaw_code_generator = CodeGenerator("./generated/yaw_generated.cpp")
 
     # Derive observation Jacobian for fusion of 321 sequence yaw measurement
     # Calculate the yaw (first rotation) angle from the 321 rotation sequence
@@ -303,7 +303,7 @@ def mag_observation(P,state,R_to_body,i,ib):
     m_mag = R_to_body * i + ib
 
     # calculate a separate set of equations for each axis
-    mag_code_generator = CodeGenerator("./3Dmag_generated.cpp")
+    mag_code_generator = CodeGenerator("./generated/3Dmag_generated.cpp")
 
     axes = [0,1,2]
     for index in axes:
@@ -316,7 +316,7 @@ def mag_observation(P,state,R_to_body,i,ib):
     # calculate a combined set of equations for a possible reduction in operations, but will use slighlty more stack
     equations = generate_observation_vector_equations(P,state,m_mag,obs_var,3)
 
-    mag_code_generator_alt  = CodeGenerator("./3Dmag_generated_alt.cpp")
+    mag_code_generator_alt  = CodeGenerator("./generated/3Dmag_generated_alt.cpp")
     write_equations_to_file(equations,mag_code_generator_alt,3)
     mag_code_generator_alt.close()
 
@@ -330,7 +330,7 @@ def tas_observation(P,state,vx,vy,vz,wx,wy):
 
     equations = generate_observation_equations(P,state,observation,obs_var)
 
-    tas_code_generator = CodeGenerator("./tas_generated.cpp")
+    tas_code_generator = CodeGenerator("./generated/tas_generated.cpp")
     write_equations_to_file(equations,tas_code_generator,1)
     tas_code_generator.close()
 
@@ -346,7 +346,7 @@ def beta_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
 
     equations = generate_observation_equations(P,state,observation,obs_var)
 
-    beta_code_generator = CodeGenerator("./beta_generated.cpp")
+    beta_code_generator = CodeGenerator("./generated/beta_generated.cpp")
     write_equations_to_file(equations,beta_code_generator,1)
     beta_code_generator.close()
 
@@ -489,7 +489,7 @@ for index in range(24):
 
 P_new_simple = cse(P_new, symbols("PS0:400"), optimizations='basic')
 
-cov_code_generator = CodeGenerator("./covariance_generated.cpp")
+cov_code_generator = CodeGenerator("./generated/covariance_generated.cpp")
 cov_code_generator.print_string("Equations for covariance matrix prediction, without process noise!")
 cov_code_generator.write_subexpressions(P_new_simple[0])
 cov_code_generator.write_matrix(Matrix(P_new_simple[1]), "nextP", True)
