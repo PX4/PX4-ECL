@@ -48,10 +48,6 @@ def create_symmetric_cov_matrix():
 
     return P
 
-def create_symbol(name, real=True):
-    symbol_name_list.append(name)
-    return Symbol(name, real=True)
-
 # generate equations for observation Jacobian and Kalman gain
 def generate_observation_equations(P,state,observation,variance):
     H = Matrix([observation]).jacobian(state)
@@ -108,8 +104,8 @@ def write_equations_to_file(equations,code_generator_id,n_obs):
 # derive equations for sequential fusion of optical flow measurements
 def optical_flow_observation(P,state,R_to_body,vx,vy,vz):
     flow_code_generator = CodeGenerator("./generated/flow_generated.cpp")
-    range = create_symbol("range", real=True) # range from camera focal point to ground along sensor Z axis
-    obs_var = create_symbol("R_LOS", real=True) # optical flow line of sight rate measurement noise variance
+    range = symbols("range", real=True) # range from camera focal point to ground along sensor Z axis
+    obs_var = symbols("R_LOS", real=True) # optical flow line of sight rate measurement noise variance
 
     # Define rotation matrix from body to sensor frame
     Tbs = Matrix(3,3,create_Tbs_matrix)
@@ -147,7 +143,7 @@ def optical_flow_observation(P,state,R_to_body,vx,vy,vz):
 
 # Derive equations for sequential fusion of body frame velocity measurements
 def body_frame_velocity_observation(P,state,R_to_body,vx,vy,vz):
-    obs_var = create_symbol("R_VEL", real=True) # measurement noise variance
+    obs_var = symbols("R_VEL", real=True) # measurement noise variance
 
     # Calculate earth relative velocity in a non-rotating sensor frame
     vel_bf = R_to_body * Matrix([vx,vy,vz])
@@ -175,8 +171,8 @@ def body_frame_velocity_observation(P,state,R_to_body,vx,vy,vz):
 
 # derive equations for fusion of dual antenna yaw measurement
 def gps_yaw_observation(P,state,R_to_body):
-    obs_var = create_symbol("R_YAW", real=True) # measurement noise variance
-    ant_yaw = create_symbol("ant_yaw", real=True) # yaw angle of antenna array axis wrt X body axis
+    obs_var = symbols("R_YAW", real=True) # measurement noise variance
+    ant_yaw = symbols("ant_yaw", real=True) # yaw angle of antenna array axis wrt X body axis
 
     # define antenna vector in body frame
     ant_vec_bf = Matrix([cos(ant_yaw),sin(ant_yaw),0])
@@ -197,7 +193,7 @@ def gps_yaw_observation(P,state,R_to_body):
 
 # derive equations for fusion of declination
 def declination_observation(P,state,ix,iy):
-    obs_var = create_symbol("R_DECL", real=True) # measurement noise variance
+    obs_var = symbols("R_DECL", real=True) # measurement noise variance
 
     # the predicted measurement is the angle wrt magnetic north of the horizontal
     # component of the measured field
@@ -213,9 +209,9 @@ def declination_observation(P,state,ix,iy):
 
 # derive equations for fusion of lateral body acceleration (multirotors only)
 def body_frame_accel_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
-    obs_var = create_symbol("R_ACC", real=True) # measurement noise variance
-    Kaccx = create_symbol("Kaccx", real=True) # measurement noise variance
-    Kaccy = create_symbol("Kaccy", real=True) # measurement noise variance
+    obs_var = symbols("R_ACC", real=True) # measurement noise variance
+    Kaccx = symbols("Kaccx", real=True) # measurement noise variance
+    Kaccy = symbols("Kaccy", real=True) # measurement noise variance
 
     # use relationship between airspeed along the X and Y body axis and the
     # drag to predict the lateral acceleration for a multirotor vehicle type
@@ -302,7 +298,7 @@ def yaw_observation(P,state,R_to_body):
 
 # 3D magnetometer fusion
 def mag_observation(P,state,R_to_body,i,ib):
-    obs_var = create_symbol("R_MAG", real=True)  # magnetometer measurement noise variance
+    obs_var = symbols("R_MAG", real=True)  # magnetometer measurement noise variance
 
     m_mag = R_to_body * i + ib
 
@@ -328,7 +324,7 @@ def mag_observation(P,state,R_to_body,i,ib):
 
 # airspeed fusion
 def tas_observation(P,state,vx,vy,vz,wx,wy):
-    obs_var = create_symbol("R_TAS", real=True) # true airspeed measurement noise variance
+    obs_var = symbols("R_TAS", real=True) # true airspeed measurement noise variance
 
     observation = sqrt((vx-wx)*(vx-wx)+(vy-wy)*(vy-wy)+vz*vz)
 
@@ -342,7 +338,7 @@ def tas_observation(P,state,vx,vy,vz,wx,wy):
 
 # sideslip fusion
 def beta_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
-    obs_var = create_symbol("R_BETA", real=True) # sideslip measurement noise variance
+    obs_var = symbols("R_BETA", real=True) # sideslip measurement noise variance
 
     v_rel_ef = Matrix([vx-wx,vy-wy,vz])
     v_rel_bf = R_to_body * v_rel_ef
@@ -356,105 +352,73 @@ def beta_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
 
     return
 
-symbol_name_list = []
 
 print('Starting code generation:')
 print('Creating symbolic variables ...')
-dt = create_symbol("dt", real=True)  # dt
-g = create_symbol("g", real=True) # gravity constant
 
-r_hor_vel = create_symbol("R_hor_vel", real=True) # horizontal velocity noise variance
-r_ver_vel = create_symbol("R_vert_vel", real=True) # vertical velocity noise variance
-r_hor_pos = create_symbol("R_hor_pos", real=True) # horizontal position noise variance
+dt = symbols("dt", real=True)  # dt
+g = symbols("g", real=True) # gravity constant
+
+r_hor_vel = symbols("R_hor_vel", real=True) # horizontal velocity noise variance
+r_ver_vel = symbols("R_vert_vel", real=True) # vertical velocity noise variance
+r_hor_pos = symbols("R_hor_pos", real=True) # horizontal position noise variance
 
 # inputs, integrated gyro measurements
-d_ang_x = create_symbol("dax", real=True)  # delta angle x
-d_ang_y = create_symbol("day", real=True)  # delta angle y
-d_ang_z = create_symbol("daz", real=True)  # delta angle z
-
+# delta angle x y z
+d_ang_x, d_ang_y, d_ang_z = symbols("dax day daz", real=True)  # delta angle x
 d_ang = Matrix([d_ang_x, d_ang_y, d_ang_z])
 
 # inputs, integrated accelerometer measurements
-d_v_x = create_symbol("dvx", real=True)  # delta velocity x
-d_v_y = create_symbol("dvy", real=True)  # delta velocity y
-d_v_z = create_symbol("dvz", real=True)  # delta velocity z
-
+# delta velocity x y z
+d_v_x, d_v_y, d_v_z = symbols("dvx dvy dvz", real=True)
 d_v = Matrix([d_v_x, d_v_y,d_v_z])
 
 u = Matrix([d_ang, d_v])
 
 # input noise
-d_ang_x_var = create_symbol("daxVar", real=True)
-d_ang_y_var = create_symbol("dayVar", real=True)
-d_ang_z_var = create_symbol("dazVar", real=True)
+d_ang_x_var, d_ang_y_var, d_ang_z_var = symbols("daxVar dayVar dazVar", real=True)
 
-d_v_x_var = create_symbol("dvxVar", real=True)
-d_v_y_var = create_symbol("dvyVar", real=True)
-d_v_z_var = create_symbol("dvzVar", real=True)
+d_v_x_var, d_v_y_var, d_v_z_var = symbols("dvxVar dvyVar dvzVar", real=True)
 
 var_u = Matrix.diag(d_ang_x_var, d_ang_y_var, d_ang_z_var, d_v_x_var, d_v_y_var, d_v_z_var)
 
 # define state vector
 
 # attitude quaternion
-qw = create_symbol("q0", real=True)  # quaternion real part
-qx = create_symbol("q1", real=True)  # quaternion x component
-qy = create_symbol("q2", real=True)  # quaternion y component
-qz = create_symbol("q3", real=True)  # quaternion z component
-
+qw, qx, qy, qz = symbols("q0 q1 q2 q3", real=True)
 q = Matrix([qw,qx,qy,qz])
 R_to_earth = quat2Rot(q)
 R_to_body = R_to_earth.T
 
-# velocity in NED local frame
-vx = create_symbol("vn", real=True)  # north velocity
-vy = create_symbol("ve", real=True)  # east velocity
-vz = create_symbol("vd", real=True)  # down velocity
-
+# velocity in NED local frame (north, east, down)
+vx, vy, vz = symbols("vn ve vd", real=True)
 v = Matrix([vx,vy,vz])
 
-# position in NED local frame
-px = create_symbol("pn", real=True)  # north position
-py = create_symbol("pe", real=True)  # east position
-pz = create_symbol("pd", real=True)  # down position
-
+# position in NED local frame (north, east, down)
+px, py, pz = symbols("pn pe pd", real=True)
 p = Matrix([px,py,pz])
 
-# delta angle bias
-d_ang_bx = create_symbol("dax_b", real=True)  # delta angle bias x
-d_ang_by = create_symbol("day_b", real=True)  # delta angle bias y
-d_ang_bz = create_symbol("daz_b", real=True)  # delta angle bias z
-
+# delta angle bias x y z
+d_ang_bx, d_ang_by, d_ang_bz = symbols("dax_b day_b daz_b", real=True)
 d_ang_b = Matrix([d_ang_bx, d_ang_by, d_ang_bz])
 d_ang_true = d_ang - d_ang_b
 
-# delta velocity bias
-d_vel_bx = create_symbol("dvx_b", real=True)  # delta velocity bias x
-d_vel_by = create_symbol("dvy_b", real=True)  # delta velocity bias y
-d_vel_bz = create_symbol("dvz_b", real=True)  # delta velocity bias z
-
+# delta velocity bias x y z
+d_vel_bx, d_vel_by, d_vel_bz = symbols("dvx_b dvy_b dvz_b", real=True)
 d_vel_b = Matrix([d_vel_bx, d_vel_by, d_vel_bz])
-
 d_vel_true = d_v - d_vel_b
 
-# earth magnetic field vector
-ix = create_symbol("magN", real=True)  # earth magnetic field x component
-iy = create_symbol("magE", real=True)  # earth magnetic field y component
-iz = create_symbol("magD", real=True)  # earth magnetic field z component
-
+# earth magnetic field vector x y z
+ix, iy, iz = symbols("magN magE magD", real=True)
 i = Matrix([ix,iy,iz])
 
-# magnetometer bias in body frame
-ibx = create_symbol("ibx", real=True)  # earth magnetic field bias in body x
-iby = create_symbol("iby", real=True)  # earth magnetic field bias in body y
-ibz = create_symbol("ibz", real=True)  # earth magnetic field bias in body z
+# earth magnetic field bias in body frame
+ibx, iby, ibz = symbols("ibx iby ibz", real=True)
 
 ib = Matrix([ibx,iby,ibz])
 
-# wind in local NE frame
-wx = create_symbol("vwn", real=True)  # wind in north direction
-wy = create_symbol("vwe", real=True)  # wind in east direction
-
+# wind in local NE frame (north, east)
+wx, wy = symbols("vwn, vwe", real=True)
 w = Matrix([wx,wy])
 
 # state vector at arbitrary time t
@@ -462,9 +426,7 @@ state = Matrix([q,v,p,d_ang_b,d_vel_b,i,ib,w])
 
 print('Defining state propagation ...')
 q_new = quat_mult(q, Matrix([1, 0.5 * d_ang_true[0],  0.5 * d_ang_true[1],  0.5 * d_ang_true[2]]))
-
 v_new = v + R_to_earth * d_vel_true + Matrix([0,0,g]) * dt
-
 p_new = p + v * dt
 
 d_ang_b_new = d_ang_b
