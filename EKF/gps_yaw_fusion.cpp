@@ -84,6 +84,9 @@ void Ekf::fuseGpsYaw()
 	const float HK7 = ecl::powf(q0, 2) - ecl::powf(q3, 2);
 	const float HK8 = HK4*(HK5 - HK6 + HK7);
 	const float HK9 = HK3 - HK8;
+	if (fabsf(HK9) < 1e-3f) {
+		return;
+	}
 	const float HK10 = 1.0F/HK9;
 	const float HK11 = HK4*q0;
 	const float HK12 = HK0*q3;
@@ -92,8 +95,16 @@ void Ekf::fuseGpsYaw()
 	const float HK15 = HK0*q0 + HK4*q3;
 	const float HK16 = HK10*(HK14*(HK11 - HK12) + HK15);
 	const float HK17 = ecl::powf(HK13, 2)/ecl::powf(HK9, 2) + 1;
+	if (fabsf(HK17) < 1e-3f) {
+		return;
+	}
 	const float HK18 = 2/HK17;
-	const float HK19 = 1.0F/(-HK3 + HK8);
+	// const float HK19 = 1.0F/(-HK3 + HK8);
+	const float HK19_inverse = -HK3 + HK8;
+	if (fabsf(HK19_inverse) < 1e-6f) {
+		return;
+	}
+	const float HK19 = 1.0F/HK19_inverse;
 	const float HK20 = HK4*q1;
 	const float HK21 = HK0*q2;
 	const float HK22 = HK13*HK19;
