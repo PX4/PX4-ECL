@@ -251,7 +251,7 @@ def body_frame_accel_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
     return
 
 # yaw fusion
-def yaw_observation(P,state,R_to_body):
+def yaw_observation(P,state,R_to_earth):
     yaw_code_generator = CodeGenerator("./generated/yaw_generated.cpp")
 
     # Derive observation Jacobian for fusion of 321 sequence yaw measurement
@@ -465,7 +465,7 @@ def generate_code():
 
     # derive autocode for observation methods
     print('Generating heading observation code ...')
-    yaw_observation(P,state,R_to_body)
+    yaw_observation(P,state,R_to_earth)
     print('Generating gps heading observation code ...')
     gps_yaw_observation(P,state,R_to_body)
     print('Generating mag observation code ...')
