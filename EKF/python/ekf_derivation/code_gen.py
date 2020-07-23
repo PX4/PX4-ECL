@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Sat Mar 14 12:47:24 2020
@@ -11,14 +11,14 @@ from sympy.codegen.ast import float32, real
 class CodeGenerator:
     def __init__(self, file_name):
         self.file_name = file_name
-        self.file = open(self.file_name, 'w', buffering=0)
+        self.file = open(self.file_name, 'w')
 
     def print_string(self, string):
         self.file.write("// " + string + "\n")
-        
+
     def get_ccode(self, expression):
         return ccode(expression, type_aliases={real:float32})
-        
+
     def write_subexpressions(self,subexpressions):
         write_string = ""
         for item in subexpressions:
@@ -26,7 +26,7 @@ class CodeGenerator:
 
         write_string = write_string + "\n\n"
         self.file.write(write_string)
-        
+
     def write_matrix(self, matrix, identifier, is_symmetric=False):
         write_string = ""
 
@@ -50,6 +50,6 @@ class CodeGenerator:
 
         write_string = write_string + "\n\n"
         self.file.write(write_string)
-        
+
     def close(self):
         self.file.close()

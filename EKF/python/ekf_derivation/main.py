@@ -56,7 +56,9 @@ def create_symbol(name, real=True):
 def generate_observation_equations(P,state,observation,variance):
     H = Matrix([observation]).jacobian(state)
     innov_var = H * P * H.T + Matrix([variance])
-    K = P * H.T / innov_var
+    assert(innov_var.shape[0] == 1)
+    assert(innov_var.shape[1] == 1)
+    K = P * H.T / innov_var[0,0]
     HK_simple = cse(Matrix([H.transpose(), K]), symbols("HK0:1000"), optimizations='basic')
 
     return HK_simple
@@ -70,7 +72,9 @@ def generate_observation_vector_equations(P,state,observation,variance,n_obs):
     for index in range(n_obs):
         H[index,:] = Matrix([observation[index]]).jacobian(state)
         innov_var = H[index,:] * P * H[index,:].T + Matrix([variance])
-        K[:,index] = P * H[index,:].T / innov_var
+        assert(innov_var.shape[0] == 1)
+        assert(innov_var.shape[1] == 1)
+        K[:,index] = P * H[index,:].T / innov_var[0,0]
         HK[index*48:(index+1)*48,0] = Matrix([H[index,:].transpose(), K[:,index]])
 
     HK_simple = cse(HK, symbols("HK0:1000"), optimizations='basic')
