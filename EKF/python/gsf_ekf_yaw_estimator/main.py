@@ -109,7 +109,7 @@ innov_var_code_generator.close()
 
 # Calculate Kalman gain
 print('Computing NE velocity Kalman gain code ...')
-K = (P * H.T) / S
+K = (P * H.T) * S.inv()
 
 K_simple = cse(K, symbols("SK0:1000"), optimizations='basic')
 

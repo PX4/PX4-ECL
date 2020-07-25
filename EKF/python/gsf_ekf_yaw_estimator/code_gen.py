@@ -11,7 +11,7 @@ from sympy.codegen.ast import float32, real
 class CodeGenerator:
     def __init__(self, file_name):
         self.file_name = file_name
-        self.file = open(self.file_name, 'w', buffering=0)
+        self.file = open(self.file_name, 'w')
 
     def print_string(self, string):
         self.file.write("// " + string + "\n")
