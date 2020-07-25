@@ -18,24 +18,15 @@ def create_symmetric_cov_matrix():
 
     return P
 
-def create_symbol(name, real=True):
-    symbol_name_list.append(name)
-    return Symbol(name, real=True)
-
-symbol_name_list = []
-
 print('Starting code generation:')
 
-daz = create_symbol("daz", real=True) # IMU z axis delta angle measurement in body axes - rad
-dvx = create_symbol("dvx", real=True) # IMU x axis delta velocity measurement in body axes - m/sec
-dvy = create_symbol("dvy", real=True) # IMU y axis delta velocity measurement in body axes - m/sec
-psi = create_symbol("psi", real=True)  # yaw angle of body frame wrt earth frame
-vn = create_symbol("vn", real=True) # N velocity - m/sec
-ve = create_symbol("ve", real=True) # E velocity - m/sec
-dt = create_symbol("dt", real=True)  # dt (sec)
-dazVar = create_symbol("dazVar", real=True) # IMU Z axis delta angle measurement variance (rad^2)
-dvxVar = create_symbol("dvxVar", real=True) # IMU X axis delta velocity measurement variance (m/s)^2
-dvyVar = create_symbol("dvyVar", real=True) # IMU Y axis delta velocity measurement variance (m/s)^2
+dt = symbols("dt", real=True)  # dt (sec)
+psi = symbols("psi", real=True)  # yaw angle of body frame wrt earth frame
+vn, ve = symbols("vn ve", real=True)  # velocity in world frame (north/east) - m/sec
+daz = symbols("daz", real=True)  # IMU z axis delta angle measurement in body axes - rad
+dazVar = symbols("dazVar", real=True) # IMU Z axis delta angle measurement variance (rad^2)
+dvx, dvy = symbols("dvx dvy", real=True)  # IMU x and y axis delta velocity measurement in body axes - m/sec
+dvxVar, dvyVar = symbols("dvxVar dvyVar", real=True)   # IMU x and y axis delta velocity measurement variance (m/s)^2
 
 # derive the body to nav direction transformation matrix
 Tbn = Matrix([[cos(psi) , -sin(psi)],
@@ -69,7 +60,7 @@ distMatrix = Matrix([[dvxVar , 0 , 0],
                      [0 , dvyVar , 0],
                      [0 , 0 , dazVar]])
 
-Q = G*distMatrix*G.T
+Q = G * distMatrix * G.T
 
 # propagate covariance matrix
 P = create_symmetric_cov_matrix()
@@ -89,7 +80,7 @@ cov_prediction_code_generator.close()
 
 # derive the covariance update equation for a NE velocity observation
 print('Computing NE velocity observatio innovation variance code ...')
-velObsVar = create_symbol("velObsVar", real=True) # velocity observation variance (m/s)^2
+velObsVar = symbols("velObsVar", real=True) # velocity observation variance (m/s)^2
 H = Matrix([[1,0,0],
             [0,1,0]])
 
@@ -122,7 +113,7 @@ kalman_gain_code_generator.close()
 
 # Calculate updated covariance matrix
 print('Computing NE velocity observation covariance update code ...')
-P_new = P - K*S*K.T
+P_new = P - K * S * K.T
 
 P_new_simple = cse(P_new, symbols("SP0:1000"), optimizations='basic')
 
