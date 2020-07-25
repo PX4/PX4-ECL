@@ -1,7 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <cstdlib>
-#include "../../../../matrix/matrix/math.hpp"
+#include "../../../../../matrix/matrix/math.hpp"
 
 typedef matrix::SquareMatrix<float, 24> SquareMatrix24f;
 
@@ -33,18 +33,6 @@ namespace ecl{
 
 int main()
 {
-    // test integer power function
-    const float x_in = 2.0f;
-    printf("ecl::powf(0.5,n) = %e , %e , %e , %e , %e\n",(double)ecl::powf(x_in,-2),
-                                    (double)ecl::powf(x_in,-1),
-                                    (double)ecl::powf(x_in, 0),
-                                    (double)ecl::powf(x_in, 1),
-                                    (double)ecl::powf(x_in, 2));
-    printf("     powf(0.5,n) = %e , %e , %e , %e , %e\n\n",(double)powf(x_in,-2),
-                                    (double)powf(x_in,-1),
-                                    (double)powf(x_in, 0),
-                                    (double)powf(x_in, 1),
-                                    (double)powf(x_in, 2));
     // create input data
     const float dt = 0.01f;
 
