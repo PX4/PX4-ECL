@@ -81,7 +81,7 @@ print('Simplifying covariance propagation ...')
 P_new_simple = cse(P_new, symbols("S0:1000"), optimizations='basic')
 
 print('Writing covariance propagation to file ...')
-cov_prediction_code_generator = CodeGenerator("./covariance_prediction_generated.cpp")
+cov_prediction_code_generator = CodeGenerator("./generated/covariance_prediction_generated.cpp")
 cov_prediction_code_generator.print_string("Equations for covariance matrix prediction")
 cov_prediction_code_generator.write_subexpressions(P_new_simple[0])
 cov_prediction_code_generator.write_matrix(Matrix(P_new_simple[1]), "_ekf_gsf[model_index].P", True)
@@ -101,19 +101,20 @@ S = H * P * H.T + R
 S_simple = cse(S, symbols("S0:1000"), optimizations='basic')
 
 print('Writing NE velocity observation innovation variance code to file ...')
-innov_var_code_generator = CodeGenerator("./innovation_variance_generated.cpp")
+innov_var_code_generator = CodeGenerator("./generated/innovation_variance_generated.cpp")
 innov_var_code_generator.print_string("Equations for NE velocity innovation variance")
 innov_var_code_generator.write_subexpressions(S_simple[0])
 innov_var_code_generator.write_matrix(Matrix(S_simple[1]), "S", True)
 innov_var_code_generator.close()
 
 # Calculate Kalman gain
+print('Computing NE velocity Kalman gain code ...')
 K = (P * H.T) / S
 
 K_simple = cse(K, symbols("SK0:1000"), optimizations='basic')
 
 print('Writing NE velocity observation Kalman gain code to file ...')
-kalman_gain_code_generator = CodeGenerator("./Kalman_gain_generated.cpp")
+kalman_gain_code_generator = CodeGenerator("./generated/Kalman_gain_generated.cpp")
 kalman_gain_code_generator.print_string("Equations for NE velocity Kalman gain")
 kalman_gain_code_generator.write_subexpressions(K_simple[0])
 kalman_gain_code_generator.write_matrix(Matrix(K_simple[1]), "K", False)
@@ -126,7 +127,7 @@ P_new = P - K*S*K.T
 P_new_simple = cse(P_new, symbols("SP0:1000"), optimizations='basic')
 
 print('Writing NE velocity observation covariance update code to file ...')
-cov_update_code_generator = CodeGenerator("./covariance_update_generated.cpp")
+cov_update_code_generator = CodeGenerator("./generated/covariance_update_generated.cpp")
 cov_update_code_generator.print_string("Equations for covariance matrix update")
 cov_update_code_generator.write_subexpressions(P_new_simple[0])
 cov_update_code_generator.write_matrix(Matrix(P_new_simple[1]), "_ekf_gsf[model_index].P", True)
