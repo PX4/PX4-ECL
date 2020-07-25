@@ -20,14 +20,9 @@ namespace ecl{
 			}
 			return ret;
 		} else if (exp < 0) {
-			ret = x;
-			for (int count = -1; count > exp; count--) {
-				ret *= x;
-			}
-			return 1.0f / ret;
-		} else {
-			return 1.0f;
+			return 1.0f / ecl::powf(x, -exp);
 		}
+		return 1.0f;
 	}
 }
 
