@@ -24,6 +24,8 @@ def create_symbol(name, real=True):
 
 symbol_name_list = []
 
+print('Starting code generation:')
+
 daz = create_symbol("daz", real=True) # IMU z axis delta angle measurement in body axes - rad
 dvx = create_symbol("dvx", real=True) # IMU x axis delta velocity measurement in body axes - m/sec
 dvy = create_symbol("dvy", real=True) # IMU y axis delta velocity measurement in body axes - m/sec
@@ -52,6 +54,7 @@ stateVector = Matrix([vn,ve,psi])
 newStateVector = Matrix([velNew,psiNew])
 
 # Calculate state transition matrix
+print('Computing state propagation jacobian ...')
 F = newStateVector.jacobian(stateVector)
 
 # Derive the covariance prediction equations
@@ -71,10 +74,13 @@ Q = G*distMatrix*G.T
 # propagate covariance matrix
 P = create_symmetric_cov_matrix()
 
+print('Computing covariance propagation ...')
 P_new = F * P * F.T + Q
 
+print('Simplifying covariance propagation ...')
 P_new_simple = cse(P_new, symbols("S0:1000"), optimizations='basic')
 
+print('Writing covariance propagation to file ...')
 cov_prediction_code_generator = CodeGenerator("./covariance_prediction_generated.cpp")
 cov_prediction_code_generator.print_string("Equations for covariance matrix prediction")
 cov_prediction_code_generator.write_subexpressions(P_new_simple[0])
@@ -82,6 +88,7 @@ cov_prediction_code_generator.write_matrix(Matrix(P_new_simple[1]), "_ekf_gsf[mo
 cov_prediction_code_generator.close()
 
 # derive the covariance update equation for a NE velocity observation
+print('Computing NE velocity observatio innovation variance code ...')
 velObsVar = create_symbol("velObsVar", real=True) # velocity observation variance (m/s)^2
 H = Matrix([[1,0,0],
             [0,1,0]])
@@ -93,6 +100,7 @@ S = H * P * H.T + R
 
 S_simple = cse(S, symbols("S0:1000"), optimizations='basic')
 
+print('Writing NE velocity observation innovation variance code to file ...')
 innov_var_code_generator = CodeGenerator("./innovation_variance_generated.cpp")
 innov_var_code_generator.print_string("Equations for NE velocity innovation variance")
 innov_var_code_generator.write_subexpressions(S_simple[0])
@@ -104,6 +112,7 @@ K = (P * H.T) / S
 
 K_simple = cse(K, symbols("SK0:1000"), optimizations='basic')
 
+print('Writing NE velocity observation Kalman gain code to file ...')
 kalman_gain_code_generator = CodeGenerator("./Kalman_gain_generated.cpp")
 kalman_gain_code_generator.print_string("Equations for NE velocity Kalman gain")
 kalman_gain_code_generator.write_subexpressions(K_simple[0])
@@ -111,10 +120,12 @@ kalman_gain_code_generator.write_matrix(Matrix(K_simple[1]), "K", False)
 kalman_gain_code_generator.close()
 
 # Calculate updated covariance matrix
+print('Computing NE velocity observation covariance update code ...')
 P_new = P - K*S*K.T
 
 P_new_simple = cse(P_new, symbols("SP0:1000"), optimizations='basic')
 
+print('Writing NE velocity observation covariance update code to file ...')
 cov_update_code_generator = CodeGenerator("./covariance_update_generated.cpp")
 cov_update_code_generator.print_string("Equations for covariance matrix update")
 cov_update_code_generator.write_subexpressions(P_new_simple[0])
