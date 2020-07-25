@@ -244,7 +244,7 @@ def body_frame_accel_observation(P,state,R_to_body,vx,vy,vz,wx,wy):
     # calculate a combined result for a possible reduction in operations, but will use more stack
     equations = generate_observation_vector_equations(P,state,observation,obs_var,2)
 
-    acc_bf_code_generator_alt  = CodeGenerator("./generated/acc_bf_generated_alt_.cpp")
+    acc_bf_code_generator_alt  = CodeGenerator("./generated/acc_bf_generated_alt.cpp")
     write_equations_to_file(equations,acc_bf_code_generator_alt,3)
     acc_bf_code_generator_alt.close()
 
