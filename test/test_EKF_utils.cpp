@@ -39,20 +39,19 @@
 
 #include <gtest/gtest.h>
 #include <cmath>
+#include <vector>
 
 #include "EKF/utils.hpp"
 
-TEST(eclPowfTest, checkAccuracy)
+TEST(eclPowfTest, compareToStandardImplementation)
 {
-	int exponent[7] = {-3,-2,-1,0,1,2,3};
-	float x[2] = {-0.5f,0.5f};
-	float expected_result[2][7] = {{-1.0f/(0.5f*0.5f*0.5f), 1.0f/(0.5f*0.5f), -1.0f/0.5f, 1.0f, -0.5f, 0.5f*0.5f, -0.5f*0.5f*0.5f},
-				       { 1.0f/(0.5f*0.5f*0.5f), 1.0f/(0.5f*0.5f),  1.0f/0.5f, 1.0f,  0.5f, 0.5f*0.5f,  0.5f*0.5f*0.5f}};
+	std::vector<int> exponents = {-3,-2,-1,-0,0,1,2,3};
+	std::vector<float> bases = {-INFINITY, -11.1f,-0.5f, -0.f, 0.f, 0.5f, 11.1f, INFINITY};
 
-	for (uint8_t exp_index = 0; exp_index < 7; exp_index++) {
-		for (uint8_t x_index = 0; x_index < 2; x_index++) {
-			const float test_result = ecl::powf(x[x_index],exponent[exp_index]);
-			ASSERT_EQ(test_result, expected_result[x_index][exp_index]);
+	for (auto const exponent : exponents) {
+		for (auto const basis : bases) {
+			EXPECT_EQ(ecl::powf(basis, exponent),
+				  std::pow(basis, static_cast<float>(exponent)));
 		}
 	}
 }
