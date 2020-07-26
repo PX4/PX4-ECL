@@ -87,39 +87,26 @@ H = Matrix([[1,0,0],
 R = Matrix([[velObsVar , 0],
             [0 , velObsVar]])
 
+print('Computing NE velocity measurement update code ...')
 S = H * P * H.T + R
-
-S_simple = cse(S, symbols("S0:1000"), optimizations='basic')
-
-print('Writing NE velocity observation innovation variance code to file ...')
-innov_var_code_generator = CodeGenerator("./generated/innovation_variance_generated.cpp")
-innov_var_code_generator.print_string("Equations for NE velocity innovation variance")
-innov_var_code_generator.write_subexpressions(S_simple[0])
-innov_var_code_generator.write_matrix(Matrix(S_simple[1]), "S", True)
-innov_var_code_generator.close()
-
-# Calculate Kalman gain
-print('Computing NE velocity Kalman gain code ...')
-K = (P * H.T) * S.inv()
-
-K_simple = cse(K, symbols("SK0:1000"), optimizations='basic')
-
-print('Writing NE velocity observation Kalman gain code to file ...')
-kalman_gain_code_generator = CodeGenerator("./generated/Kalman_gain_generated.cpp")
-kalman_gain_code_generator.print_string("Equations for NE velocity Kalman gain")
-kalman_gain_code_generator.write_subexpressions(K_simple[0])
-kalman_gain_code_generator.write_matrix(Matrix(K_simple[1]), "K", False)
-kalman_gain_code_generator.close()
-
-# Calculate updated covariance matrix
-print('Computing NE velocity observation covariance update code ...')
+S_det_inv = 1 / S.det()
+S_inv = S.inv()
+K = (P * H.T) * S_inv
 P_new = P - K * S * K.T
 
-P_new_simple = cse(P_new, symbols("SP0:1000"), optimizations='basic')
+# optimize code
+t, [S_det_inv_s, S_inv_s, K_s, P_new_s] = cse([S_det_inv, S_inv, K, P_new], symbols("t0:1000"), optimizations='basic')
 
-print('Writing NE velocity observation covariance update code to file ...')
-cov_update_code_generator = CodeGenerator("./generated/covariance_update_generated.cpp")
-cov_update_code_generator.print_string("Equations for covariance matrix update")
-cov_update_code_generator.write_subexpressions(P_new_simple[0])
-cov_update_code_generator.write_matrix(Matrix(P_new_simple[1]), "_ekf_gsf[model_index].P", True)
-cov_update_code_generator.close()
+print('Writing NE velocity measurement update code to file ...')
+measurement_update_code_generator = CodeGenerator("./generated/measurement_update_generated.cpp")
+measurement_update_code_generator.print_string("Intermediate variables")
+measurement_update_code_generator.write_subexpressions(t)
+measurement_update_code_generator.print_string("Equations for NE velocity innovation variance's determinante inverse")
+measurement_update_code_generator.write_matrix(Matrix([[S_det_inv_s]]), "_ekf_gsf[model_index].S_det_inverse", False)
+measurement_update_code_generator.print_string("Equations for NE velocity innovation variance inverse")
+measurement_update_code_generator.write_matrix(Matrix(S_inv_s), "_ekf_gsf[model_index].S_inverse", True)
+measurement_update_code_generator.print_string("Equations for NE velocity Kalman gain")
+measurement_update_code_generator.write_matrix(Matrix(K_s), "K", False)
+measurement_update_code_generator.print_string("Equations for covariance matrix update")
+measurement_update_code_generator.write_matrix(Matrix(P_new_s), "_ekf_gsf[model_index].P", True)
+measurement_update_code_generator.close()

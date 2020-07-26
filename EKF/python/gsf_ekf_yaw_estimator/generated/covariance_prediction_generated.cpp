@@ -18,4 +18,8 @@ _ekf_gsf[model_index].P(0,2) = S5;
 _ekf_gsf[model_index].P(1,2) = S9;
 _ekf_gsf[model_index].P(2,2) = P22 + dazVar;
 
+_ekf_gsf[model_index].P(1,0) = _ekf_gsf[model_index].P(0,1);
+_ekf_gsf[model_index].P(2,0) = _ekf_gsf[model_index].P(0,2);
+_ekf_gsf[model_index].P(2,1) = _ekf_gsf[model_index].P(1,2);
+
 
