@@ -341,88 +341,67 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	const float &P12 = _ekf_gsf[model_index].P(1,2);
 	const float &P22 = _ekf_gsf[model_index].P(2,2);
 
-	// calculate innovation variance
-	matrix::SquareMatrix<float, 2> S = _ekf_gsf[model_index].P.slice<2, 2>(0, 0);
-	S(0, 0) += velObsVar;
-	S(1, 1) += velObsVar;
-
-	// Update the inverse of the innovation covariance matrix S_inverse
-	updateInnovCovMatInv(model_index, S);
-
-	// test ratio = transpose(innovation) * inverse(innovation variance) * innovation = [1x2] * [2,2] * [2,1] = [1,1]
-	const float test_ratio = _ekf_gsf[model_index].innov * (_ekf_gsf[model_index].S_inverse * _ekf_gsf[model_index].innov);
-
-	// Perform a chi-square innovation consistency test and calculate a compression scale factor
-	// that limits the magnitude of innovations to 5-sigma
-	// If the test ratio is greater than 25 (5 Sigma) then reduce the length of the innovation vector to clip it at 5-Sigma
-	// This protects from large measurement spikes
-	const float innov_comp_scale_factor = test_ratio > 25.f ? sqrtf(25.0f / test_ratio) : 1.f;
-
-	// Equations for NE velocity Kalman gain
-	const float SK0 = sq(P01);
-	const float SK1 = P11 + velObsVar;
-	const float SK2 = P00 + velObsVar;
-	// const float SK3 = 1.0F/(SK0 - SK1*SK2);
-	const float SK3_inverse = SK0 - SK1*SK2;
-	if (fabsf(SK3_inverse) < 1e-6f) {
+	// optimized auto generated code
+	const float t0 = ecl::powf(P01, 2);
+	const float t1 = -t0;
+	const float t2 = P00*P11 + P00*velObsVar + P11*velObsVar + t1 + ecl::powf(velObsVar, 2);
+	if (fabsf(t2) < 1e-6f) {
 		return false;
 	}
-	const float SK3 = 1.0F/SK3_inverse;
-	const float SK4 = -P01*SK3*velObsVar;
+	const float t3 = 1.0F/t2;
+	const float t4 = P11 + velObsVar;
+	const float t5 = P01*t3;
+	const float t6 = -t5;
+	const float t7 = P00 + velObsVar;
+	const float t8 = P00*t4 + t1;
+	const float t9 = t5*velObsVar;
+	const float t10 = P11*t7;
+	const float t11 = t1 + t10;
+	const float t12 = P01*P12;
+	const float t13 = P02*t4;
+	const float t14 = P01*P02;
+	const float t15 = P12*t7;
+	const float t16 = t0*velObsVar;
+	const float t17 = ecl::powf(t2, -2);
+	const float t18 = t4*velObsVar + t8;
+	const float t19 = t17*t18;
+	const float t20 = t17*(t16 + t7*t8);
+	const float t21 = t0 - t10;
+	const float t22 = t17*t21;
+	const float t23 = t14 - t15;
+	const float t24 = P01*t23;
+	const float t25 = t12 - t13;
+	const float t26 = t16 - t21*t4;
+	const float t27 = t17*t26;
+	const float t28 = t11 + t7*velObsVar;
+	const float t30 = t17*t28;
+	const float t31 = P01*t25;
+	const float t32 = t23*t4 + t31;
+	const float t33 = t17*t32;
+	const float t35 = t24 + t25*t7;
+	const float t36 = t17*t35;
+
+	_ekf_gsf[model_index].S_det_inverse = t3;
+
+	_ekf_gsf[model_index].S_inverse(0,0) = t3*t4;
+	_ekf_gsf[model_index].S_inverse(0,1) = t6;
+	_ekf_gsf[model_index].S_inverse(1,1) = t3*t7;
+	_ekf_gsf[model_index].S_inverse(1,0) = _ekf_gsf[model_index].S_inverse(0,1);
 
 	matrix::Matrix<float, 3, 2> K;
-	K(0,0) = SK3*(-P00*SK1 + SK0);
-	K(1,0) = SK4;
-	K(2,0) = SK3*(P01*P12 - P02*SK1);
-	K(0,1) = SK4;
-	K(1,1) = SK3*(-P11*SK2 + SK0);
-	K(2,1) = SK3*(P01*P02 - P12*SK2);
+	K(0,0) = t3*t8;
+	K(1,0) = t9;
+	K(2,0) = t3*(-t12 + t13);
+	K(0,1) = t9;
+	K(1,1) = t11*t3;
+	K(2,1) = t3*(-t14 + t15);
 
-	// Equations for covariance matrix update
-	const float SP0 = P11 + velObsVar;
-	const float SP1 = ecl::powf(P01, 2);
-	const float SP2 = -SP1;
-	const float SP3 = P00 + velObsVar;
-	const float SP4 = SP0*SP3;
-	const float SP5 = SP2 + SP4;
-	if (fabsf(SP5) < 1e-3f) {
-		return false;
-	}
-	const float SP6 = 1.0F/SP5;
-	const float SP7 = SP6*velObsVar;
-	// const float SP8 = (-P00*SP0 + SP1)/(SP1 - SP4);
-	const float SP8_denom = SP1 - SP4;
-	if (fabsf(SP8_denom) < 1e-6f) {
-		return false;
-	}
-	const float SP8 = (-P00*SP0 + SP1)/SP8_denom;
-	const float SP9 = SP0*SP7 + SP8;
-	const float SP10 = SP1*velObsVar;
-	const float SP11 = SP10*SP6;
-	const float SP12 = SP11 + SP3*SP8;
-	const float SP13 = P11*SP3;
-	const float SP14 = SP1 - SP13;
-	const float SP15 = SP6*SP9;
-	const float SP16 = P01*P02 - P12*SP3;
-	const float SP17 = P01*SP16;
-	const float SP18 = P01*P12 - P02*SP0;
-	const float SP19 = ecl::powf(SP5, -2);
-	const float SP20 = SP19*(-SP0*SP14 + SP10);
-	const float SP21 = SP13 + SP2 + SP3*velObsVar;
-	const float SP23 = SP19*SP21;
-	const float SP24 = P01*SP18;
-	const float SP25 = SP19*(SP0*SP16 + SP24);
-	const float SP27 = SP17 + SP18*SP3;
-	const float SP28 = SP19*SP27;
-
-	_ekf_gsf[model_index].P(0,0) = P00 - SP11*SP9 - SP12*SP8;
-	_ekf_gsf[model_index].P(0,1) = P01*(-SP12*SP7 + SP14*SP15 + 1);
-	_ekf_gsf[model_index].P(1,1) = P11 - SP10*SP23 + SP14*SP20;
-	_ekf_gsf[model_index].P(0,2) = P02 + SP12*SP18*SP6 + SP15*SP17;
-	_ekf_gsf[model_index].P(1,2) = P12 + SP16*SP20 + SP23*SP24;
-	_ekf_gsf[model_index].P(2,2) = P22 - SP16*SP25 - SP18*SP28;
-
-	// covariance matrix is symmetrical, so copy upper half to lower half
+	_ekf_gsf[model_index].P(0,0) = P00 - t16*t19 - t20*t8;
+	_ekf_gsf[model_index].P(0,1) = P01*(t18*t22 - t20*velObsVar + 1);
+	_ekf_gsf[model_index].P(1,1) = P11 - t16*t30 + t22*t26;
+	_ekf_gsf[model_index].P(0,2) = P02 + t19*t24 + t20*t25;
+	_ekf_gsf[model_index].P(1,2) = P12 + t23*t27 + t30*t31;
+	_ekf_gsf[model_index].P(2,2) = P22 - t23*t33 - t25*t36;
 	_ekf_gsf[model_index].P(1,0) = _ekf_gsf[model_index].P(0,1);
 	_ekf_gsf[model_index].P(2,0) = _ekf_gsf[model_index].P(0,2);
 	_ekf_gsf[model_index].P(2,1) = _ekf_gsf[model_index].P(1,2);
@@ -432,6 +411,15 @@ bool EKFGSF_yaw::updateEKF(const uint8_t model_index)
 	for (unsigned index = 0; index < 3; index++) {
 		_ekf_gsf[model_index].P(index,index) = fmaxf(_ekf_gsf[model_index].P(index,index),min_var);
 	}
+
+	// test ratio = transpose(innovation) * inverse(innovation variance) * innovation = [1x2] * [2,2] * [2,1] = [1,1]
+	const float test_ratio = _ekf_gsf[model_index].innov * (_ekf_gsf[model_index].S_inverse * _ekf_gsf[model_index].innov);
+
+	// Perform a chi-square innovation consistency test and calculate a compression scale factor
+	// that limits the magnitude of innovations to 5-sigma
+	// If the test ratio is greater than 25 (5 Sigma) then reduce the length of the innovation vector to clip it at 5-Sigma
+	// This protects from large measurement spikes
+	const float innov_comp_scale_factor = test_ratio > 25.f ? sqrtf(25.0f / test_ratio) : 1.f;
 
 	// Correct the state vector and capture the change in yaw angle
 	const float oldYaw = _ekf_gsf[model_index].X(2);
@@ -488,24 +476,6 @@ float EKFGSF_yaw::gaussianDensity(const uint8_t model_index) const
 	const float normDist = _ekf_gsf[model_index].innov.dot(_ekf_gsf[model_index].S_inverse * _ekf_gsf[model_index].innov);
 
 	return _m_2pi_inv * sqrtf(_ekf_gsf[model_index].S_det_inverse) * expf(-0.5f * normDist);
-}
-
-void EKFGSF_yaw::updateInnovCovMatInv(const uint8_t model_index, const matrix::SquareMatrix<float, 2> &S)
-{
-	// calculate determinant for innovation covariance matrix
-	const float t2 = S(0,0) * S(1,1);
-	const float t5 = S(0,1) * S(1,0);
-	const float t3 = t2 - t5;
-
-	// calculate determinant inverse and protect against badly conditioned matrix
-	_ekf_gsf[model_index].S_det_inverse = 1.0f / fmaxf(t3 , 1e-12f);
-
-	// calculate inv(S)
-	_ekf_gsf[model_index].S_inverse(0,0) =   _ekf_gsf[model_index].S_det_inverse * S(1,1);
-	_ekf_gsf[model_index].S_inverse(1,1) =   _ekf_gsf[model_index].S_det_inverse * S(0,0);
-	_ekf_gsf[model_index].S_inverse(0,1) = - _ekf_gsf[model_index].S_det_inverse * S(0,1);
-	_ekf_gsf[model_index].S_inverse(1,0) = - _ekf_gsf[model_index].S_det_inverse * S(1,0);
-
 }
 
 bool EKFGSF_yaw::getLogData(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF], float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF])
