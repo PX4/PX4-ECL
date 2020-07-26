@@ -40,7 +40,7 @@
 #include <gtest/gtest.h>
 #include <cmath>
 
-#include "EKF/common.h"
+#include "EKF/utils.hpp"
 
 TEST(eclPowfTest, checkAccuracy)
 {

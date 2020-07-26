@@ -42,6 +42,7 @@
  */
 
 #include "ekf.h"
+#include "utils.hpp"
 
 #include <ecl.h>
 #include <math.h>
