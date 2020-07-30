@@ -612,6 +612,8 @@ float Ekf::compensateBaroForDynamicPressure(const float baro_alt_uncompensated)
 // calculate the earth rotation vector
 Vector3f Ekf::calcEarthRateNED(float lat_rad) const
 {
+	static constexpr float CONSTANTS_EARTH_SPIN_RATE = 7.2921150e-5f; // radians/second (rad/s)
+
 	return Vector3f(CONSTANTS_EARTH_SPIN_RATE * cosf(lat_rad),
 			0.0f,
 			-CONSTANTS_EARTH_SPIN_RATE * sinf(lat_rad));

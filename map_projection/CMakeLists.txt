@@ -31,9 +31,10 @@
 #
 ############################################################################
 
-add_library(ecl_geo
-	geo.cpp
+add_library(ecl_map_projection
+	map_projection.cpp
+	map_projection.h
 	)
-add_dependencies(ecl_geo prebuild_targets)
-target_compile_definitions(ecl_geo PRIVATE -DMODULE_NAME="ecl/geo")
-target_include_directories(ecl_geo PUBLIC ${ECL_SOURCE_DIR})
+add_dependencies(ecl_map_projection prebuild_targets)
+target_compile_definitions(ecl_map_projection PRIVATE -DMODULE_NAME="ecl/map_projection")
+target_include_directories(ecl_map_projection PUBLIC ${ECL_SOURCE_DIR})

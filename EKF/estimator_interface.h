@@ -50,7 +50,7 @@
 #include "sensor_range_finder.hpp"
 #include "utils.hpp"
 
-#include <geo/geo.h>
+#include <map_projection/map_projection.h>
 #include <matrix/math.hpp>
 #include <mathlib/mathlib.h>
 
@@ -448,7 +448,7 @@ protected:
 	// Used by the multi-rotor specific drag force fusion
 	uint8_t _drag_sample_count{0};	// number of drag specific force samples assumulated at the filter prediction rate
 	float _drag_sample_time_dt{0.0f};	// time integral across all samples used to form _drag_down_sampled (sec)
-	float _air_density{CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C};		// air density (kg/m**3)
+	float _air_density{1.225f};		// air density (kg/m**3)
 
 	// Sensor limitations
 	float _flow_max_rate{0.0f}; ///< maximum angular flow rate that the optical flow sensor can measure (rad/s)

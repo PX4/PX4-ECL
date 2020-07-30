@@ -55,6 +55,8 @@ using matrix::Vector2f;
 using matrix::Vector3f;
 using matrix::wrap_pi;
 
+static constexpr float CONSTANTS_ONE_G = 9.80665f; // m/s^2
+
 enum velocity_frame_t {LOCAL_FRAME_FRD, BODY_FRAME_FRD};
 
 struct gps_message {

@@ -166,7 +166,7 @@ endif()
 
 add_subdirectory(airdata)
 add_subdirectory(EKF)
-add_subdirectory(geo)
+add_subdirectory(map_projection)
 add_subdirectory(geo_lookup)
 
 if(BUILD_TESTING AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)

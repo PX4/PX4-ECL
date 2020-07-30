@@ -35,7 +35,7 @@
 #include <math.h>
 #include <mathlib/mathlib.h>
 #include <memory>
-#include <geo/geo.h>
+#include <map_projection/map_projection.h>
 
 class GeoTest : public ::testing::Test {
  public:
