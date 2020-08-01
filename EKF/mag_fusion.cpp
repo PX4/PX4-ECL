@@ -114,13 +114,8 @@ void Ekf::fuseMag()
 	const float HK49 = HK21*P(16,19) + HK27*P(17,19) - HK28*P(18,19) + HK29*P(1,19) + HK30*P(0,19) - HK32*P(2,19) + HK34*P(3,19) + P(19,19);
 
 	_mag_innov_var(0) = (HK21*HK37 + HK27*HK42 - HK28*HK38 + HK29*HK48 + HK30*HK36 - HK32*HK41 + HK34*HK45 + HK49 + R_MAG);
-	float HK50;
-	if (_mag_innov_var(0) >= R_MAG) {
-		// the innovation variance contribution from the state covariances is non-negative - no fault
-		_fault_status.flags.bad_mag_x = false;
-		HK50 = 1.0F/_mag_innov_var(0);
 
-	} else {
+	if (_mag_innov_var(0) < R_MAG) {
 		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
 		_fault_status.flags.bad_mag_x = true;
 
@@ -128,8 +123,10 @@ void Ekf::fuseMag()
 		resetMagRelatedCovariances();
 		ECL_ERR("magX %s", numerical_error_covariance_reset_string);
 		return;
-
 	}
+
+	_fault_status.flags.bad_mag_x = false;
+	const float HK50 = 1.0F/_mag_innov_var(0);
 
 	const float HK51 = 2*HK31;
 	const float HK52 = -HK15;
@@ -153,14 +150,8 @@ void Ekf::fuseMag()
 	const float HK70 = HK29*P(2,20) - HK30*P(3,20) + HK32*P(1,20) + HK34*P(0,20) + HK53*P(17,20) + HK57*P(18,20) - HK58*P(16,20) + P(20,20);
 
 	_mag_innov_var(1) = (HK29*HK69 - HK30*HK64 + HK32*HK67 + HK34*HK60 + HK53*HK61 + HK57*HK65 - HK58*HK62 + HK70 + R_MAG);
-	float HK71;
-	// check for a badly conditioned covariance matrix
-	if (_mag_innov_var(1) >= R_MAG) {
-		// the innovation variance contribution from the state covariances is non-negative - no fault
-		_fault_status.flags.bad_mag_y = false;
-		HK71 = 1.0F/_mag_innov_var(1);
 
-	} else {
+	if (_mag_innov_var(1) < R_MAG) {
 		// the innovation variance contribution from the state covariances is negtive which means the covariance matrix is badly conditioned
 		_fault_status.flags.bad_mag_y = true;
 
@@ -168,8 +159,10 @@ void Ekf::fuseMag()
 		resetMagRelatedCovariances();
 		ECL_ERR("magY %s", numerical_error_covariance_reset_string);
 		return;
-
 	}
+
+	_fault_status.flags.bad_mag_y = false;
+	const float HK71 = 1.0F/_mag_innov_var(1);
 
 	const float HK72 = HK25 + HK26;
 	const float HK73 = HK17 + HK18 + HK19 + HK52;
@@ -185,14 +178,8 @@ void Ekf::fuseMag()
 	const float HK83 = HK29*P(3,21) + HK30*P(2,21) + HK32*P(0,21) - HK34*P(1,21) + HK73*P(18,21) + HK74*P(16,21) - HK75*P(17,21) + P(21,21);
 
 	_mag_innov_var(2) = (HK29*HK81 + HK30*HK82 + HK32*HK76 - HK34*HK79 + HK73*HK77 + HK74*HK80 - HK75*HK78 + HK83 + R_MAG);
-	float HK84;
-	// check for a badly conditioned covariance matrix
-	if (_mag_innov_var(2) >= R_MAG) {
-		// the innovation variance contribution from the state covariances is non-negative - no fault
-		_fault_status.flags.bad_mag_z = false;
-		HK84 = 1.0F/_mag_innov_var(2);
 
-	} else {
+	if (_mag_innov_var(2) < R_MAG) {
 		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
 		_fault_status.flags.bad_mag_z = true;
 
@@ -200,8 +187,10 @@ void Ekf::fuseMag()
 		resetMagRelatedCovariances();
 		ECL_ERR("magZ %s", numerical_error_covariance_reset_string);
 		return;
-
 	}
+
+	_fault_status.flags.bad_mag_z = false;
+	const float HK84 = 1.0F/_mag_innov_var(2);
 
 	// rotate magnetometer earth field state into body frame
 	const Dcmf R_to_body = quatToInverseRotMat(_state.quat_nominal);
@@ -873,7 +862,7 @@ void Ekf::fuseDeclination(float decl_sigma)
 	const float &magE = _state.mag_I(1);
 
 	// minimum North field strength before calculation becomes badly conditioned (T)
-	const float N_field_min = 0.001f;
+	constexpr float N_field_min = 0.001f;
 
 	// observation variance (rad**2)
 	const float R_DECL = sq(decl_sigma);
