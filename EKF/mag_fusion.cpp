@@ -277,13 +277,6 @@ void Ekf::fuseMag()
 				for (unsigned row = 22; row <= 23; row++) {
 					Kfusion(row) = HK50*(HK21*P(row,16) + HK27*P(row,17) - HK28*P(row,18) + HK29*P(1,row) + HK30*P(0,row) - HK32*P(2,row) + HK34*P(3,row) + P(row,19));
 				}
-			} else {
-				for (uint8_t i = 0; i < 16; i++) {
-					Kfusion(i) = 0.0f;
-				}
-
-				Kfusion(22) = 0.0f;
-				Kfusion(23) = 0.0f;
 			}
 
 			Kfusion(16) = HK37*HK50;
@@ -320,13 +313,6 @@ void Ekf::fuseMag()
 				for (unsigned row = 22; row <= 23; row++) {
 					Kfusion(row) = HK71*(HK29*P(2,row) - HK30*P(3,row) + HK32*P(1,row) + HK34*P(0,row) + HK53*P(row,17) + HK57*P(row,18) - HK58*P(row,16) + P(row,20));
 				}
-			} else {
-				for (uint8_t i = 0; i < 16; i++) {
-					Kfusion(i) = 0.0f;
-				}
-
-				Kfusion(22) = 0.0f;
-				Kfusion(23) = 0.0f;
 			}
 
 			Kfusion(16) = HK62*HK71;
@@ -368,13 +354,6 @@ void Ekf::fuseMag()
 				for (unsigned row = 22; row <= 23; row++) {
 					Kfusion(row) = HK84*(HK29*P(3,row) + HK30*P(2,row) + HK32*P(0,row) - HK34*P(1,row) + HK73*P(row,18) + HK74*P(row,16) - HK75*P(row,17) + P(row,21));
 				}
-			} else {
-				for (uint8_t i = 0; i < 16; i++) {
-					Kfusion(i) = 0.0f;
-				}
-
-				Kfusion(22) = 0.0f;
-				Kfusion(23) = 0.0f;
 			}
 
 			Kfusion(16) = HK80*HK84;
