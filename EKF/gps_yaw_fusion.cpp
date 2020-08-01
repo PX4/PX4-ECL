@@ -117,17 +117,12 @@ void Ekf::fuseGpsYaw()
 	const float HK29 = 4/ecl::powf(HK17, 2);
 	const float HK30 = -HK16*P(0,2) - HK24*P(1,2) - HK25*P(2,2) + HK26*P(2,3);
 	const float HK31 = -HK16*P(0,3) - HK24*P(1,3) - HK25*P(2,3) + HK26*P(3,3);
-	float HK32;
 
 	// check if the innovation variance calculation is badly conditioned
 	_heading_innov_var = (-HK16*HK27*HK29 - HK24*HK28*HK29 - HK25*HK29*HK30 + HK26*HK29*HK31 + R_YAW);
-	if (_heading_innov_var >= R_YAW) {
-		// the innovation variance contribution from the state covariances is not negative, no fault
-		_fault_status.flags.bad_hdg = false;
-		HK32 = HK18/_heading_innov_var;
 
-	} else {
-		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
+	if (_heading_innov_var < R_YAW) {
+	// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
 		_fault_status.flags.bad_hdg = true;
 
 		// we reinitialise the covariance matrix and abort this fusion step
@@ -135,6 +130,9 @@ void Ekf::fuseGpsYaw()
 		ECL_ERR_TIMESTAMPED("GPS yaw numerical error - covariance reset");
 		return;
 	}
+
+	_fault_status.flags.bad_hdg = false;
+	const float HK32 = HK18/_heading_innov_var;
 
 	// calculate the innovation and define the innovation gate
 	const float innov_gate = math::max(_params.heading_innov_gate, 1.0f);
