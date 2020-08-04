@@ -7,46 +7,46 @@ typedef matrix::Vector<float, 24> Vector24f;
 typedef matrix::SquareMatrix<float, 24> SquareMatrix24f;
 
 float sq(float in) {
-    return in * in;
+	return in * in;
 }
 
 int main()
 {
-    // Compare calculation of observation Jacobians and Kalman gains for sympy and matlab generated equations
+    	// Compare calculation of observation Jacobians and Kalman gains for sympy and matlab generated equations
 
 	float Hfusion[24];
-    float H_YAW[24];
-    Vector24f Kfusion;
-    float heading_innov_var;
+	float H_YAW[24];
+	Vector24f Kfusion;
+	float heading_innov_var;
 
 	const float R_YAW = sq(0.3f);
 
-    const float _gps_yaw_offset = 1.5f;
+	const float _gps_yaw_offset = 1.5f;
 
-    // quaternion inputs must be normalised
-    float q0 = 2.0f * ((float)rand() - 0.5f);
-    float q1 = 2.0f * ((float)rand() - 0.5f);
-    float q2 = 2.0f * ((float)rand() - 0.5f);
-    float q3 = 2.0f * ((float)rand() - 0.5f);
-    const float length = sqrtf(sq(q0) + sq(q1) + sq(q2) + sq(q3));
-    q0 /= length;
-    q1 /= length;
-    q2 /= length;
-    q3 /= length;
+	// quaternion inputs must be normalised
+	float q0 = 2.0f * ((float)rand() - 0.5f);
+	float q1 = 2.0f * ((float)rand() - 0.5f);
+	float q2 = 2.0f * ((float)rand() - 0.5f);
+	float q3 = 2.0f * ((float)rand() - 0.5f);
+	const float length = sqrtf(sq(q0) + sq(q1) + sq(q2) + sq(q3));
+	q0 /= length;
+	q1 /= length;
+	q2 /= length;
+	q3 /= length;
 
-    // create a symmetrical positive dfinite matrix with off diagonals between -1 and 1 and diagonals between 0 and 1
-    SquareMatrix24f P;
-    for (int col=0; col<=23; col++) {
-        for (int row=0; row<=col; row++) {
-            if (row == col) {
-                P(row,col) = (float)rand();
-            } else {
-                P(col,row) = P(row,col) = 2.0f * ((float)rand() - 0.5f);
-            }
-        }
-    }
+	// create a symmetrical positive dfinite matrix with off diagonals between -1 and 1 and diagonals between 0 and 1
+	SquareMatrix24f P;
+	for (int col=0; col<=23; col++) {
+		for (int row=0; row<=col; row++) {
+			if (row == col) {
+				P(row,col) = (float)rand();
+			} else {
+				P(col,row) = P(row,col) = 2.0f * ((float)rand() - 0.5f);
+			}
+		}
+	}
 
-    // First calculate observationjacobians and Kalman gains using sympy generated equations
+	// First calculate observationjacobians and Kalman gains using sympy generated equations
 
 	// calculate intermediate variables
 	const float HK0 = sinf(_gps_yaw_offset);
@@ -106,15 +106,15 @@ int main()
 		Kfusion(row) = HK32*(-HK16*P(0,row) - HK24*P(1,row) - HK25*P(2,row) + HK26*P(3,row));
 	}
 
-    // save output and repeat calculation using legacy matlab generated code
-    float Hfusion_sympy[24];
-    Vector24f Kfusion_sympy;
-    for (int row=0; row<24; row++) {
-        Hfusion_sympy[row] = Hfusion[row];
-        Kfusion_sympy(row) = Kfusion(row);
-    }
+	// save output and repeat calculation using legacy matlab generated code
+	float Hfusion_sympy[24];
+	Vector24f Kfusion_sympy;
+	for (int row=0; row<24; row++) {
+		Hfusion_sympy[row] = Hfusion[row];
+		Kfusion_sympy(row) = Kfusion(row);
+	}
 
-    // repeat calculation using matlab generated equations
+	// repeat calculation using matlab generated equations
 	// calculate observation jacobian
 	float t2 = sinf(_gps_yaw_offset);
 	float t3 = cosf(_gps_yaw_offset);
@@ -156,7 +156,7 @@ int main()
 	float t34 = q0*t2*2.0f;
 	float t35 = t33+t34;
 
-    memset(&H_YAW, 0, sizeof(H_YAW));
+	memset(&H_YAW, 0, sizeof(H_YAW));
 	H_YAW[0] = (t35/(t11-t2*(t4-q1*q2*2.0f))-t16*t18*t32)/(t18*t21+1.0f);
 	H_YAW[1] = -t30*(t26*(t27-q2*t3*2.0f)+t16*t22*t25);
 	H_YAW[2] = t30*(t25*t26-t16*t22*(t27-q2*t3*2.0f));
@@ -172,7 +172,6 @@ int main()
 		for (uint8_t col = 0; col <= 3; col++) {
 			Kfusion(row) += P(row,col) * H_YAW[col];
 		}
-
 		Kfusion(row) *= heading_innov_var_inv;
 	}
 
@@ -181,31 +180,30 @@ int main()
 			for (uint8_t col = 0; col <= 3; col++) {
 				Kfusion(row) += P(row,col) * H_YAW[col];
 			}
-
 			Kfusion(row) *= heading_innov_var_inv;
 		}
 	}
 
-    // find largest observation variance difference as a fraction of the matlab value
-    float max_diff_fraction = 0.0f;
-    int max_row;
-    float max_old, max_new;
-    for (int row=0; row<24; row++) {
-        float diff_fraction;
-        if (H_YAW[row] != 0.0f) {
-            diff_fraction = fabsf(Hfusion_sympy[row] - H_YAW[row]) / fabsf(H_YAW[row]);
-        } else if (Hfusion_sympy[row] != 0.0f) {
-            diff_fraction = fabsf(Hfusion_sympy[row] - H_YAW[row]) / fabsf(Hfusion_sympy[row]);
-        } else {
-            diff_fraction = 0.0f;
-        }
-        if (diff_fraction > max_diff_fraction) {
-            max_diff_fraction = diff_fraction;
-            max_row = row;
-            max_old = H_YAW[row];
-            max_new = Hfusion_sympy[row];
-        }
-    }
+	// find largest observation variance difference as a fraction of the matlab value
+	float max_diff_fraction = 0.0f;
+	int max_row;
+	float max_old, max_new;
+	for (int row=0; row<24; row++) {
+		float diff_fraction;
+		if (H_YAW[row] != 0.0f) {
+			diff_fraction = fabsf(Hfusion_sympy[row] - H_YAW[row]) / fabsf(H_YAW[row]);
+		} else if (Hfusion_sympy[row] != 0.0f) {
+			diff_fraction = fabsf(Hfusion_sympy[row] - H_YAW[row]) / fabsf(Hfusion_sympy[row]);
+		} else {
+			diff_fraction = 0.0f;
+		}
+		if (diff_fraction > max_diff_fraction) {
+			max_diff_fraction = diff_fraction;
+			max_row = row;
+			max_old = H_YAW[row];
+			max_new = Hfusion_sympy[row];
+		}
+	}
 
 	if (max_diff_fraction > 1E-5f) {
 		printf("Fail: GPS yaw Hfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
@@ -213,24 +211,24 @@ int main()
 		printf("Pass: GPS yaw Hfusion max diff fraction = %e\n",max_diff_fraction);
 	}
 
-    // find largest Kalman gain difference as a fraction of the matlab value
-    max_diff_fraction = 0.0f;
-    for (int row=0; row<4; row++) {
-        float diff_fraction;
-        if (Kfusion(row) != 0.0f) {
-            diff_fraction = fabsf(Kfusion_sympy(row) - Kfusion(row)) / fabsf(Kfusion(row));
-        } else if (Kfusion_sympy(row) != 0.0f) {
-            diff_fraction = fabsf(Kfusion_sympy(row) - Kfusion(row)) / fabsf(Kfusion_sympy(row));
-        } else {
-            diff_fraction = 0.0f;
-        }
-        if (diff_fraction > max_diff_fraction) {
-            max_diff_fraction = diff_fraction;
-            max_row = row;
-            max_old = Kfusion(row);
-            max_new = Kfusion_sympy(row);
-        }
-    }
+	// find largest Kalman gain difference as a fraction of the matlab value
+	max_diff_fraction = 0.0f;
+	for (int row=0; row<4; row++) {
+		float diff_fraction;
+		if (Kfusion(row) != 0.0f) {
+			diff_fraction = fabsf(Kfusion_sympy(row) - Kfusion(row)) / fabsf(Kfusion(row));
+		} else if (Kfusion_sympy(row) != 0.0f) {
+			diff_fraction = fabsf(Kfusion_sympy(row) - Kfusion(row)) / fabsf(Kfusion_sympy(row));
+		} else {
+			diff_fraction = 0.0f;
+		}
+		if (diff_fraction > max_diff_fraction) {
+			max_diff_fraction = diff_fraction;
+			max_row = row;
+			max_old = Kfusion(row);
+			max_new = Kfusion_sympy(row);
+		}
+	}
 
 	if (max_diff_fraction > 1E-5f) {
 		printf("Fail: GPS yaw Kfusion max diff fraction = %e , old = %e , new = %e , location index = %i\n",max_diff_fraction, max_old, max_new, max_row);
