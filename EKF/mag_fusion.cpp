@@ -60,60 +60,34 @@ void Ekf::fuseMag()
 	// XYZ Measurement uncertainty. Need to consider timing errors for fast rotations
 	const float R_MAG = sq(fmaxf(_params.mag_noise, 0.0f));
 
-	// intermediate variables from algebraic optimisation
+	// calculate intermediate variables used for X axis innovation variance, observation Jacobians and Kalman gainss
 	const char* numerical_error_covariance_reset_string = "numerical error - covariance reset";
-	const float HK0 = magE*q3;
-	const float HK1 = magN*q0;
-	const float HK2 = magD*q2;
-	const float HK3 = HK0 + HK1 - HK2;
-	const float HK4 = 2*HK3;
-	const float HK5 = magD*q3 + magE*q2 + magN*q1;
-	const float HK6 = 2*HK5;
-	const float HK7 = magE*q1;
-	const float HK8 = magD*q0;
-	const float HK9 = magN*q2;
-	const float HK10 = magD*q1;
-	const float HK11 = magE*q0;
-	const float HK12 = magN*q3;
-	const float HK13 = HK10 + HK11 - HK12;
-	const float HK14 = 2*HK13;
-	const float HK15 = ecl::powf(q1, 2);
-	const float HK16 = ecl::powf(q2, 2);
-	const float HK17 = -HK16;
-	const float HK18 = ecl::powf(q0, 2);
-	const float HK19 = ecl::powf(q3, 2);
-	const float HK20 = HK18 - HK19;
-	const float HK21 = HK15 + HK17 + HK20;
-	const float HK22 = q0*q3;
-	const float HK23 = q1*q2;
-	const float HK24 = HK22 + HK23;
-	const float HK25 = q1*q3;
-	const float HK26 = q0*q2;
-	const float HK27 = 2*HK24;
-	const float HK28 = -2*HK25 + 2*HK26;
-	const float HK29 = 2*HK5;
-	const float HK30 = 2*HK3;
-	const float HK31 = -HK7 + HK8 + HK9;
-	const float HK32 = 2*HK31;
-	const float HK33 = HK32*P(0,2);
-	const float HK34 = 2*HK13;
-	const float HK35 = HK34*P(0,3);
-	const float HK36 = HK21*P(0,16) + HK27*P(0,17) - HK28*P(0,18) + HK29*P(0,1) + HK30*P(0,0) - HK33 + HK35 + P(0,19);
-	const float HK37 = HK21*P(16,16) + HK27*P(16,17) - HK28*P(16,18) + HK29*P(1,16) + HK30*P(0,16) - HK32*P(2,16) + HK34*P(3,16) + P(16,19);
-	const float HK38 = HK21*P(16,18) + HK27*P(17,18) - HK28*P(18,18) + HK29*P(1,18) + HK30*P(0,18) - HK32*P(2,18) + HK34*P(3,18) + P(18,19);
-	const float HK39 = HK29*P(1,2);
-	const float HK40 = HK30*P(0,2);
-	const float HK41 = HK21*P(2,16) + HK27*P(2,17) - HK28*P(2,18) - HK32*P(2,2) + HK34*P(2,3) + HK39 + HK40 + P(2,19);
-	const float HK42 = HK21*P(16,17) + HK27*P(17,17) - HK28*P(17,18) + HK29*P(1,17) + HK30*P(0,17) - HK32*P(2,17) + HK34*P(3,17) + P(17,19);
-	const float HK43 = HK29*P(1,3);
-	const float HK44 = HK30*P(0,3);
-	const float HK45 = HK21*P(3,16) + HK27*P(3,17) - HK28*P(3,18) - HK32*P(2,3) + HK34*P(3,3) + HK43 + HK44 + P(3,19);
-	const float HK46 = HK32*P(1,2);
-	const float HK47 = HK34*P(1,3);
-	const float HK48 = HK21*P(1,16) + HK27*P(1,17) - HK28*P(1,18) + HK29*P(1,1) + HK30*P(0,1) - HK46 + HK47 + P(1,19);
-	const float HK49 = HK21*P(16,19) + HK27*P(17,19) - HK28*P(18,19) + HK29*P(1,19) + HK30*P(0,19) - HK32*P(2,19) + HK34*P(3,19) + P(19,19);
+	const float HKX0 = -magD*q2 + magE*q3 + magN*q0;
+	const float HKX1 = magD*q3 + magE*q2 + magN*q1;
+	const float HKX2 = magE*q1;
+	const float HKX3 = magD*q0;
+	const float HKX4 = magN*q2;
+	const float HKX5 = magD*q1 + magE*q0 - magN*q3;
+	const float HKX6 = powf(q0, 2) + powf(q1, 2) - powf(q2, 2) - powf(q3, 2);
+	const float HKX7 = q0*q3 + q1*q2;
+	const float HKX8 = q1*q3;
+	const float HKX9 = q0*q2;
+	const float HKX10 = 2*HKX7;
+	const float HKX11 = -2*HKX8 + 2*HKX9;
+	const float HKX12 = 2*HKX1;
+	const float HKX13 = 2*HKX0;
+	const float HKX14 = -2*HKX2 + 2*HKX3 + 2*HKX4;
+	const float HKX15 = 2*HKX5;
+	const float HKX16 = HKX10*P(0,17) - HKX11*P(0,18) + HKX12*P(0,1) + HKX13*P(0,0) - HKX14*P(0,2) + HKX15*P(0,3) + HKX6*P(0,16) + P(0,19);
+	const float HKX17 = HKX10*P(16,17) - HKX11*P(16,18) + HKX12*P(1,16) + HKX13*P(0,16) - HKX14*P(2,16) + HKX15*P(3,16) + HKX6*P(16,16) + P(16,19);
+	const float HKX18 = HKX10*P(17,18) - HKX11*P(18,18) + HKX12*P(1,18) + HKX13*P(0,18) - HKX14*P(2,18) + HKX15*P(3,18) + HKX6*P(16,18) + P(18,19);
+	const float HKX19 = HKX10*P(2,17) - HKX11*P(2,18) + HKX12*P(1,2) + HKX13*P(0,2) - HKX14*P(2,2) + HKX15*P(2,3) + HKX6*P(2,16) + P(2,19);
+	const float HKX20 = HKX10*P(17,17) - HKX11*P(17,18) + HKX12*P(1,17) + HKX13*P(0,17) - HKX14*P(2,17) + HKX15*P(3,17) + HKX6*P(16,17) + P(17,19);
+	const float HKX21 = HKX10*P(3,17) - HKX11*P(3,18) + HKX12*P(1,3) + HKX13*P(0,3) - HKX14*P(2,3) + HKX15*P(3,3) + HKX6*P(3,16) + P(3,19);
+	const float HKX22 = HKX10*P(1,17) - HKX11*P(1,18) + HKX12*P(1,1) + HKX13*P(0,1) - HKX14*P(1,2) + HKX15*P(1,3) + HKX6*P(1,16) + P(1,19);
+	const float HKX23 = HKX10*P(17,19) - HKX11*P(18,19) + HKX12*P(1,19) + HKX13*P(0,19) - HKX14*P(2,19) + HKX15*P(3,19) + HKX6*P(16,19) + P(19,19);
 
-	_mag_innov_var(0) = (HK21*HK37 + HK27*HK42 - HK28*HK38 + HK29*HK48 + HK30*HK36 - HK32*HK41 + HK34*HK45 + HK49 + R_MAG);
+	_mag_innov_var(0) = HKX10*HKX20 - HKX11*HKX18 + HKX12*HKX22 + HKX13*HKX16 - HKX14*HKX19 + HKX15*HKX21 + HKX17*HKX6 + HKX23 + R_MAG;
 
 	if (_mag_innov_var(0) < R_MAG) {
 		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
@@ -126,30 +100,36 @@ void Ekf::fuseMag()
 	}
 
 	_fault_status.flags.bad_mag_x = false;
-	const float HK50 = 1.0F/_mag_innov_var(0);
 
-	const float HK51 = 2*HK31;
-	const float HK52 = -HK15;
-	const float HK53 = HK16 + HK20 + HK52;
-	const float HK54 = q0*q1;
-	const float HK55 = q2*q3;
-	const float HK56 = HK54 + HK55;
-	const float HK57 = 2*HK56;
-	const float HK58 = 2*HK22 - 2*HK23;
-	const float HK59 = HK32*P(0,1);
-	const float HK60 = HK29*P(0,2) + HK34*P(0,0) - HK44 + HK53*P(0,17) + HK57*P(0,18) - HK58*P(0,16) + HK59 + P(0,20);
-	const float HK61 = HK29*P(2,17) - HK30*P(3,17) + HK32*P(1,17) + HK34*P(0,17) + HK53*P(17,17) + HK57*P(17,18) - HK58*P(16,17) + P(17,20);
-	const float HK62 = HK29*P(2,16) - HK30*P(3,16) + HK32*P(1,16) + HK34*P(0,16) + HK53*P(16,17) + HK57*P(16,18) - HK58*P(16,16) + P(16,20);
-	const float HK63 = HK29*P(2,3);
-	const float HK64 = -HK30*P(3,3) + HK32*P(1,3) + HK35 + HK53*P(3,17) + HK57*P(3,18) - HK58*P(3,16) + HK63 + P(3,20);
-	const float HK65 = HK29*P(2,18) - HK30*P(3,18) + HK32*P(1,18) + HK34*P(0,18) + HK53*P(17,18) + HK57*P(18,18) - HK58*P(16,18) + P(18,20);
-	const float HK66 = HK34*P(0,1);
-	const float HK67 = -HK30*P(1,3) + HK32*P(1,1) + HK39 + HK53*P(1,17) + HK57*P(1,18) - HK58*P(1,16) + HK66 + P(1,20);
-	const float HK68 = HK30*P(2,3);
-	const float HK69 = HK29*P(2,2) + HK34*P(0,2) + HK46 + HK53*P(2,17) + HK57*P(2,18) - HK58*P(2,16) - HK68 + P(2,20);
-	const float HK70 = HK29*P(2,20) - HK30*P(3,20) + HK32*P(1,20) + HK34*P(0,20) + HK53*P(17,20) + HK57*P(18,20) - HK58*P(16,20) + P(20,20);
+	const float HKX24 = 1.0F/_mag_innov_var(0);
 
-	_mag_innov_var(1) = (HK29*HK69 - HK30*HK64 + HK32*HK67 + HK34*HK60 + HK53*HK61 + HK57*HK65 - HK58*HK62 + HK70 + R_MAG);
+	// intermediate variables for calculation of innovations variances for Y and Z axes
+	// don't calculate all terms needed for observation jacobians and Kalman gains because
+	// these will have to be recalculated when the X and Y axes are fused
+	const float IV0 = q0*q1;
+	const float IV1 = q2*q3;
+	const float IV2 = 2*IV0 + 2*IV1;
+	const float IV3 = 2*q0*q3 - 2*q1*q2;
+	const float IV4 = 2*magD*q3 + 2*magE*q2 + 2*magN*q1;
+	const float IV5 = 2*magD*q1 + 2*magE*q0 - 2*magN*q3;
+	const float IV6 = 2*magD*q0 - 2*magE*q1 + 2*magN*q2;
+	const float IV7 = -2*magD*q2 + 2*magE*q3 + 2*magN*q0;
+	const float IV8 = powf(q2, 2);
+	const float IV9 = powf(q3, 2);
+	const float IV10 = powf(q0, 2) - powf(q1, 2);
+	const float IV11 = IV10 + IV8 - IV9;
+	const float IV12 = IV7*P(2,3);
+	const float IV13 = IV5*P(0,1);
+	const float IV14 = IV6*P(0,1);
+	const float IV15 = IV4*P(2,3);
+	const float IV16 = 2*q0*q2 + 2*q1*q3;
+	const float IV17 = 2*IV0 - 2*IV1;
+	const float IV18 = IV10 - IV8 + IV9;
+
+	_mag_innov_var(1) = IV11*P(17,20) + IV11*(IV11*P(17,17) + IV2*P(17,18) - IV3*P(16,17) + IV4*P(2,17) + IV5*P(0,17) + IV6*P(1,17) - IV7*P(3,17) + P(17,20)) + IV2*P(18,20) + IV2*(IV11*P(17,18) + IV2*P(18,18) - IV3*P(16,18) + IV4*P(2,18) + IV5*P(0,18) + IV6*P(1,18) - IV7*P(3,18) + P(18,20)) - IV3*P(16,20) - IV3*(IV11*P(16,17) + IV2*P(16,18) - IV3*P(16,16) + IV4*P(2,16) + IV5*P(0,16) + IV6*P(1,16) - IV7*P(3,16) + P(16,20)) + IV4*P(2,20) + IV4*(IV11*P(2,17) - IV12 + IV2*P(2,18) - IV3*P(2,16) + IV4*P(2,2) + IV5*P(0,2) + IV6*P(1,2) + P(2,20)) + IV5*P(0,20) + IV5*(IV11*P(0,17) + IV14 + IV2*P(0,18) - IV3*P(0,16) + IV4*P(0,2) + IV5*P(0,0) - IV7*P(0,3) + P(0,20)) + IV6*P(1,20) + IV6*(IV11*P(1,17) + IV13 + IV2*P(1,18) - IV3*P(1,16) + IV4*P(1,2) + IV6*P(1,1) - IV7*P(1,3) + P(1,20)) - IV7*P(3,20) - IV7*(IV11*P(3,17) + IV15 + IV2*P(3,18) - IV3*P(3,16) + IV5*P(0,3) + IV6*P(1,3) - IV7*P(3,3) + P(3,20)) + P(20,20) + R_MAG;
+	_mag_innov_var(2) = IV16*P(16,21) + IV16*(IV16*P(16,16) - IV17*P(16,17) + IV18*P(16,18) + IV4*P(3,16) - IV5*P(1,16) + IV6*P(0,16) + IV7*P(2,16) + P(16,21)) - IV17*P(17,21) - IV17*(IV16*P(16,17) - IV17*P(17,17) + IV18*P(17,18) + IV4*P(3,17) - IV5*P(1,17) + IV6*P(0,17) + IV7*P(2,17) + P(17,21)) + IV18*P(18,21) + IV18*(IV16*P(16,18) - IV17*P(17,18) + IV18*P(18,18) + IV4*P(3,18) - IV5*P(1,18) + IV6*P(0,18) + IV7*P(2,18) + P(18,21)) + IV4*P(3,21) + IV4*(IV12 + IV16*P(3,16) - IV17*P(3,17) + IV18*P(3,18) + IV4*P(3,3) - IV5*P(1,3) + IV6*P(0,3) + P(3,21)) - IV5*P(1,21) - IV5*(IV14 + IV16*P(1,16) - IV17*P(1,17) + IV18*P(1,18) + IV4*P(1,3) - IV5*P(1,1) + IV7*P(1,2) + P(1,21)) + IV6*P(0,21) + IV6*(-IV13 + IV16*P(0,16) - IV17*P(0,17) + IV18*P(0,18) + IV4*P(0,3) + IV6*P(0,0) + IV7*P(0,2) + P(0,21)) + IV7*P(2,21) + IV7*(IV15 + IV16*P(2,16) - IV17*P(2,17) + IV18*P(2,18) - IV5*P(1,2) + IV6*P(0,2) + IV7*P(2,2) + P(2,21)) + P(21,21) + R_MAG;
+
+	// chedk innovation variances for being badly conditioned
 
 	if (_mag_innov_var(1) < R_MAG) {
 		// the innovation variance contribution from the state covariances is negtive which means the covariance matrix is badly conditioned
@@ -162,22 +142,6 @@ void Ekf::fuseMag()
 	}
 
 	_fault_status.flags.bad_mag_y = false;
-	const float HK71 = 1.0F/_mag_innov_var(1);
-
-	const float HK72 = HK25 + HK26;
-	const float HK73 = HK17 + HK18 + HK19 + HK52;
-	const float HK74 = 2*HK72;
-	const float HK75 = 2*HK54 - 2*HK55;
-	const float HK76 = HK29*P(0,3) + HK32*P(0,0) + HK40 - HK66 + HK73*P(0,18) + HK74*P(0,16) - HK75*P(0,17) + P(0,21);
-	const float HK77 = HK29*P(3,18) + HK30*P(2,18) + HK32*P(0,18) - HK34*P(1,18) + HK73*P(18,18) + HK74*P(16,18) - HK75*P(17,18) + P(18,21);
-	const float HK78 = HK29*P(3,17) + HK30*P(2,17) + HK32*P(0,17) - HK34*P(1,17) + HK73*P(17,18) + HK74*P(16,17) - HK75*P(17,17) + P(17,21);
-	const float HK79 = HK30*P(1,2) - HK34*P(1,1) + HK43 + HK59 + HK73*P(1,18) + HK74*P(1,16) - HK75*P(1,17) + P(1,21);
-	const float HK80 = HK29*P(3,16) + HK30*P(2,16) + HK32*P(0,16) - HK34*P(1,16) + HK73*P(16,18) + HK74*P(16,16) - HK75*P(16,17) + P(16,21);
-	const float HK81 = HK29*P(3,3) + HK32*P(0,3) - HK47 + HK68 + HK73*P(3,18) + HK74*P(3,16) - HK75*P(3,17) + P(3,21);
-	const float HK82 = HK30*P(2,2) + HK33 - HK34*P(1,2) + HK63 + HK73*P(2,18) + HK74*P(2,16) - HK75*P(2,17) + P(2,21);
-	const float HK83 = HK29*P(3,21) + HK30*P(2,21) + HK32*P(0,21) - HK34*P(1,21) + HK73*P(18,21) + HK74*P(16,21) - HK75*P(17,21) + P(21,21);
-
-	_mag_innov_var(2) = (HK29*HK81 + HK30*HK82 + HK32*HK76 - HK34*HK79 + HK73*HK77 + HK74*HK80 - HK75*HK78 + HK83 + R_MAG);
 
 	if (_mag_innov_var(2) < R_MAG) {
 		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
@@ -190,7 +154,6 @@ void Ekf::fuseMag()
 	}
 
 	_fault_status.flags.bad_mag_z = false;
-	const float HK84 = 1.0F/_mag_innov_var(2);
 
 	// rotate magnetometer earth field state into body frame
 	const Dcmf R_to_body = quatToInverseRotMat(_state.quat_nominal);
@@ -243,73 +206,114 @@ void Ekf::fuseMag()
 		if (index == 0) {
 			// Calculate X axis observation jacobians
 			memset(Hfusion, 0, sizeof(Hfusion));
-			Hfusion[0] = HK4;
-			Hfusion[1] = HK6;
-			Hfusion[2] = 2*HK7 - 2*HK8 - 2*HK9;
-			Hfusion[3] = HK14;
-			Hfusion[16] = HK21;
-			Hfusion[17] = 2*HK24;
-			Hfusion[18] = 2*HK25 - 2*HK26;
+			Hfusion[0] = 2*HKX0;
+			Hfusion[1] = 2*HKX1;
+			Hfusion[2] = 2*HKX2 - 2*HKX3 - 2*HKX4;
+			Hfusion[3] = 2*HKX5;
+			Hfusion[16] = HKX6;
+			Hfusion[17] = 2*HKX7;
+			Hfusion[18] = 2*HKX8 - 2*HKX9;
 			Hfusion[19] = 1;
 
 			// Calculate X axis Kalman gains
 			if (update_all_states) {
-				Kfusion(0) = HK36*HK50;
-				Kfusion(1) = HK48*HK50;
-				Kfusion(2) = HK41*HK50;
-				Kfusion(3) = HK45*HK50;
+				Kfusion(0) = HKX16*HKX24;
+				Kfusion(1) = HKX22*HKX24;
+				Kfusion(2) = HKX19*HKX24;
+				Kfusion(3) = HKX21*HKX24;
 
 				for (unsigned row = 4; row <= 15; row++) {
-					Kfusion(row) = HK50*(HK21*P(row,16) + HK27*P(row,17) - HK28*P(row,18) + HK29*P(1,row) + HK30*P(0,row) - HK32*P(2,row) + HK34*P(3,row) + P(row,19));
+					Kfusion(row) = HKX24*(HKX10*P(row,17) - HKX11*P(row,18) + HKX12*P(1,row) + HKX13*P(0,row) - HKX14*P(2,row) + HKX15*P(3,row) + HKX6*P(row,16) + P(row,19));
 				}
 
 				for (unsigned row = 22; row <= 23; row++) {
-					Kfusion(row) = HK50*(HK21*P(row,16) + HK27*P(row,17) - HK28*P(row,18) + HK29*P(1,row) + HK30*P(0,row) - HK32*P(2,row) + HK34*P(3,row) + P(row,19));
+					Kfusion(row) = HKX24*(HKX10*P(17,row) - HKX11*P(18,row) + HKX12*P(1,row) + HKX13*P(0,row) - HKX14*P(2,row) + HKX15*P(3,row) + HKX6*P(16,row) + P(19,row));
 				}
 			}
 
-			Kfusion(16) = HK37*HK50;
-			Kfusion(17) = HK42*HK50;
-			Kfusion(18) = HK38*HK50;
-			Kfusion(19) = HK49*HK50;
+			Kfusion(16) = HKX17*HKX24;
+			Kfusion(17) = HKX20*HKX24;
+			Kfusion(18) = HKX18*HKX24;
+			Kfusion(19) = HKX23*HKX24;
 
 			for (unsigned row = 20; row <= 21; row++) {
-				Kfusion(row) = HK50*(HK21*P(16,row) + HK27*P(17,row) - HK28*P(18,row) + HK29*P(1,row) + HK30*P(0,row) - HK32*P(2,row) + HK34*P(3,row) + P(19,row));
+				Kfusion(row) = HKX24*(HKX10*P(17,row) - HKX11*P(18,row) + HKX12*P(1,row) + HKX13*P(0,row) - HKX14*P(2,row) + HKX15*P(3,row) + HKX6*P(16,row) + P(19,row));
 			}
+
 		} else if (index == 1) {
+
+			// recalculate innovation variance becasue states and covariances have changed due to previous fusion
+			const float HKY0 = magD*q1 + magE*q0 - magN*q3;
+			const float HKY1 = magD*q0 - magE*q1 + magN*q2;
+			const float HKY2 = magD*q3 + magE*q2 + magN*q1;
+			const float HKY3 = magD*q2;
+			const float HKY4 = magE*q3;
+			const float HKY5 = magN*q0;
+			const float HKY6 = q1*q2;
+			const float HKY7 = q0*q3;
+			const float HKY8 = powf(q0, 2) - powf(q1, 2) + powf(q2, 2) - powf(q3, 2);
+			const float HKY9 = q0*q1 + q2*q3;
+			const float HKY10 = 2*HKY9;
+			const float HKY11 = -2*HKY6 + 2*HKY7;
+			const float HKY12 = 2*HKY2;
+			const float HKY13 = 2*HKY0;
+			const float HKY14 = 2*HKY1;
+			const float HKY15 = -2*HKY3 + 2*HKY4 + 2*HKY5;
+			const float HKY16 = HKY10*P(0,18) - HKY11*P(0,16) + HKY12*P(0,2) + HKY13*P(0,0) + HKY14*P(0,1) - HKY15*P(0,3) + HKY8*P(0,17) + P(0,20);
+			const float HKY17 = HKY10*P(17,18) - HKY11*P(16,17) + HKY12*P(2,17) + HKY13*P(0,17) + HKY14*P(1,17) - HKY15*P(3,17) + HKY8*P(17,17) + P(17,20);
+			const float HKY18 = HKY10*P(16,18) - HKY11*P(16,16) + HKY12*P(2,16) + HKY13*P(0,16) + HKY14*P(1,16) - HKY15*P(3,16) + HKY8*P(16,17) + P(16,20);
+			const float HKY19 = HKY10*P(3,18) - HKY11*P(3,16) + HKY12*P(2,3) + HKY13*P(0,3) + HKY14*P(1,3) - HKY15*P(3,3) + HKY8*P(3,17) + P(3,20);
+			const float HKY20 = HKY10*P(18,18) - HKY11*P(16,18) + HKY12*P(2,18) + HKY13*P(0,18) + HKY14*P(1,18) - HKY15*P(3,18) + HKY8*P(17,18) + P(18,20);
+			const float HKY21 = HKY10*P(1,18) - HKY11*P(1,16) + HKY12*P(1,2) + HKY13*P(0,1) + HKY14*P(1,1) - HKY15*P(1,3) + HKY8*P(1,17) + P(1,20);
+			const float HKY22 = HKY10*P(2,18) - HKY11*P(2,16) + HKY12*P(2,2) + HKY13*P(0,2) + HKY14*P(1,2) - HKY15*P(2,3) + HKY8*P(2,17) + P(2,20);
+			const float HKY23 = HKY10*P(18,20) - HKY11*P(16,20) + HKY12*P(2,20) + HKY13*P(0,20) + HKY14*P(1,20) - HKY15*P(3,20) + HKY8*P(17,20) + P(20,20);
+
+			_mag_innov_var(1) = (HKY10*HKY20 - HKY11*HKY18 + HKY12*HKY22 + HKY13*HKY16 + HKY14*HKY21 - HKY15*HKY19 + HKY17*HKY8 + HKY23 + R_MAG);
+
+			if (_mag_innov_var(1) < R_MAG) {
+				// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
+				_fault_status.flags.bad_mag_y = true;
+
+				// we need to re-initialise covariances and abort this fusion step
+				resetMagRelatedCovariances();
+				ECL_ERR("magY %s", numerical_error_covariance_reset_string);
+				return;
+			}
+			const float HKY24 = 1.0F/_mag_innov_var(1);
+
 			// Calculate Y axis observation jacobians
 			memset(Hfusion, 0, sizeof(Hfusion));
-			Hfusion[0] = HK14;
-			Hfusion[1] = HK51;
-			Hfusion[2] = HK6;
-			Hfusion[3] = -2*HK0 - 2*HK1 + 2*HK2;
-			Hfusion[16] = -2*HK22 + 2*HK23;
-			Hfusion[17] = HK53;
-			Hfusion[18] = 2*HK56;
+			Hfusion[0] = 2*HKY0;
+			Hfusion[1] = 2*HKY1;
+			Hfusion[2] = 2*HKY2;
+			Hfusion[3] = 2*HKY3 - 2*HKY4 - 2*HKY5;
+			Hfusion[16] = 2*HKY6 - 2*HKY7;
+			Hfusion[17] = HKY8;
+			Hfusion[18] = 2*HKY9;
 			Hfusion[20] = 1;
 
 			// Calculate Y axis Kalman gains
 			if (update_all_states) {
-				Kfusion(0) = HK60*HK71;
-				Kfusion(1) = HK67*HK71;
-				Kfusion(2) = HK69*HK71;
-				Kfusion(3) = HK64*HK71;
+				Kfusion(0) = HKY16*HKY24;
+				Kfusion(1) = HKY21*HKY24;
+				Kfusion(2) = HKY22*HKY24;
+				Kfusion(3) = HKY19*HKY24;
 
 				for (unsigned row = 4; row <= 15; row++) {
-					Kfusion(row) = HK71*(HK29*P(2,row) - HK30*P(3,row) + HK32*P(1,row) + HK34*P(0,row) + HK53*P(row,17) + HK57*P(row,18) - HK58*P(row,16) + P(row,20));
+					Kfusion(row) = HKY24*(HKY10*P(row,18) - HKY11*P(row,16) + HKY12*P(2,row) + HKY13*P(0,row) + HKY14*P(1,row) - HKY15*P(3,row) + HKY8*P(row,17) + P(row,20));
 				}
 
 				for (unsigned row = 22; row <= 23; row++) {
-					Kfusion(row) = HK71*(HK29*P(2,row) - HK30*P(3,row) + HK32*P(1,row) + HK34*P(0,row) + HK53*P(row,17) + HK57*P(row,18) - HK58*P(row,16) + P(row,20));
+					Kfusion(row) = HKY24*(HKY10*P(18,row) - HKY11*P(16,row) + HKY12*P(2,row) + HKY13*P(0,row) + HKY14*P(1,row) - HKY15*P(3,row) + HKY8*P(17,row) + P(20,row));
 				}
 			}
 
-			Kfusion(16) = HK62*HK71;
-			Kfusion(17) = HK61*HK71;
-			Kfusion(18) = HK65*HK71;
-			Kfusion(19) = HK71*(HK29*P(2,19) - HK30*P(3,19) + HK32*P(1,19) + HK34*P(0,19) + HK53*P(17,19) + HK57*P(18,19) - HK58*P(16,19) + P(19,20));
-			Kfusion(20) = HK70*HK71;
-			Kfusion(21) = HK71*(HK29*P(2,21) - HK30*P(3,21) + HK32*P(1,21) + HK34*P(0,21) + HK53*P(17,21) + HK57*P(18,21) - HK58*P(16,21) + P(20,21));
+			Kfusion(16) = HKY18*HKY24;
+			Kfusion(17) = HKY17*HKY24;
+			Kfusion(18) = HKY20*HKY24;
+			Kfusion(19) = HKY24*(HKY10*P(18,19) - HKY11*P(16,19) + HKY12*P(2,19) + HKY13*P(0,19) + HKY14*P(1,19) - HKY15*P(3,19) + HKY8*P(17,19) + P(19,20));
+			Kfusion(20) = HKY23*HKY24;
+			Kfusion(21) = HKY24*(HKY10*P(18,21) - HKY11*P(16,21) + HKY12*P(2,21) + HKY13*P(0,21) + HKY14*P(1,21) - HKY15*P(3,21) + HKY8*P(17,21) + P(20,21));
 
 		} else if (index == 2) {
 
@@ -318,42 +322,82 @@ void Ekf::fuseMag()
 				continue;
 			}
 
+			// recalculate innovation variance becasue states and covariances have changed due to previous fusion
+			const float HKZ0 = magD*q0 - magE*q1 + magN*q2;
+			const float HKZ1 = magN*q3;
+			const float HKZ2 = magD*q1;
+			const float HKZ3 = magE*q0;
+			const float HKZ4 = -magD*q2 + magE*q3 + magN*q0;
+			const float HKZ5 = magD*q3 + magE*q2 + magN*q1;
+			const float HKZ6 = q0*q2 + q1*q3;
+			const float HKZ7 = q2*q3;
+			const float HKZ8 = q0*q1;
+			const float HKZ9 = powf(q0, 2) - powf(q1, 2) - powf(q2, 2) + powf(q3, 2);
+			const float HKZ10 = 2*HKZ6;
+			const float HKZ11 = -2*HKZ7 + 2*HKZ8;
+			const float HKZ12 = 2*HKZ5;
+			const float HKZ13 = 2*HKZ0;
+			const float HKZ14 = -2*HKZ1 + 2*HKZ2 + 2*HKZ3;
+			const float HKZ15 = 2*HKZ4;
+			const float HKZ16 = HKZ10*P(0,16) - HKZ11*P(0,17) + HKZ12*P(0,3) + HKZ13*P(0,0) - HKZ14*P(0,1) + HKZ15*P(0,2) + HKZ9*P(0,18) + P(0,21);
+			const float HKZ17 = HKZ10*P(16,18) - HKZ11*P(17,18) + HKZ12*P(3,18) + HKZ13*P(0,18) - HKZ14*P(1,18) + HKZ15*P(2,18) + HKZ9*P(18,18) + P(18,21);
+			const float HKZ18 = HKZ10*P(16,17) - HKZ11*P(17,17) + HKZ12*P(3,17) + HKZ13*P(0,17) - HKZ14*P(1,17) + HKZ15*P(2,17) + HKZ9*P(17,18) + P(17,21);
+			const float HKZ19 = HKZ10*P(1,16) - HKZ11*P(1,17) + HKZ12*P(1,3) + HKZ13*P(0,1) - HKZ14*P(1,1) + HKZ15*P(1,2) + HKZ9*P(1,18) + P(1,21);
+			const float HKZ20 = HKZ10*P(16,16) - HKZ11*P(16,17) + HKZ12*P(3,16) + HKZ13*P(0,16) - HKZ14*P(1,16) + HKZ15*P(2,16) + HKZ9*P(16,18) + P(16,21);
+			const float HKZ21 = HKZ10*P(3,16) - HKZ11*P(3,17) + HKZ12*P(3,3) + HKZ13*P(0,3) - HKZ14*P(1,3) + HKZ15*P(2,3) + HKZ9*P(3,18) + P(3,21);
+			const float HKZ22 = HKZ10*P(2,16) - HKZ11*P(2,17) + HKZ12*P(2,3) + HKZ13*P(0,2) - HKZ14*P(1,2) + HKZ15*P(2,2) + HKZ9*P(2,18) + P(2,21);
+			const float HKZ23 = HKZ10*P(16,21) - HKZ11*P(17,21) + HKZ12*P(3,21) + HKZ13*P(0,21) - HKZ14*P(1,21) + HKZ15*P(2,21) + HKZ9*P(18,21) + P(21,21);
+
+			_mag_innov_var(2) = (HKZ10*HKZ20 - HKZ11*HKZ18 + HKZ12*HKZ21 + HKZ13*HKZ16 - HKZ14*HKZ19 + HKZ15*HKZ22 + HKZ17*HKZ9 + HKZ23 + R_MAG);
+
+			if (_mag_innov_var(2) < R_MAG) {
+				// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
+				_fault_status.flags.bad_mag_z = true;
+
+				// we need to re-initialise covariances and abort this fusion step
+				resetMagRelatedCovariances();
+				ECL_ERR("magZ %s", numerical_error_covariance_reset_string);
+				return;
+			}
+
+			const float HKZ24 = 1.0F/_mag_innov_var(2);
+
 			// calculate Z axis observation jacobians
 			memset(Hfusion, 0, sizeof(Hfusion));
-			Hfusion[0] = HK51;
-			Hfusion[1] = -2*HK10 - 2*HK11 + 2*HK12;
-			Hfusion[2] = HK4;
-			Hfusion[3] = HK6;
-			Hfusion[16] = 2*HK72;
-			Hfusion[17] = -2*HK54 + 2*HK55;
-			Hfusion[18] = HK73;
+			Hfusion[0] = 2*HKZ0;
+			Hfusion[1] = 2*HKZ1 - 2*HKZ2 - 2*HKZ3;
+			Hfusion[2] = 2*HKZ4;
+			Hfusion[3] = 2*HKZ5;
+			Hfusion[16] = 2*HKZ6;
+			Hfusion[17] = 2*HKZ7 - 2*HKZ8;
+			Hfusion[18] = HKZ9;
 			Hfusion[21] = 1;
 
 			// Calculate Z axis Kalman gains
 			if (update_all_states) {
-				Kfusion(0) = HK76*HK84;
-				Kfusion(1) = HK79*HK84;
-				Kfusion(2) = HK82*HK84;
-				Kfusion(3) = HK81*HK84;
+				Kfusion(0) = HKZ16*HKZ24;
+				Kfusion(1) = HKZ19*HKZ24;
+				Kfusion(2) = HKZ22*HKZ24;
+				Kfusion(3) = HKZ21*HKZ24;
 
 				for (unsigned row = 4; row <= 15; row++) {
-					Kfusion(row) = HK84*(HK29*P(3,row) + HK30*P(2,row) + HK32*P(0,row) - HK34*P(1,row) + HK73*P(row,18) + HK74*P(row,16) - HK75*P(row,17) + P(row,21));
+					Kfusion(row) = HKZ24*(HKZ10*P(row,16) - HKZ11*P(row,17) + HKZ12*P(3,row) + HKZ13*P(0,row) - HKZ14*P(1,row) + HKZ15*P(2,row) + HKZ9*P(row,18) + P(row,21));
 				}
 
 				for (unsigned row = 22; row <= 23; row++) {
-					Kfusion(row) = HK84*(HK29*P(3,row) + HK30*P(2,row) + HK32*P(0,row) - HK34*P(1,row) + HK73*P(row,18) + HK74*P(row,16) - HK75*P(row,17) + P(row,21));
+					Kfusion(row) = HKZ24*(HKZ10*P(16,row) - HKZ11*P(17,row) + HKZ12*P(3,row) + HKZ13*P(0,row) - HKZ14*P(1,row) + HKZ15*P(2,row) + HKZ9*P(18,row) + P(21,row));
 				}
 			}
 
-			Kfusion(16) = HK80*HK84;
-			Kfusion(17) = HK78*HK84;
-			Kfusion(18) = HK77*HK84;
+			Kfusion(16) = HKZ20*HKZ24;
+			Kfusion(17) = HKZ18*HKZ24;
+			Kfusion(18) = HKZ17*HKZ24;
 
 			for (unsigned row = 19; row <= 20; row++) {
-			Kfusion(row) = HK84*(HK29*P(3,row) + HK30*P(2,row) + HK32*P(0,row) - HK34*P(1,row) + HK73*P(18,row) + HK74*P(16,row) - HK75*P(17,row) + P(row,21));
+				Kfusion(row) = HKZ24*(HKZ10*P(16,row) - HKZ11*P(17,row) + HKZ12*P(3,row) + HKZ13*P(0,row) - HKZ14*P(1,row) + HKZ15*P(2,row) + HKZ9*P(18,row) + P(row,21));
 			}
 
-			Kfusion(21) = HK83*HK84;
+			Kfusion(21) = HKZ23*HKZ24;
 		}
 
 		// apply covariance correction via P_new = (I -K*H)*P

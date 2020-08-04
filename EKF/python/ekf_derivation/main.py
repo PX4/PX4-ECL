@@ -48,14 +48,28 @@ def create_symmetric_cov_matrix():
 
     return P
 
+# generate equations for observation vector innovation variances
+def generate_observation_vector_innovation_variances(P,state,observation,variance,n_obs):
+    H = observation.jacobian(state)
+    innovation_variance = zeros(n_obs,1)
+    for index in range(n_obs):
+        H[index,:] = Matrix([observation[index]]).jacobian(state)
+        innovation_variance[index] = H[index,:] * P * H[index,:].T + Matrix([variance])
+
+    IV_simple = cse(innovation_variance, symbols("IV0:1000"), optimizations='basic')
+
+    return IV_simple
+
 # generate equations for observation Jacobian and Kalman gain
-def generate_observation_equations(P,state,observation,variance):
+def generate_observation_equations(P,state,observation,variance,varname="HK"):
     H = Matrix([observation]).jacobian(state)
     innov_var = H * P * H.T + Matrix([variance])
     assert(innov_var.shape[0] == 1)
     assert(innov_var.shape[1] == 1)
     K = P * H.T / innov_var[0,0]
-    HK_simple = cse(Matrix([H.transpose(), K]), symbols("HK0:1000"), optimizations='basic')
+    extension="0:1000"
+    var_string = varname+extension
+    HK_simple = cse(Matrix([H.transpose(), K]), symbols(var_string), optimizations='basic')
 
     return HK_simple
 
@@ -297,6 +311,21 @@ def yaw_observation(P,state,R_to_earth):
     return
 
 # 3D magnetometer fusion
+def mag_observation_variance(P,state,R_to_body,i,ib):
+    obs_var = symbols("R_MAG", real=True)  # magnetometer measurement noise variance
+
+    m_mag = R_to_body * i + ib
+
+    # separate calculation of innovation variance equations for the y and z axes
+    m_mag[0]=0
+    innov_var_equations = generate_observation_vector_innovation_variances(P,state,m_mag,obs_var,3)
+    mag_innov_var_code_generator = CodeGenerator("./generated/3Dmag_innov_var_generated.cpp")
+    write_equations_to_file(innov_var_equations,mag_innov_var_code_generator,3)
+    mag_innov_var_code_generator.close()
+
+    return
+
+# 3D magnetometer fusion
 def mag_observation(P,state,R_to_body,i,ib):
     obs_var = symbols("R_MAG", real=True)  # magnetometer measurement noise variance
 
@@ -306,8 +335,17 @@ def mag_observation(P,state,R_to_body,i,ib):
     mag_code_generator = CodeGenerator("./generated/3Dmag_generated.cpp")
 
     axes = [0,1,2]
+    label="HK"
     for index in axes:
-        equations = generate_observation_equations(P,state,m_mag[index],obs_var)
+        if (index==0):
+            label="HKX"
+        elif (index==1):
+            label="HKY"
+        elif (index==2):
+            label="HKZ"
+        else:
+            return
+        equations = generate_observation_equations(P,state,m_mag[index],obs_var,varname=label)
         mag_code_generator.print_string("Axis %i equations" % index)
         write_equations_to_file(equations,mag_code_generator,1)
 
@@ -469,6 +507,7 @@ def generate_code():
     print('Generating gps heading observation code ...')
     gps_yaw_observation(P,state,R_to_body)
     print('Generating mag observation code ...')
+    mag_observation_variance(P,state,R_to_body,i,ib)
     mag_observation(P,state,R_to_body,i,ib)
     print('Generating declination observation code ...')
     declination_observation(P,state,ix,iy)
