@@ -100,18 +100,18 @@ def write_equations_to_file(equations,code_generator_id,n_obs):
         code_generator_id.print_string("Sub Expressions")
         code_generator_id.write_subexpressions(equations[0])
         code_generator_id.print_string("Observation Jacobians")
-        code_generator_id.write_matrix(Matrix(equations[1][0][0:24]), "Hfusion")
+        code_generator_id.write_matrix(Matrix(equations[1][0][0:24]), "Hfusion", False, ".at<", ">()")
         code_generator_id.print_string("Kalman gains")
-        code_generator_id.write_matrix(Matrix(equations[1][0][24:]), "Kfusion")
+        code_generator_id.write_matrix(Matrix(equations[1][0][24:]), "Kfusion", False, "(", ")")
     else:
         code_generator_id.print_string("Sub Expressions")
         code_generator_id.write_subexpressions(equations[0])
         for axis_index in range(n_obs):
             start_index = axis_index*48
             code_generator_id.print_string("Observation Jacobians - axis %i" % axis_index)
-            code_generator_id.write_matrix(Matrix(equations[1][0][start_index:start_index+24]), "Hfusion")
+            code_generator_id.write_matrix(Matrix(equations[1][0][start_index:start_index+24]), "Hfusion", False, ".at<", ">()")
             code_generator_id.print_string("Kalman gains - axis %i" % axis_index)
-            code_generator_id.write_matrix(Matrix(equations[1][0][start_index+24:start_index+48]), "Kfusion")
+            code_generator_id.write_matrix(Matrix(equations[1][0][start_index+24:start_index+48]), "Kfusion", False, "(", ")")
 
     return
 
@@ -171,8 +171,8 @@ def body_frame_velocity_observation(P,state,R_to_body,vx,vy,vz):
 
         vel_bf_code_generator.print_string("axis %i" % index)
         vel_bf_code_generator.write_subexpressions(equations[0])
-        vel_bf_code_generator.write_matrix(Matrix(equations[1][0][0:24]), "H_VEL")
-        vel_bf_code_generator.write_matrix(Matrix(equations[1][0][24:]), "Kfusion")
+        vel_bf_code_generator.write_matrix(Matrix(equations[1][0][0:24]), "H_VEL", False, "(", ")")
+        vel_bf_code_generator.write_matrix(Matrix(equations[1][0][24:]), "Kfusion", False, "(", ")")
 
     vel_bf_code_generator.close()
 
@@ -281,11 +281,11 @@ def yaw_observation(P,state,R_to_earth):
 
     yaw_code_generator.print_string("calculate 321 yaw observation matrix - option A")
     yaw_code_generator.write_subexpressions(H_YAW321_A_simple[0])
-    yaw_code_generator.write_matrix(Matrix(H_YAW321_A_simple[1]).T, "H_YAW")
+    yaw_code_generator.write_matrix(Matrix(H_YAW321_A_simple[1]).T, "H_YAW", False, ".at<", ">()")
 
     yaw_code_generator.print_string("calculate 321 yaw observation matrix - option B")
     yaw_code_generator.write_subexpressions(H_YAW321_B_simple[0])
-    yaw_code_generator.write_matrix(Matrix(H_YAW321_B_simple[1]).T, "H_YAW")
+    yaw_code_generator.write_matrix(Matrix(H_YAW321_B_simple[1]).T, "H_YAW", False, ".at<", ">()")
 
     # Derive observation Jacobian for fusion of 312 sequence yaw measurement
     # Calculate the yaw (first rotation) angle from an Euler 312 sequence
@@ -300,11 +300,11 @@ def yaw_observation(P,state,R_to_earth):
 
     yaw_code_generator.print_string("calculate 312 yaw observation matrix - option A")
     yaw_code_generator.write_subexpressions(H_YAW312_A_simple[0])
-    yaw_code_generator.write_matrix(Matrix(H_YAW312_A_simple[1]).T, "H_YAW")
+    yaw_code_generator.write_matrix(Matrix(H_YAW312_A_simple[1]).T, "H_YAW", False, ".at<", ">()")
 
     yaw_code_generator.print_string("calculate 312 yaw observation matrix - option B")
     yaw_code_generator.write_subexpressions(H_YAW312_B_simple[0])
-    yaw_code_generator.write_matrix(Matrix(H_YAW312_B_simple[1]).T, "H_YAW")
+    yaw_code_generator.write_matrix(Matrix(H_YAW312_B_simple[1]).T, "H_YAW", False, ".at<", ">()")
 
     yaw_code_generator.close()
 
@@ -497,7 +497,7 @@ def generate_code():
     cov_code_generator = CodeGenerator("./generated/covariance_generated.cpp")
     cov_code_generator.print_string("Equations for covariance matrix prediction, without process noise!")
     cov_code_generator.write_subexpressions(P_new_simple[0])
-    cov_code_generator.write_matrix(Matrix(P_new_simple[1]), "nextP", True)
+    cov_code_generator.write_matrix(Matrix(P_new_simple[1]), "nextP", True, "(", ")")
 
     cov_code_generator.close()
 
