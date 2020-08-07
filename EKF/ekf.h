@@ -52,6 +52,8 @@ public:
 	typedef matrix::SquareMatrix<float, _k_num_states> SquareMatrix24f;
 	typedef matrix::SquareMatrix<float, 2> Matrix2f;
 	typedef matrix::Vector<float, 4> Vector4f;
+	template<int ... Idxs>
+	using SparseVector24f = matrix::SparseVectorf<24, Idxs...>;
 
 	Ekf() = default;
 	virtual ~Ekf() = default;

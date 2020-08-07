@@ -60,7 +60,7 @@ void Ekf::fuseMag()
 	// XYZ Measurement uncertainty. Need to consider timing errors for fast rotations
 	const float R_MAG = sq(fmaxf(_params.mag_noise, 0.0f));
 
-	// calculate intermediate variables used for X axis innovation variance, observation Jacobians and Kalman gainss
+	// calculate intermediate variables used for X axis innovation variance, observation Jacobians and Kalman gains
 	const char* numerical_error_covariance_reset_string = "numerical error - covariance reset";
 	const float HKX0 = -magD*q2 + magE*q3 + magN*q0;
 	const float HKX1 = magD*q3 + magE*q2 + magN*q1;
@@ -196,7 +196,7 @@ void Ekf::fuseMag()
 	const bool update_all_states = ((_imu_sample_delayed.time_us - _flt_mag_align_start_time) > (uint64_t)5e6);
 
 	// Observation jacobian and Kalman gain vectors
-	float Hfusion[24];
+	SparseVector24f<0,1,2,3,16,17,18,19,20,21> Hfusion;
 	Vector24f Kfusion;
 
 	// update the states and covariance using sequential fusion of the magnetometer components
@@ -205,15 +205,14 @@ void Ekf::fuseMag()
 		// Calculate Kalman gains and observation jacobians
 		if (index == 0) {
 			// Calculate X axis observation jacobians
-			memset(Hfusion, 0, sizeof(Hfusion));
-			Hfusion[0] = 2*HKX0;
-			Hfusion[1] = 2*HKX1;
-			Hfusion[2] = 2*HKX2 - 2*HKX3 - 2*HKX4;
-			Hfusion[3] = 2*HKX5;
-			Hfusion[16] = HKX6;
-			Hfusion[17] = 2*HKX7;
-			Hfusion[18] = 2*HKX8 - 2*HKX9;
-			Hfusion[19] = 1;
+			Hfusion.at<0>() = 2*HKX0;
+			Hfusion.at<1>() = 2*HKX1;
+			Hfusion.at<2>() = 2*HKX2 - 2*HKX3 - 2*HKX4;
+			Hfusion.at<3>() = 2*HKX5;
+			Hfusion.at<16>() = HKX6;
+			Hfusion.at<17>() = 2*HKX7;
+			Hfusion.at<18>() = 2*HKX8 - 2*HKX9;
+			Hfusion.at<19>() = 1;
 
 			// Calculate X axis Kalman gains
 			if (update_all_states) {
@@ -282,15 +281,15 @@ void Ekf::fuseMag()
 			const float HKY24 = 1.0F/_mag_innov_var(1);
 
 			// Calculate Y axis observation jacobians
-			memset(Hfusion, 0, sizeof(Hfusion));
-			Hfusion[0] = 2*HKY0;
-			Hfusion[1] = 2*HKY1;
-			Hfusion[2] = 2*HKY2;
-			Hfusion[3] = 2*HKY3 - 2*HKY4 - 2*HKY5;
-			Hfusion[16] = 2*HKY6 - 2*HKY7;
-			Hfusion[17] = HKY8;
-			Hfusion[18] = 2*HKY9;
-			Hfusion[20] = 1;
+			Hfusion.setZero();
+			Hfusion.at<0>() = 2*HKY0;
+			Hfusion.at<1>() = 2*HKY1;
+			Hfusion.at<2>() = 2*HKY2;
+			Hfusion.at<3>() = 2*HKY3 - 2*HKY4 - 2*HKY5;
+			Hfusion.at<16>() = 2*HKY6 - 2*HKY7;
+			Hfusion.at<17>() = HKY8;
+			Hfusion.at<18>() = 2*HKY9;
+			Hfusion.at<20>() = 1;
 
 			// Calculate Y axis Kalman gains
 			if (update_all_states) {
@@ -363,15 +362,15 @@ void Ekf::fuseMag()
 			const float HKZ24 = 1.0F/_mag_innov_var(2);
 
 			// calculate Z axis observation jacobians
-			memset(Hfusion, 0, sizeof(Hfusion));
-			Hfusion[0] = 2*HKZ0;
-			Hfusion[1] = 2*HKZ1 - 2*HKZ2 - 2*HKZ3;
-			Hfusion[2] = 2*HKZ4;
-			Hfusion[3] = 2*HKZ5;
-			Hfusion[16] = 2*HKZ6;
-			Hfusion[17] = 2*HKZ7 - 2*HKZ8;
-			Hfusion[18] = HKZ9;
-			Hfusion[21] = 1;
+			Hfusion.setZero();
+			Hfusion.at<0>() = 2*HKZ0;
+			Hfusion.at<1>() = 2*HKZ1 - 2*HKZ2 - 2*HKZ3;
+			Hfusion.at<2>() = 2*HKZ4;
+			Hfusion.at<3>() = 2*HKZ5;
+			Hfusion.at<16>() = 2*HKZ6;
+			Hfusion.at<17>() = 2*HKZ7 - 2*HKZ8;
+			Hfusion.at<18>() = HKZ9;
+			Hfusion.at<21>() = 1;
 
 			// Calculate Z axis Kalman gains
 			if (update_all_states) {
@@ -408,16 +407,16 @@ void Ekf::fuseMag()
 
 		for (unsigned row = 0; row < _k_num_states; row++) {
 
-			KH[0] = Kfusion(row) * Hfusion[0];
-			KH[1] = Kfusion(row) * Hfusion[1];
-			KH[2] = Kfusion(row) * Hfusion[2];
-			KH[3] = Kfusion(row) * Hfusion[3];
-			KH[4] = Kfusion(row) * Hfusion[16];
-			KH[5] = Kfusion(row) * Hfusion[17];
-			KH[6] = Kfusion(row) * Hfusion[18];
-			KH[7] = Kfusion(row) * Hfusion[19];
-			KH[8] = Kfusion(row) * Hfusion[20];
-			KH[9] = Kfusion(row) * Hfusion[21];
+			KH[0] = Kfusion(row) * Hfusion.at<0>();
+			KH[1] = Kfusion(row) * Hfusion.at<1>();
+			KH[2] = Kfusion(row) * Hfusion.at<2>();
+			KH[3] = Kfusion(row) * Hfusion.at<3>();
+			KH[4] = Kfusion(row) * Hfusion.at<16>();
+			KH[5] = Kfusion(row) * Hfusion.at<17>();
+			KH[6] = Kfusion(row) * Hfusion.at<18>();
+			KH[7] = Kfusion(row) * Hfusion.at<19>();
+			KH[8] = Kfusion(row) * Hfusion.at<20>();
+			KH[9] = Kfusion(row) * Hfusion.at<21>();
 
 			for (unsigned column = 0; column < _k_num_states; column++) {
 				float tmp = KH[0] * P(0,column);
@@ -937,9 +936,9 @@ void Ekf::fuseDeclination(float decl_sigma)
 	// Calculate the observation Jacobian
 	// Note only 2 terms are non-zero which can be used in matrix operations for calculation of Kalman gains and covariance update to significantly reduce cost
 	// Note Hfusion indices do not match state indices
-	float Hfusion[2] = {};
-	Hfusion[0] = -HK0*HK2*magE; 	// state index 16
-	Hfusion[1] = HK4;		// state index 17
+	SparseVector24f<16,17> Hfusion;
+	Hfusion.at<16>() = -HK0*HK2*magE;
+	Hfusion.at<17>() = HK4;
 
 	// Calculate the Kalman gains
 	Vector24f Kfusion;
@@ -964,8 +963,8 @@ void Ekf::fuseDeclination(float decl_sigma)
 	float KH[2];
 	for (unsigned row = 0; row < _k_num_states; row++) {
 
-		KH[0] = Kfusion(row) * Hfusion[0];
-		KH[1] = Kfusion(row) * Hfusion[1];
+		KH[0] = Kfusion(row) * Hfusion.at<16>();
+		KH[1] = Kfusion(row) * Hfusion.at<17>();
 
 		for (unsigned column = 0; column < _k_num_states; column++) {
 			float tmp = KH[0] * P(16,column);

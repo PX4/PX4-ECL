@@ -134,7 +134,7 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
 	include(ExternalProject)
 	ExternalProject_Add(matrix
 			GIT_REPOSITORY "https://github.com/PX4/Matrix.git"
-			GIT_TAG f529358e9ac28b0809572c14a964ba7ba691adc4
+			GIT_TAG e714a28c836773605bd1eb81a7a0dc0208746aef
 			UPDATE_COMMAND ""
 			PATCH_COMMAND ""
 			CONFIGURE_COMMAND ""
