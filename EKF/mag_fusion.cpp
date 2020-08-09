@@ -402,36 +402,7 @@ void Ekf::fuseMag()
 		// apply covariance correction via P_new = (I -K*H)*P
 		// first calculate expression for KHP
 		// then calculate P - KHP
-		SquareMatrix24f KHP;
-		float KH[10];
-
-		for (unsigned row = 0; row < _k_num_states; row++) {
-
-			KH[0] = Kfusion(row) * Hfusion.at<0>();
-			KH[1] = Kfusion(row) * Hfusion.at<1>();
-			KH[2] = Kfusion(row) * Hfusion.at<2>();
-			KH[3] = Kfusion(row) * Hfusion.at<3>();
-			KH[4] = Kfusion(row) * Hfusion.at<16>();
-			KH[5] = Kfusion(row) * Hfusion.at<17>();
-			KH[6] = Kfusion(row) * Hfusion.at<18>();
-			KH[7] = Kfusion(row) * Hfusion.at<19>();
-			KH[8] = Kfusion(row) * Hfusion.at<20>();
-			KH[9] = Kfusion(row) * Hfusion.at<21>();
-
-			for (unsigned column = 0; column < _k_num_states; column++) {
-				float tmp = KH[0] * P(0,column);
-				tmp += KH[1] * P(1,column);
-				tmp += KH[2] * P(2,column);
-				tmp += KH[3] * P(3,column);
-				tmp += KH[4] * P(16,column);
-				tmp += KH[5] * P(17,column);
-				tmp += KH[6] * P(18,column);
-				tmp += KH[7] * P(19,column);
-				tmp += KH[8] * P(20,column);
-				tmp += KH[9] * P(21,column);
-				KHP(row,column) = tmp;
-			}
-		}
+		const SquareMatrix24f KHP = computeKHP(Kfusion, Hfusion);
 
 		const bool healthy = checkAndFixCovarianceUpdate(KHP);
 
@@ -959,19 +930,7 @@ void Ekf::fuseDeclination(float decl_sigma)
 	// first calculate expression for KHP
 	// then calculate P - KHP
 	// take advantage of the empty columns in KH to reduce the number of operations
-	SquareMatrix24f KHP;
-	float KH[2];
-	for (unsigned row = 0; row < _k_num_states; row++) {
-
-		KH[0] = Kfusion(row) * Hfusion.at<16>();
-		KH[1] = Kfusion(row) * Hfusion.at<17>();
-
-		for (unsigned column = 0; column < _k_num_states; column++) {
-			float tmp = KH[0] * P(16,column);
-			tmp += KH[1] * P(17,column);
-			KHP(row,column) = tmp;
-		}
-	}
+	const SquareMatrix24f KHP = computeKHP(Kfusion, Hfusion);
 
 	const bool healthy = checkAndFixCovarianceUpdate(KHP);
 
