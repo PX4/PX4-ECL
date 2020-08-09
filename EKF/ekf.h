@@ -666,6 +666,29 @@ private:
 
 	Vector3f getVisionVelocityVarianceInEkfFrame() const;
 
+	// matrix vector multiplication for computing K<24,1> * H<1,24> * P<24,24>
+	// that is optimized by exploring the sparsity in H
+	template <size_t ...Idxs>
+	SquareMatrix24f computeKHP(const Vector24f& K, const SparseVector24f<Idxs...>& H) const {
+		SquareMatrix24f KHP;
+		float KH[H.non_zeros()];
+		for (unsigned row = 0; row < _k_num_states; row++) {
+			for(unsigned i = 0; i < H.non_zeros(); i++) {
+				KH[i] = K(row) * H.atCompressedIndex(i);
+			}
+
+			for (unsigned column = 0; column < _k_num_states; column++) {
+				float tmp = 0.f;
+				for(unsigned i = 0; i < H.non_zeros(); i++) {
+					const size_t index = H.index(i);
+					tmp += KH[i] * P(index, column);
+				}
+				KHP(row,column) = tmp;
+			}
+		}
+		return KHP;
+	}
+
 	// if the covariance correction will result in a negative variance, then
 	// the covariance matrix is unhealthy and must be corrected
 	bool checkAndFixCovarianceUpdate(const SquareMatrix24f& KHP);
