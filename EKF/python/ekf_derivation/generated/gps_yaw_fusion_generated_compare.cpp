@@ -5,6 +5,8 @@
 
 typedef matrix::Vector<float, 24> Vector24f;
 typedef matrix::SquareMatrix<float, 24> SquareMatrix24f;
+template<int ... Idxs>
+using SparseVector24f = matrix::SparseVectorf<24, Idxs...>;
 
 float sq(float in) {
 	return in * in;
@@ -12,12 +14,11 @@ float sq(float in) {
 
 int main()
 {
-    	// Compare calculation of observation Jacobians and Kalman gains for sympy and matlab generated equations
+	// Compare calculation of observation Jacobians and Kalman gains for sympy and matlab generated equations
 
-	float Hfusion[24];
 	float H_YAW[24];
 	Vector24f Kfusion;
-	float heading_innov_var;
+	float _heading_innov_var;
 
 	const float R_YAW = sq(0.3f);
 
@@ -59,6 +60,9 @@ int main()
 	const float HK7 = powf(q0, 2) - powf(q3, 2);
 	const float HK8 = HK4*(HK5 - HK6 + HK7);
 	const float HK9 = HK3 - HK8;
+	if (fabsf(HK9) < 1e-3f) {
+		return 0;
+	}
 	const float HK10 = 1.0F/HK9;
 	const float HK11 = HK4*q0;
 	const float HK12 = HK0*q3;
@@ -67,8 +71,16 @@ int main()
 	const float HK15 = HK0*q0 + HK4*q3;
 	const float HK16 = HK10*(HK14*(HK11 - HK12) + HK15);
 	const float HK17 = powf(HK13, 2)/powf(HK9, 2) + 1;
+	if (fabsf(HK17) < 1e-3f) {
+		return 0;
+	}
 	const float HK18 = 2/HK17;
-	const float HK19 = 1.0F/(-HK3 + HK8);
+	// const float HK19 = 1.0F/(-HK3 + HK8);
+	const float HK19_inverse = -HK3 + HK8;
+	if (fabsf(HK19_inverse) < 1e-6f) {
+		return 0;
+	}
+	const float HK19 = 1.0F/HK19_inverse;
 	const float HK20 = HK4*q1;
 	const float HK21 = HK0*q2;
 	const float HK22 = HK13*HK19;
@@ -81,23 +93,18 @@ int main()
 	const float HK29 = 4/powf(HK17, 2);
 	const float HK30 = -HK16*P(0,2) - HK24*P(1,2) - HK25*P(2,2) + HK26*P(2,3);
 	const float HK31 = -HK16*P(0,3) - HK24*P(1,3) - HK25*P(2,3) + HK26*P(3,3);
-	float HK32;
-
-	// check if the innovation variance calculation is badly conditioned
-	heading_innov_var = (-HK16*HK27*HK29 - HK24*HK28*HK29 - HK25*HK29*HK30 + HK26*HK29*HK31 + R_YAW);
-
-	HK32 = HK18/heading_innov_var;
+	const float HK32 = HK18/(-HK16*HK27*HK29 - HK24*HK28*HK29 - HK25*HK29*HK30 + HK26*HK29*HK31 + R_YAW);
 
 	// calculate observation jacobian
-	memset(&Hfusion, 0, sizeof(Hfusion));
-	Hfusion[0] = -HK16*HK18;
-	Hfusion[1] = -HK18*HK24;
-	Hfusion[2] = -HK18*HK25;
-	Hfusion[3] = HK18*HK26;
+	// Observation jacobian and Kalman gain vectors
+	SparseVector24f<0,1,2,3> Hfusion;
+	Hfusion.at<0>() = -HK16*HK18;
+	Hfusion.at<1>() = -HK18*HK24;
+	Hfusion.at<2>() = -HK18*HK25;
+	Hfusion.at<3>() = HK18*HK26;
 
 	// calculate the Kalman gains
 	// only calculate gains for states we are using
-	memset(&Kfusion, 0, sizeof(Kfusion));
 	Kfusion(0) = HK27*HK32;
 	Kfusion(1) = HK28*HK32;
 	Kfusion(2) = HK30*HK32;
@@ -107,10 +114,14 @@ int main()
 	}
 
 	// save output and repeat calculation using legacy matlab generated code
-	float Hfusion_sympy[24];
+	float Hfusion_sympy[24] = {};
 	Vector24f Kfusion_sympy;
+	Hfusion_sympy[0] = Hfusion.at<0>();
+	Hfusion_sympy[1] = Hfusion.at<1>();
+	Hfusion_sympy[2] = Hfusion.at<2>();
+	Hfusion_sympy[3] = Hfusion.at<3>();
+
 	for (int row=0; row<24; row++) {
-		Hfusion_sympy[row] = Hfusion[row];
 		Kfusion_sympy(row) = Kfusion(row);
 	}
 
