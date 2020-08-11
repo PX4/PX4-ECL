@@ -288,14 +288,8 @@ void create_waypoint_from_line_and_dist(double lat_A, double lon_A, double lat_B
 	if (fabsf(dist) < FLT_EPSILON) {
 		*lat_target = lat_A;
 		*lon_target = lon_A;
-
-	} else if (dist >= FLT_EPSILON) {
-		float heading = get_bearing_to_next_waypoint(lat_A, lon_A, lat_B, lon_B);
-		waypoint_from_heading_and_distance(lat_A, lon_A, heading, dist, lat_target, lon_target);
-
 	} else {
 		float heading = get_bearing_to_next_waypoint(lat_A, lon_A, lat_B, lon_B);
-		heading = wrap_2pi(heading + M_PI_F);
 		waypoint_from_heading_and_distance(lat_A, lon_A, heading, dist, lat_target, lon_target);
 	}
 }
@@ -304,7 +298,7 @@ void waypoint_from_heading_and_distance(double lat_start, double lon_start, floa
 					double *lat_target, double *lon_target)
 {
 	bearing = wrap_2pi(bearing);
-	double radius_ratio = (double)fabs((double)dist) / CONSTANTS_RADIUS_OF_EARTH;
+	double radius_ratio = static_cast<double>(dist) / CONSTANTS_RADIUS_OF_EARTH;
 
 	double lat_start_rad = math::radians(lat_start);
 	double lon_start_rad = math::radians(lon_start);
