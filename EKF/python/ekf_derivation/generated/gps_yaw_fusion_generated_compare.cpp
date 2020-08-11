@@ -173,7 +173,22 @@ int main()
 	H_YAW[2] = t30*(t25*t26-t16*t22*(t27-q2*t3*2.0f));
 	H_YAW[3] = t30*(t26*t32+t16*t22*t35);
 
-	const float heading_innov_var_inv = 1.f / heading_innov_var;
+	// Calculate innovation variance and Kalman gains, taking advantage of the fact that only the first 3 elements in H are non zero
+	// calculate the innovation variance
+	float PH[4];
+	_heading_innov_var = R_YAW;
+
+	for (unsigned row = 0; row <= 3; row++) {
+		PH[row] = 0.0f;
+
+		for (uint8_t col = 0; col <= 3; col++) {
+			PH[row] += P(row,col) * H_YAW[col];
+		}
+
+		_heading_innov_var += H_YAW[row] * PH[row];
+	}
+
+	const float heading_innov_var_inv = 1.f / _heading_innov_var;
 
 	// calculate the Kalman gains
 	// only calculate gains for states we are using
