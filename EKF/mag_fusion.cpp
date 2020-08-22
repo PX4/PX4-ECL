@@ -593,15 +593,8 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 		_heading_innov_var += yaw_jacobian.atCompressedIndex(row) * tmp;
 	}
 
-	float heading_innov_var_inv;
-
 	// check if the innovation variance calculation is badly conditioned
-	if (_heading_innov_var >= variance) {
-		// the innovation variance contribution from the state covariances is not negative, no fault
-		_fault_status.flags.bad_hdg = false;
-		heading_innov_var_inv = 1.0f / _heading_innov_var;
-
-	} else {
+	if (_heading_innov_var < variance) {
 		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
 		_fault_status.flags.bad_hdg = true;
 
@@ -610,6 +603,9 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 		ECL_ERR_TIMESTAMPED("mag yaw fusion numerical error - covariance reset");
 		return;
 	}
+
+	_fault_status.flags.bad_hdg = false;
+	const float heading_innov_var_inv = 1.0f / _heading_innov_var;
 
 	// calculate the Kalman gains
 	// only calculate gains for states we are using
@@ -651,7 +647,7 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 
 		} else {
 			// constrain the innovation to the maximum set by the gate
-			float gate_limit = sqrtf((sq(gate_sigma) * _heading_innov_var));
+			const float gate_limit = sqrtf((sq(gate_sigma) * _heading_innov_var));
 			_heading_innov = math::constrain(innovation, -gate_limit, gate_limit);
 		}
 
@@ -677,7 +673,6 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 
 		// apply the state corrections
 		fuse(Kfusion, _heading_innov);
-
 	}
 }
 
