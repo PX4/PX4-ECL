@@ -129,6 +129,7 @@ void Ekf::controlFusionModes()
 	// update range sensor angle parameters in case they have changed
 	_range_sensor.setPitchOffset(_params.rng_sens_pitch);
 	_range_sensor.setCosMaxTilt(_params.range_cos_max_tilt);
+	_range_sensor.setQualityHysteresis(_params.range_valid_quality_s);
 	}
 
 	if (_range_sensor.isDataHealthy()) {
