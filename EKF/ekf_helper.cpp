@@ -708,6 +708,16 @@ void Ekf::getFlowInnovRatio(float &flow_innov_ratio) const
 	flow_innov_ratio = _optflow_test_ratio;
 }
 
+void Ekf::getFlowVelBody(float flow_vel_body[2]) const
+{
+	_flow_vel_body.copyTo(flow_vel_body);
+}
+
+void Ekf::getFlowVelNE(float flow_vel_ne[2]) const
+{
+	_flow_vel_ne.copyTo(flow_vel_ne);
+}
+
 void Ekf::getHeadingInnov(float &heading_innov) const
 {
 	heading_innov = _heading_innov;

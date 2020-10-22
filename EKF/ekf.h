@@ -105,6 +105,9 @@ public:
 
 	void getFlowInnovRatio(float &flow_innov_ratio) const override;
 
+	void getFlowVelBody(float flow_vel_body[2]) const override;
+	void getFlowVelNE(float flow_vel_ne[2]) const override;
+
 	void getHeadingInnov(float &heading_innov) const override;
 
 	void getHeadingInnovVar(float &heading_innov_var) const override;
@@ -437,6 +440,8 @@ private:
 	Vector2f _flow_innov;		///< flow measurement innovation (rad/sec)
 	Vector2f _flow_innov_var;	///< flow innovation variance ((rad/sec)**2)
 	Vector3f _flow_gyro_bias;	///< bias errors in optical flow sensor rate gyro outputs (rad/sec)
+	Vector2f _flow_vel_body;	///< velocity from corrected flow measurement (body frame)(m/s)
+	Vector2f _flow_vel_ne;		///< velocity from corrected flow measurement (local frame) (m/s)
 	Vector3f _imu_del_ang_of;	///< bias corrected delta angle measurements accumulated across the same time frame as the optical flow rates (rad)
 	float _delta_time_of{0.0f};	///< time in sec that _imu_del_ang_of was accumulated over (sec)
 	uint64_t _time_bad_motion_us{0};	///< last system time that on-ground motion exceeded limits (uSec)

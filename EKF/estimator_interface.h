@@ -91,6 +91,8 @@ public:
 	virtual void getFlowInnov(float flow_innov[2]) const = 0;
 	virtual void getFlowInnovVar(float flow_innov_var[2]) const = 0;
 	virtual void getFlowInnovRatio(float &flow_innov_ratio) const = 0;
+	virtual void getFlowVelBody(float flow_vel_body[2]) const = 0;
+	virtual void getFlowVelNE(float flow_vel_ne[2]) const = 0;
 
 	virtual void getHeadingInnov(float &heading_innov) const = 0;
 	virtual void getHeadingInnovVar(float &heading_innov_var) const = 0;
