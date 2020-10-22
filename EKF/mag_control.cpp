@@ -50,6 +50,7 @@ void Ekf::controlMagFusion()
 	// yaw fusion is run selectively to enable yaw gyro bias learning when stationary on
 	// ground and to prevent uncontrolled yaw variance growth
 	if (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE) {
+		_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState()); 
 		if (noOtherYawAidingThanMag())
 		{
 			_is_yaw_fusion_inhibited = true;
