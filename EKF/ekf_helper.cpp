@@ -718,6 +718,21 @@ void Ekf::getFlowVelNE(float flow_vel_ne[2]) const
 	_flow_vel_ne.copyTo(flow_vel_ne);
 }
 
+void Ekf::getFlowCompensated(float flow_compensated[2]) const
+{
+	_flow_compensated_XY_rad.copyTo(flow_compensated);
+}
+
+void Ekf::getFlowUncompensated(float flow_uncompensated[2]) const
+{
+	_flow_sample_delayed.flow_xy_rad.copyTo(flow_uncompensated);
+}
+
+void Ekf::getFlowGyro(float flow_gyro[3]) const
+{
+	_flow_sample_delayed.gyro_xyz.copyTo(flow_gyro);
+}
+
 void Ekf::getHeadingInnov(float &heading_innov) const
 {
 	heading_innov = _heading_innov;

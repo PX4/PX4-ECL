@@ -107,6 +107,9 @@ public:
 
 	void getFlowVelBody(float flow_vel_body[2]) const override;
 	void getFlowVelNE(float flow_vel_ne[2]) const override;
+	void getFlowCompensated(float flow_compensated[2]) const override;
+	void getFlowUncompensated(float flow_uncompensated[2]) const override;
+	void getFlowGyro(float flow_gyro[3]) const override;
 
 	void getHeadingInnov(float &heading_innov) const override;
 
