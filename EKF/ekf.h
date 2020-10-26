@@ -105,11 +105,11 @@ public:
 
 	void getFlowInnovRatio(float &flow_innov_ratio) const override;
 
-	void getFlowVelBody(float flow_vel_body[2]) const override;
-	void getFlowVelNE(float flow_vel_ne[2]) const override;
-	void getFlowCompensated(float flow_compensated[2]) const override;
-	void getFlowUncompensated(float flow_uncompensated[2]) const override;
-	void getFlowGyro(float flow_gyro[3]) const override;
+	Vector2f getFlowVelBody() const override;
+	Vector2f getFlowVelNE() const override;
+	Vector2f getFlowCompensated() const override;
+	Vector2f getFlowUncompensated() const override;
+	Vector3f getFlowGyro() const override;
 
 	void getHeadingInnov(float &heading_innov) const override;
 

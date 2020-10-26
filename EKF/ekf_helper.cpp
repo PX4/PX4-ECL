@@ -708,29 +708,29 @@ void Ekf::getFlowInnovRatio(float &flow_innov_ratio) const
 	flow_innov_ratio = _optflow_test_ratio;
 }
 
-void Ekf::getFlowVelBody(float flow_vel_body[2]) const
+Vector2f Ekf::getFlowVelBody() const
 {
-	_flow_vel_body.copyTo(flow_vel_body);
+	return _flow_vel_body;
 }
 
-void Ekf::getFlowVelNE(float flow_vel_ne[2]) const
+Vector2f Ekf::getFlowVelNE() const
 {
-	_flow_vel_ne.copyTo(flow_vel_ne);
+	return _flow_vel_ne;
 }
 
-void Ekf::getFlowCompensated(float flow_compensated[2]) const
+Vector2f Ekf::getFlowCompensated() const
 {
-	_flow_compensated_XY_rad.copyTo(flow_compensated);
+	return _flow_compensated_XY_rad;
 }
 
-void Ekf::getFlowUncompensated(float flow_uncompensated[2]) const
+Vector2f Ekf::getFlowUncompensated() const
 {
-	_flow_sample_delayed.flow_xy_rad.copyTo(flow_uncompensated);
+	return _flow_sample_delayed.flow_xy_rad;
 }
 
-void Ekf::getFlowGyro(float flow_gyro[3]) const
+Vector3f Ekf::getFlowGyro() const
 {
-	_flow_sample_delayed.gyro_xyz.copyTo(flow_gyro);
+	return _flow_sample_delayed.gyro_xyz;
 }
 
 void Ekf::getHeadingInnov(float &heading_innov) const
