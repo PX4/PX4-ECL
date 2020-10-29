@@ -128,11 +128,9 @@ bool Ekf::update()
 
 		// run EKF-GSF yaw estimator
 		runYawEKFGSF();
-	}
 
-	// the output observer always runs
-	// Use full rate IMU data at the current time horizon
-	calculateOutputStates(_newest_high_rate_imu_sample);
+		correctOutputStates();
+	}
 
 	return updated;
 }
@@ -389,75 +387,75 @@ void Ekf::calculateOutputStates(const imuSample &imu)
 		// rotate the relative velocity into earth frame
 		_vel_imu_rel_body_ned = _R_to_earth_now * vel_imu_rel_body;
 	}
+}
 
+void Ekf::correctOutputStates()
+{
 	// store the INS states in a ring buffer with the same length and time coordinates as the IMU data buffer
-	if (_imu_updated) {
-		_output_buffer.push(_output_new);
-		_output_vert_buffer.push(_output_vert_new);
+	_output_buffer.push(_output_new);
+	_output_vert_buffer.push(_output_vert_new);
 
-		// get the oldest INS state data from the ring buffer
-		// this data will be at the EKF fusion time horizon
-		// TODO: there is no guarantee that data is at delayed fusion horizon
-		//       Shouldnt we use pop_first_older_than?
-		const outputSample &output_delayed = _output_buffer.get_oldest();
-		const outputVert &output_vert_delayed = _output_vert_buffer.get_oldest();
+	// get the oldest INS state data from the ring buffer
+	// this data will be at the EKF fusion time horizon
+	// TODO: there is no guarantee that data is at delayed fusion horizon
+	//       Shouldnt we use pop_first_older_than?
+	const outputSample& output_delayed = _output_buffer.get_oldest();
+	const outputVert& output_vert_delayed = _output_vert_buffer.get_oldest();
 
-		// calculate the quaternion delta between the INS and EKF quaternions at the EKF fusion time horizon
-		const Quatf q_error((_state.quat_nominal.inversed() * output_delayed.quat_nominal).normalized());
+	// calculate the quaternion delta between the INS and EKF quaternions at the EKF fusion time horizon
+	const Quatf q_error{(_state.quat_nominal.inversed() * output_delayed.quat_nominal).normalized()};
 
-		// convert the quaternion delta to a delta angle
-		const float scalar = (q_error(0) >= 0.0f) ? -2.f : 2.f;
+	// convert the quaternion delta to a delta angle
+	const float scalar = (q_error(0) >= 0.0f) ? -2.f : 2.f;
 
-		const Vector3f delta_ang_error{scalar * q_error(1), scalar * q_error(2), scalar * q_error(3)};
+	const Vector3f delta_ang_error{scalar * q_error(1), scalar * q_error(2), scalar * q_error(3)};
 
-		// calculate a gain that provides tight tracking of the estimator attitude states and
-		// adjust for changes in time delay to maintain consistent damping ratio of ~0.7
-		const float time_delay = fmaxf((imu.time_us - _imu_sample_delayed.time_us) * 1e-6f, _dt_imu_avg);
-		const float att_gain = 0.5f * _dt_imu_avg / time_delay;
+	// calculate a gain that provides tight tracking of the estimator attitude states and
+	// adjust for changes in time delay to maintain consistent damping ratio of ~0.7
+	const float time_delay = fmaxf((_time_last_imu - _imu_sample_delayed.time_us) * 1e-6f, _dt_imu_avg);
+	const float att_gain = 0.5f * _dt_imu_avg / time_delay;
 
-		// calculate a corrrection to the delta angle
-		// that will cause the INS to track the EKF quaternions
-		_delta_angle_corr = delta_ang_error * att_gain;
-		_output_tracking_error(0) = delta_ang_error.norm();
+	// calculate a corrrection to the delta angle
+	// that will cause the INS to track the EKF quaternions
+	_delta_angle_corr = delta_ang_error * att_gain;
+	_output_tracking_error(0) = delta_ang_error.norm();
 
-		/*
-		 * Loop through the output filter state history and apply the corrections to the velocity and position states.
-		 * This method is too expensive to use for the attitude states due to the quaternion operations required
-		 * but because it eliminates the time delay in the 'correction loop' it allows higher tracking gains
-		 * to be used and reduces tracking error relative to EKF states.
-		 */
+	/*
+	* Loop through the output filter state history and apply the corrections to the velocity and position states.
+	* This method is too expensive to use for the attitude states due to the quaternion operations required
+	* but because it eliminates the time delay in the 'correction loop' it allows higher tracking gains
+	* to be used and reduces tracking error relative to EKF states.
+	*/
 
-		// Complementary filter gains
-		const float vel_gain = _dt_ekf_avg / math::constrain(_params.vel_Tau, _dt_ekf_avg, 10.0f);
-		const float pos_gain = _dt_ekf_avg / math::constrain(_params.pos_Tau, _dt_ekf_avg, 10.0f);
+	// Complementary filter gains
+	const float vel_gain = _dt_ekf_avg / math::constrain(_params.vel_Tau, _dt_ekf_avg, 10.0f);
+	const float pos_gain = _dt_ekf_avg / math::constrain(_params.pos_Tau, _dt_ekf_avg, 10.0f);
 
-		// calculate down velocity and position tracking errors
-		const float vert_vel_err = (_state.vel(2) - output_vert_delayed.vert_vel);
-		const float vert_vel_integ_err = (_state.pos(2) - output_vert_delayed.vert_vel_integ);
+	// calculate down velocity and position tracking errors
+	const float vert_vel_err = (_state.vel(2) - output_vert_delayed.vert_vel);
+	const float vert_vel_integ_err = (_state.pos(2) - output_vert_delayed.vert_vel_integ);
 
-		// calculate a velocity correction that will be applied to the output state history
-		// using a PD feedback tuned to a 5% overshoot
-		const float vert_vel_correction = vert_vel_integ_err * pos_gain + vert_vel_err * vel_gain * 1.1f;
+	// calculate a velocity correction that will be applied to the output state history
+	// using a PD feedback tuned to a 5% overshoot
+	const float vert_vel_correction = vert_vel_integ_err * pos_gain + vert_vel_err * vel_gain * 1.1f;
+	applyCorrectionToVerticalOutputBuffer(vert_vel_correction);
 
-		applyCorrectionToVerticalOutputBuffer(vert_vel_correction);
+	// calculate velocity and position tracking errors
+	const Vector3f vel_err(_state.vel - output_delayed.vel);
+	_vel_err_integ += vel_err;
+	_output_tracking_error(1) = vel_err.norm();
 
-		// calculate velocity and position tracking errors
-		const Vector3f vel_err(_state.vel - output_delayed.vel);
-		const Vector3f pos_err(_state.pos - output_delayed.pos);
+	const Vector3f pos_err(_state.pos - output_delayed.pos);
+	_pos_err_integ += pos_err;
+	_output_tracking_error(2) = pos_err.norm();
 
-		_output_tracking_error(1) = vel_err.norm();
-		_output_tracking_error(2) = pos_err.norm();
+	// calculate a velocity correction that will be applied to the output state history
+	const Vector3f vel_correction = vel_err * vel_gain + _vel_err_integ * sq(vel_gain) * 0.1f;
 
-		// calculate a velocity correction that will be applied to the output state history
-		_vel_err_integ += vel_err;
-		const Vector3f vel_correction = vel_err * vel_gain + _vel_err_integ * sq(vel_gain) * 0.1f;
+	// calculate a position correction that will be applied to the output state history
+	const Vector3f pos_correction = pos_err * pos_gain + _pos_err_integ * sq(pos_gain) * 0.1f;
 
-		// calculate a position correction that will be applied to the output state history
-		_pos_err_integ += pos_err;
-		const Vector3f pos_correction = pos_err * pos_gain + _pos_err_integ * sq(pos_gain) * 0.1f;
-
-		applyCorrectionToOutputBuffer(vel_correction, pos_correction);
-	}
+	applyCorrectionToOutputBuffer(vel_correction, pos_correction);
 }
 
 /*
@@ -520,18 +518,4 @@ void Ekf::applyCorrectionToOutputBuffer(const Vector3f& vel_correction, const Ve
 
 	// update output state to corrected values
 	_output_new = _output_buffer.get_newest();
-}
-
-/*
- * Predict the previous quaternion output state forward using the latest IMU delta angle data.
-*/
-Quatf Ekf::calculate_quaternion() const
-{
-	// Correct delta angle data for bias errors using bias state estimates from the EKF and also apply
-	// corrections required to track the EKF quaternion states
-	const Vector3f delta_angle{_newest_high_rate_imu_sample.delta_ang - _state.delta_ang_bias * (_dt_imu_avg / _dt_ekf_avg) + _delta_angle_corr};
-
-	// increment the quaternions using the corrected delta angle vector
-	// the quaternions must always be normalised after modification
-	return Quatf{_output_new.quat_nominal * AxisAnglef{delta_angle}}.unit();
 }

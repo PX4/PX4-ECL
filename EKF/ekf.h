@@ -266,9 +266,6 @@ public:
 	// return the quaternion defining the rotation from the External Vision to the EKF reference frame
 	matrix::Quatf getVisionAlignmentQuaternion() const { return Quatf(_R_ev_to_ekf); };
 
-	// use the latest IMU data at the current time horizon.
-	Quatf calculate_quaternion() const;
-
 	// set minimum continuous period without GPS fail required to mark a healthy GPS status
 	void set_min_required_gps_health_time(uint32_t time_us) { _min_gps_health_time_us = time_us; }
 
@@ -511,7 +508,8 @@ private:
 
 	// update the real time complementary filter states. This includes the prediction
 	// and the correction step
-	void calculateOutputStates(const imuSample &imu);
+	void calculateOutputStates(const imuSample &imu) override;
+	void correctOutputStates();
 	void applyCorrectionToVerticalOutputBuffer(float vert_vel_correction);
 	void applyCorrectionToOutputBuffer(const Vector3f &vel_correction, const Vector3f &pos_correction);
 

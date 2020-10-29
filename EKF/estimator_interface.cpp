@@ -62,8 +62,6 @@ void EstimatorInterface::setIMUData(const imuSample &imu_sample)
 		_dt_imu_avg = 0.8f * _dt_imu_avg + 0.2f * dt;
 	}
 
-	_newest_high_rate_imu_sample = imu_sample;
-
 	// Do not change order of computeVibrationMetric and checkIfVehicleAtRest
 	computeVibrationMetric(imu_sample);
 	_control_status.flags.vehicle_at_rest = checkIfVehicleAtRest(dt, imu_sample);
@@ -84,6 +82,8 @@ void EstimatorInterface::setIMUData(const imuSample &imu_sample)
 
 		setDragData(imu_sample);
 	}
+
+	calculateOutputStates(imu_sample);
 }
 
 void EstimatorInterface::computeVibrationMetric(const imuSample &imu)
