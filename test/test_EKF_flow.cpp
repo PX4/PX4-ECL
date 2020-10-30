@@ -98,13 +98,16 @@ TEST_F(EkfFlowTest, resetToFlowVelocityInAir)
 	const float max_ground_distance = 50.f;
 	_ekf->set_optical_flow_limits(max_flow_rate, min_ground_distance, max_ground_distance);
 	_sensor_simulator.startFlow();
-	_sensor_simulator.runSeconds(0.12); // Let it reset but not fuse more measurements
+	 // Let it reset but not fuse more measurements. We actually need to send 2
+	 // samples to get a reset because the first one cannot be used as the gyro
+	 // compensation needs to be accumulated between two samples.
+	_sensor_simulator.runSeconds(0.14);
 
 	// THEN: estimated velocity should match simulated velocity
 	const Vector2f estimated_horz_velocity = Vector2f(_ekf->getVelocity());
-	EXPECT_FALSE(isEqual(estimated_horz_velocity, simulated_horz_velocity))
+	EXPECT_TRUE(isEqual(estimated_horz_velocity, simulated_horz_velocity))
 		<< "estimated vel = " << estimated_horz_velocity(0) << ", "
-		<< estimated_horz_velocity(1); // TODO: This needs to change (reset is always 0)
+		<< estimated_horz_velocity(1);
 
 	// AND: the reset in velocity should be saved correctly
 	reset_logging_checker.capturePostResetState();

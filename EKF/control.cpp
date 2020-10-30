@@ -370,6 +370,25 @@ void Ekf::controlOpticalFlowFusion()
 	_imu_del_ang_of += _imu_sample_delayed.delta_ang - _state.delta_ang_bias;
 	_delta_time_of += _imu_sample_delayed.delta_ang_dt;
 
+	// Only fuse optical flow if valid body rate compensation data is available
+	if (_flow_data_ready && calcOptFlowBodyRateComp()) {
+
+		bool flow_quality_good = (_flow_sample_delayed.quality >= _params.flow_qual_min);
+
+		if (!flow_quality_good && !_control_status.flags.in_air) {
+			// when on the ground with poor flow quality, assume zero ground relative velocity and LOS rate
+			_flow_compensated_XY_rad.setZero();
+
+		} else {
+			// compensate for body motion to give a LOS rate
+			_flow_compensated_XY_rad = _flow_sample_delayed.flow_xy_rad - _flow_sample_delayed.gyro_xyz.xy();
+		}
+
+	} else {
+		// don't use this flow data and wait for the next data to arrive
+		_flow_data_ready = false;
+	}
+
 	// New optical flow data is available and is ready to be fused when the midpoint of the sample falls behind the fusion time horizon
 	if (_flow_data_ready) {
 		// Inhibit flow use if motion is un-suitable or we have good quality GPS
@@ -377,47 +396,40 @@ void Ekf::controlOpticalFlowFusion()
 		const float gps_err_norm_lim = _control_status.flags.opt_flow ? 0.7f : 1.0f;
 
 		// Check if we are in-air and require optical flow to control position drift
-		bool flow_required = _control_status.flags.in_air &&
-				(_is_dead_reckoning // is doing inertial dead-reckoning so must constrain drift urgently
-				  || (isOnlyActiveSourceOfHorizontalAiding(_control_status.flags.opt_flow))
-				  || (_control_status.flags.gps && (_gps_error_norm > gps_err_norm_lim))); // is using GPS, but GPS is bad
+		const bool is_flow_required = _control_status.flags.in_air
+		                              && (_is_dead_reckoning // is doing inertial dead-reckoning so must constrain drift urgently
+		                                  || isOnlyActiveSourceOfHorizontalAiding(_control_status.flags.opt_flow)
+		                                  || (_control_status.flags.gps && (_gps_error_norm > gps_err_norm_lim))); // is using GPS, but GPS is bad
 
-		if (!_inhibit_flow_use && _control_status.flags.opt_flow) {
-			// inhibit use of optical flow if motion is unsuitable and we are not reliant on it for flight navigation
-			bool preflight_motion_not_ok = !_control_status.flags.in_air && ((_imu_sample_delayed.time_us - _time_good_motion_us) > (uint64_t)1E5);
-			bool flight_motion_not_ok = _control_status.flags.in_air && !isTerrainEstimateValid();
-			if ((preflight_motion_not_ok || flight_motion_not_ok) && !flow_required) {
-				_inhibit_flow_use = true;
-			}
-		} else if (_inhibit_flow_use && !_control_status.flags.opt_flow){
-			// allow use of optical flow if motion is suitable or we are reliant on it for flight navigation
-			bool preflight_motion_ok = !_control_status.flags.in_air && ((_imu_sample_delayed.time_us - _time_bad_motion_us) > (uint64_t)5E6);
-			bool flight_motion_ok = _control_status.flags.in_air && isRangeAidSuitable();
-			if (preflight_motion_ok || flight_motion_ok || flow_required) {
-				_inhibit_flow_use = false;
-			}
-		}
 
-		// Handle cases where we are using optical flow but are no longer able to because data is old
-		// or its use has been inhibited.
+		// inhibit use of optical flow if motion is unsuitable and we are not reliant on it for flight navigation
+		const bool preflight_motion_not_ok = !_control_status.flags.in_air
+		                                     && (((_imu_sample_delayed.time_us - _time_good_motion_us) > (uint64_t)1E5)
+		                                         || ((_imu_sample_delayed.time_us - _time_bad_motion_us) < (uint64_t)5E6));
+		const bool flight_condition_not_ok = _control_status.flags.in_air && !isTerrainEstimateValid();
+
+		_inhibit_flow_use = ((preflight_motion_not_ok || flight_condition_not_ok) && !is_flow_required)
+		                    || !_control_status.flags.tilt_align;
+
+		// Handle cases where we are using optical flow but we should not use it anymore
 		if (_control_status.flags.opt_flow) {
-			if (_inhibit_flow_use) {
-				stopFlowFusion();
-				_time_last_of_fuse = 0;
+			if (!(_params.fusion_mode & MASK_USE_OF)
+			    || _inhibit_flow_use
+			    || isTimedOut(_time_last_of_fuse, (uint64_t)_params.reset_timeout_max)) {
 
-			} else if (isTimedOut(_time_last_of_fuse, (uint64_t)_params.reset_timeout_max)) {
 				stopFlowFusion();
+				_flow_data_ready = false;
+				return;
 			}
 		}
 
 		// optical flow fusion mode selection logic
 		if ((_params.fusion_mode & MASK_USE_OF) // optical flow has been selected by the user
 			&& !_control_status.flags.opt_flow // we are not yet using flow data
-			&& _control_status.flags.tilt_align // we know our tilt attitude
-			&& !_inhibit_flow_use
-			&& isTerrainEstimateValid())
+			&& !_inhibit_flow_use)
 		{
 			// If the heading is not aligned, reset the yaw and magnetic field states
+			// TODO: ekf2 should always try to align itself if not already aligned
 			if (!_control_status.flags.yaw_align) {
 				_control_status.flags.yaw_align = resetMagHeading(_mag_lpf.getState());
 			}
@@ -430,58 +442,35 @@ void Ekf::controlOpticalFlowFusion()
 
 				// if we are not using GPS or external vision aiding, then the velocity and position states and covariances need to be set
 				const bool flow_aid_only = !isOtherSourceOfHorizontalAidingThan(_control_status.flags.opt_flow);
+
 				if (flow_aid_only) {
-					// TODO: Issue: First time we want to reset the optical flow velocity
-					// we will use _flow_compensated_XY_rad in the resetVelocity() function,
-					// but _flow_compensated_XY_rad is this zero as it gets updated for the first time below here.
 					resetVelocity();
 					resetHorizontalPosition();
 				}
 			}
-
-		} else if (!(_params.fusion_mode & MASK_USE_OF)) {
-			_control_status.flags.opt_flow = false;
 		}
 
-		// handle the case when we have optical flow, are reliant on it, but have not been using it for an extended period
-		if (isOnlyActiveSourceOfHorizontalAiding(_control_status.flags.opt_flow)) {
+		if (_control_status.flags.opt_flow) {
+			// Wait until the midpoint of the flow sample has fallen behind the fusion time horizon
+			if (_imu_sample_delayed.time_us > (_flow_sample_delayed.time_us - uint32_t(1e6f * _flow_sample_delayed.dt) / 2)) {
+				// Fuse optical flow LOS rate observations into the main filter only if height above ground has been updated recently
+				// but use a relaxed time criteria to enable it to coast through bad range finder data
+				if (isRecent(_time_last_hagl_fuse, (uint64_t)10e6)) {
+					fuseOptFlow();
+					_last_known_posNE = _state.pos.xy();
+				}
 
-			bool do_reset = isTimedOut(_time_last_of_fuse, _params.reset_timeout_max);
+				_flow_data_ready = false;
+			}
 
-			if (do_reset) {
+			// handle the case when we have optical flow, are reliant on it, but have not been using it for an extended period
+			if (isTimedOut(_time_last_of_fuse, _params.reset_timeout_max)
+			    && !isOtherSourceOfHorizontalAidingThan(_control_status.flags.opt_flow)) {
+
 				resetVelocity();
 				resetHorizontalPosition();
 			}
 		}
-
-		// Only fuse optical flow if valid body rate compensation data is available
-		if (calcOptFlowBodyRateComp()) {
-
-			bool flow_quality_good = (_flow_sample_delayed.quality >= _params.flow_qual_min);
-
-			if (!flow_quality_good && !_control_status.flags.in_air) {
-				// when on the ground with poor flow quality, assume zero ground relative velocity and LOS rate
-				_flow_compensated_XY_rad.setZero();
-			} else {
-				// compensate for body motion to give a LOS rate
-				_flow_compensated_XY_rad = _flow_sample_delayed.flow_xy_rad - _flow_sample_delayed.gyro_xyz.xy();
-			}
-		} else {
-			// don't use this flow data and wait for the next data to arrive
-			_flow_data_ready = false;
-		}
-	}
-
-	// Wait until the midpoint of the flow sample has fallen behind the fusion time horizon
-	if (_flow_data_ready && (_imu_sample_delayed.time_us > _flow_sample_delayed.time_us - uint32_t(1e6f * _flow_sample_delayed.dt) / 2)) {
-		// Fuse optical flow LOS rate observations into the main filter only if height above ground has been updated recently
-		// but use a relaxed time criteria to enable it to coast through bad range finder data
-		if (_control_status.flags.opt_flow && isRecent(_time_last_hagl_fuse, (uint64_t)10e6)) {
-			fuseOptFlow();
-			_last_known_posNE = _state.pos.xy();
-		}
-
-		_flow_data_ready = false;
 	}
 }
 
