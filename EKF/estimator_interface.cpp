@@ -358,7 +358,9 @@ void EstimatorInterface::setOpticalFlowData(const flowSample &flow)
 		// of min arrival interval because too much data is being lost
 		float delta_time = flow.dt; // in seconds
 		const float delta_time_min = 0.5e-6f * (float)_min_obs_interval_us;
-		const bool is_delta_time_good = delta_time >= delta_time_min;
+		const float delta_time_max = 0.05f;
+		const bool is_delta_time_good = delta_time >= delta_time_min
+		                                && delta_time <= delta_time_max;
 
 		if (is_delta_time_good) {
 			_time_last_optflow = flow.time_us;
