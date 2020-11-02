@@ -373,7 +373,7 @@ void Ekf::controlOpticalFlowFusion()
 	// Only fuse optical flow if valid body rate compensation data is available
 	if (_flow_data_ready && calcOptFlowBodyRateComp()) {
 
-		bool flow_quality_good = (_flow_sample_delayed.quality >= _params.flow_qual_min);
+		const bool flow_quality_good = (_flow_sample_delayed.quality >= _params.flow_qual_min);
 
 		if (!flow_quality_good && !_control_status.flags.in_air) {
 			// when on the ground with poor flow quality, assume zero ground relative velocity and LOS rate
@@ -404,8 +404,8 @@ void Ekf::controlOpticalFlowFusion()
 
 		// inhibit use of optical flow if motion is unsuitable and we are not reliant on it for flight navigation
 		const bool preflight_motion_not_ok = !_control_status.flags.in_air
-		                                     && (((_imu_sample_delayed.time_us - _time_good_motion_us) > (uint64_t)1E5)
-		                                         || ((_imu_sample_delayed.time_us - _time_bad_motion_us) < (uint64_t)5E6));
+		                                     && ((_imu_sample_delayed.time_us > (_time_good_motion_us + (uint64_t)1E5))
+		                                         || (_imu_sample_delayed.time_us < (_time_bad_motion_us + (uint64_t)5E6)));
 		const bool flight_condition_not_ok = _control_status.flags.in_air && !isTerrainEstimateValid();
 
 		_inhibit_flow_use = ((preflight_motion_not_ok || flight_condition_not_ok) && !is_flow_required)
