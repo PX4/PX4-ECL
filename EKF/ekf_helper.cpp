@@ -1468,7 +1468,6 @@ void Ekf::stopFlowFusion()
 	_flow_innov.setZero();
 	_flow_innov_var.setZero();
 	_optflow_test_ratio = 0.0f;
-	_flow_data_ready = false;
 }
 
 void Ekf::resetQuatStateYaw(float yaw, float yaw_variance, bool update_buffer)
