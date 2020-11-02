@@ -343,27 +343,12 @@ void Ekf::controlExternalVisionFusion()
 
 void Ekf::controlOpticalFlowFusion()
 {
-	// TODO: These motion checks run all the time. Pull them out of this function
 	// Check if on ground motion is un-suitable for use of optical flow
 	if (!_control_status.flags.in_air) {
-		// When on ground check if the vehicle is being shaken or moved in a way that could cause a loss of navigation
-		const float accel_norm = _accel_vec_filt.norm();
-
-		const bool motion_is_excessive = ((accel_norm > (CONSTANTS_ONE_G * 1.5f)) // upper g limit
-					    || (accel_norm < (CONSTANTS_ONE_G * 0.5f)) // lower g limit
-					    || (_ang_rate_magnitude_filt > _flow_max_rate) // angular rate exceeds flow sensor limit
-					    || (_R_to_earth(2,2) < cosf(math::radians(30.0f)))); // tilted excessively
-
-		if (motion_is_excessive) {
-			_time_bad_motion_us = _imu_sample_delayed.time_us;
-
-		} else {
-			_time_good_motion_us = _imu_sample_delayed.time_us;
-		}
+		updateOnGroundMotionForOpticalFlowChecks();
 
 	} else {
-		_time_bad_motion_us = 0;
-		_time_good_motion_us = _imu_sample_delayed.time_us;
+		resetOnGroundMotionForOpticalFlowChecks();
 	}
 
 	// Accumulate autopilot gyro data across the same time interval as the flow sensor
@@ -472,6 +457,30 @@ void Ekf::controlOpticalFlowFusion()
 			}
 		}
 	}
+}
+
+void Ekf::updateOnGroundMotionForOpticalFlowChecks()
+{
+	// When on ground check if the vehicle is being shaken or moved in a way that could cause a loss of navigation
+	const float accel_norm = _accel_vec_filt.norm();
+
+	const bool motion_is_excessive = ((accel_norm > (CONSTANTS_ONE_G * 1.5f)) // upper g limit
+				    || (accel_norm < (CONSTANTS_ONE_G * 0.5f)) // lower g limit
+				    || (_ang_rate_magnitude_filt > _flow_max_rate) // angular rate exceeds flow sensor limit
+				    || (_R_to_earth(2,2) < cosf(math::radians(30.0f)))); // tilted excessively
+
+	if (motion_is_excessive) {
+		_time_bad_motion_us = _imu_sample_delayed.time_us;
+
+	} else {
+		_time_good_motion_us = _imu_sample_delayed.time_us;
+	}
+}
+
+void Ekf::resetOnGroundMotionForOpticalFlowChecks()
+{
+	_time_bad_motion_us = 0;
+	_time_good_motion_us = _imu_sample_delayed.time_us;
 }
 
 void Ekf::controlGpsFusion()
