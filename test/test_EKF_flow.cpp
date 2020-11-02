@@ -58,6 +58,11 @@ class EkfFlowTest : public ::testing::Test {
 	// Setup the Ekf with synthetic measurements
 	void SetUp() override
 	{
+		const float max_flow_rate = 5.f;
+		const float min_ground_distance = 0.f;
+		const float max_ground_distance = 50.f;
+		_ekf->set_optical_flow_limits(max_flow_rate, min_ground_distance, max_ground_distance);
+
 		_ekf->init(0);
 		_sensor_simulator.runSeconds(7);
 	}
@@ -93,10 +98,6 @@ TEST_F(EkfFlowTest, resetToFlowVelocityInAir)
 			 -simulated_horz_velocity(0) * flow_sample.dt / estimated_distance_to_ground);
 	_sensor_simulator._flow.setData(flow_sample);
 	_ekf_wrapper.enableFlowFusion();
-	const float max_flow_rate = 5.f;
-	const float min_ground_distance = 0.f;
-	const float max_ground_distance = 50.f;
-	_ekf->set_optical_flow_limits(max_flow_rate, min_ground_distance, max_ground_distance);
 	_sensor_simulator.startFlow();
 	 // Let it reset but not fuse more measurements. We actually need to send 2
 	 // samples to get a reset because the first one cannot be used as the gyro

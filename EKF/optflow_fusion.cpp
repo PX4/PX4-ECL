@@ -108,13 +108,8 @@ void Ekf::fuseOptFlow()
 	_flow_vel_body(1) = opt_flow_rate(0) * range;
 	_flow_vel_ne = Vector2f(_R_to_earth * Vector3f(_flow_vel_body(0), _flow_vel_body(1), 0.f));
 
-	if (opt_flow_rate.norm() < _flow_max_rate) {
-		_flow_innov(0) =  vel_body(1) / range - opt_flow_rate(0); // flow around the X axis
-		_flow_innov(1) = -vel_body(0) / range - opt_flow_rate(1); // flow around the Y axis
-
-	} else {
-		return;
-	}
+	_flow_innov(0) =  vel_body(1) / range - opt_flow_rate(0); // flow around the X axis
+	_flow_innov(1) = -vel_body(0) / range - opt_flow_rate(1); // flow around the Y axis
 
 	// The derivation allows for an arbitrary body to flow sensor frame rotation which is
 	// currently not supported by the EKF, so assume sensor frame is aligned with the

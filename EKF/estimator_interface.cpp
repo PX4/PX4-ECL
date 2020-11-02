@@ -358,32 +358,9 @@ void EstimatorInterface::setOpticalFlowData(const flowSample &flow)
 		// of min arrival interval because too much data is being lost
 		float delta_time = flow.dt; // in seconds
 		const float delta_time_min = 0.5e-6f * (float)_min_obs_interval_us;
-		const bool delta_time_good = delta_time >= delta_time_min;
+		const bool is_delta_time_good = delta_time >= delta_time_min;
 
-		bool flow_magnitude_good = true;
-
-		if (delta_time_good) {
-			// check magnitude is within sensor limits
-			// use this to prevent use of a saturated flow sensor
-			// when there are other aiding sources available
-			const float flow_rate_magnitude = flow.flow_xy_rad.norm() / delta_time;
-			flow_magnitude_good = (flow_rate_magnitude <= _flow_max_rate);
-
-		} else {
-			// protect against overflow caused by division with very small delta_time
-			delta_time = delta_time_min;
-		}
-
-		const bool relying_on_flow = !isOtherSourceOfHorizontalAidingThan(_control_status.flags.opt_flow);
-
-		const bool flow_quality_good = (flow.quality >= _params.flow_qual_min);
-
-		// Check data validity and write to buffers
-		// Invalid flow data is allowed when on ground and is handled as a special case in controlOpticalFlowFusion()
-		bool use_flow_data_to_navigate = delta_time_good && flow_quality_good && (flow_magnitude_good || relying_on_flow);
-
-		if (use_flow_data_to_navigate || (!_control_status.flags.in_air && relying_on_flow)) {
-
+		if (is_delta_time_good) {
 			_time_last_optflow = flow.time_us;
 
 			flowSample optflow_sample_new = flow;

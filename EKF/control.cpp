@@ -144,12 +144,13 @@ void Ekf::controlFusionModes()
 	// This means we stop looking for new data until the old data has been fused, unless we are not fusing optical flow,
 	// in this case we need to empty the buffer
 	if (!_flow_data_ready || !_control_status.flags.opt_flow) {
-		_flow_data_ready = _flow_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_flow_sample_delayed)
-				   && (_R_to_earth(2, 2) > _params.range_cos_max_tilt);
+		_flow_data_ready = _flow_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_flow_sample_delayed);
 	}
 
 	// check if we should fuse flow data for terrain estimation
 	if (!_flow_for_terrain_data_ready && _flow_data_ready && _control_status.flags.in_air) {
+		// TODO: WARNING, _flow_data_ready can be modified in controlOpticalFlowFusion
+		// due to some checks failing
 		// only fuse flow for terrain if range data hasn't been fused for 5 seconds
 		_flow_for_terrain_data_ready = isTimedOut(_time_last_hagl_fuse, (uint64_t)5E6);
 		// only fuse flow for terrain if the main filter is not fusing flow and we are using gps
@@ -355,23 +356,25 @@ void Ekf::controlOpticalFlowFusion()
 	_imu_del_ang_of += _imu_sample_delayed.delta_ang - _state.delta_ang_bias;
 	_delta_time_of += _imu_sample_delayed.delta_ang_dt;
 
-	// Only fuse optical flow if valid body rate compensation data is available
-	if (_flow_data_ready && calcOptFlowBodyRateComp()) {
+	if (_flow_data_ready) {
+		const bool is_quality_good = (_flow_sample_delayed.quality >= _params.flow_qual_min);
+		const bool is_magnitude_good = !_flow_sample_delayed.flow_xy_rad.longerThan(_flow_sample_delayed.dt * _flow_max_rate);
+		const bool is_tilt_good = (_R_to_earth(2, 2) > _params.range_cos_max_tilt);
+		const bool is_body_rate_comp_available = calcOptFlowBodyRateComp();
 
-		const bool flow_quality_good = (_flow_sample_delayed.quality >= _params.flow_qual_min);
+		if (is_quality_good && is_magnitude_good && is_tilt_good && is_body_rate_comp_available) {
+			// compensate for body motion to give a LOS rate
+			_flow_compensated_XY_rad = _flow_sample_delayed.flow_xy_rad - _flow_sample_delayed.gyro_xyz.xy();
 
-		if (!flow_quality_good && !_control_status.flags.in_air) {
+		} else if (!_control_status.flags.in_air && is_body_rate_comp_available) {
 			// when on the ground with poor flow quality, assume zero ground relative velocity and LOS rate
 			_flow_compensated_XY_rad.setZero();
 
 		} else {
-			// compensate for body motion to give a LOS rate
-			_flow_compensated_XY_rad = _flow_sample_delayed.flow_xy_rad - _flow_sample_delayed.gyro_xyz.xy();
+			// don't use this flow data and wait for the next data to arrive
+			_flow_data_ready = false;
+			_flow_for_terrain_data_ready = false; // TODO: find a better place
 		}
-
-	} else {
-		// don't use this flow data and wait for the next data to arrive
-		_flow_data_ready = false;
 	}
 
 	// New optical flow data is available and is ready to be fused when the midpoint of the sample falls behind the fusion time horizon
@@ -399,11 +402,9 @@ void Ekf::controlOpticalFlowFusion()
 		// Handle cases where we are using optical flow but we should not use it anymore
 		if (_control_status.flags.opt_flow) {
 			if (!(_params.fusion_mode & MASK_USE_OF)
-			    || _inhibit_flow_use
-			    || isTimedOut(_time_last_of_fuse, (uint64_t)_params.reset_timeout_max)) {
+			    || _inhibit_flow_use) {
 
 				stopFlowFusion();
-				_flow_data_ready = false;
 				return;
 			}
 		}
@@ -456,6 +457,9 @@ void Ekf::controlOpticalFlowFusion()
 				resetHorizontalPosition();
 			}
 		}
+
+	} else if (_control_status.flags.opt_flow && (_imu_sample_delayed.time_us >  _flow_sample_delayed.time_us + (uint64_t)10e6)) {
+		stopFlowFusion();
 	}
 }
 

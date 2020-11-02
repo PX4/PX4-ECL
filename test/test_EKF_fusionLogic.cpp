@@ -164,6 +164,10 @@ TEST_F(EkfFusionLogicTest, doFlowFusion)
 	// GIVEN: a tilt and heading aligned filter
 	// WHEN: sending flow data without having the flow fusion enabled
 	//       flow measurement fusion should not be intended.
+	const float max_flow_rate = 5.f;
+	const float min_ground_distance = 0.f;
+	const float max_ground_distance = 50.f;
+	_ekf->set_optical_flow_limits(max_flow_rate, min_ground_distance, max_ground_distance);
 	_sensor_simulator.startFlow();
 	_sensor_simulator.runSeconds(4);
 
