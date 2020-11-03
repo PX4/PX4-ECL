@@ -1058,12 +1058,12 @@ void Ekf::controlHeightFusion()
 			// innovation gate size
 			baro_hgt_innov_gate(1) = fmaxf(_params.baro_innov_gate, 1.0f);
 
-			// Compensate for positive static pressure transients (negative vertical position innovations)
-			// caused by rotor wash ground interaction by applying a temporary deadzone to baro innovations.
-			const float deadzone_start = 0.0f;
-			const float deadzone_end = deadzone_start + _params.gnd_effect_deadzone;
-
 			if (_control_status.flags.gnd_effect) {
+				// Compensate for positive static pressure transients (negative vertical position innovations)
+				// caused by rotor wash ground interaction by applying a temporary deadzone to baro innovations.
+				const float deadzone_start = 0.0f;
+				const float deadzone_end = deadzone_start + _params.gnd_effect_deadzone;
+
 				if (_baro_hgt_innov(2) < -deadzone_start) {
 					if (_baro_hgt_innov(2) <= -deadzone_end) {
 						_baro_hgt_innov(2) += deadzone_end;
@@ -1074,8 +1074,8 @@ void Ekf::controlHeightFusion()
 				}
 			}
 			// fuse height information
-			fuseVerticalPosition(_baro_hgt_innov,baro_hgt_innov_gate,
-				baro_hgt_obs_var, _baro_hgt_innov_var,_baro_hgt_test_ratio);
+			fuseVerticalPosition(_baro_hgt_innov, baro_hgt_innov_gate,
+				baro_hgt_obs_var, _baro_hgt_innov_var, _baro_hgt_test_ratio);
 
 		} else if (_control_status.flags.gps_hgt) {
 			Vector2f gps_hgt_innov_gate;

@@ -293,4 +293,8 @@ void Ekf::updateTerrainValidity()
 						 && (_time_last_fake_hagl_fuse != _time_last_hagl_fuse);
 
 	_hagl_sensor_status.flags.flow = shouldUseOpticalFlowForHagl() && recent_flow_for_terrain_fusion;
+
+	if (_hagl_valid && (_params.gnd_effect_max_hgt > 0)) {
+		set_gnd_effect_flag(_terrain_vpos < _params.gnd_effect_max_hgt);
+	}
 }

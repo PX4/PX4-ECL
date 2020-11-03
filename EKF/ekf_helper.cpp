@@ -1190,7 +1190,6 @@ void Ekf::startBaroHgtFusion()
 	// Turn off ground effect compensation if it times out
 	if (_control_status.flags.gnd_effect) {
 		if (isTimedOut(_time_last_gnd_effect_on, GNDEFFECT_TIMEOUT)) {
-
 			_control_status.flags.gnd_effect = false;
 		}
 	}
