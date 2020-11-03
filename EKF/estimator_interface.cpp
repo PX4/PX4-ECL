@@ -354,26 +354,14 @@ void EstimatorInterface::setOpticalFlowData(const flowSample &flow)
 
 	// limit data rate to prevent data being lost
 	if ((flow.time_us - _time_last_optflow) > _min_obs_interval_us) {
-		// check if enough integration time and fail if integration time is less than 50%
-		// of min arrival interval because too much data is being lost
-		float delta_time = flow.dt; // in seconds
-		const float delta_time_min = 0.5e-6f * (float)_min_obs_interval_us;
-		const float delta_time_max = 0.05f;
-		const bool is_delta_time_good = delta_time >= delta_time_min
-		                                && delta_time <= delta_time_max;
+		_time_last_optflow = flow.time_us;
 
-		if (is_delta_time_good) {
-			_time_last_optflow = flow.time_us;
+		flowSample optflow_sample_new = flow;
 
-			flowSample optflow_sample_new = flow;
+		optflow_sample_new.time_us -= _params.flow_delay_ms * 1000;
+		optflow_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
 
-			optflow_sample_new.time_us -= _params.flow_delay_ms * 1000;
-			optflow_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
-
-			optflow_sample_new.dt = delta_time;
-
-			_flow_buffer.push(optflow_sample_new);
-		}
+		_flow_buffer.push(optflow_sample_new);
 	}
 }
 

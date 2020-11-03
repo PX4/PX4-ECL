@@ -362,7 +362,18 @@ void Ekf::controlOpticalFlowFusion()
 		const bool is_tilt_good = (_R_to_earth(2, 2) > _params.range_cos_max_tilt);
 		const bool is_body_rate_comp_available = calcOptFlowBodyRateComp();
 
-		if (is_quality_good && is_magnitude_good && is_tilt_good && is_body_rate_comp_available) {
+		// check if enough integration time and fail if integration time is less than 50%
+		// of min arrival interval because too much data is being lost
+		const float delta_time_min = 0.5e-6f * (float)_min_obs_interval_us;
+		const float delta_time_max = 0.2f;
+		const bool is_delta_time_good = _flow_sample_delayed.dt >= delta_time_min
+		                                && _flow_sample_delayed.dt <= delta_time_max;
+
+		if (is_quality_good
+		    && is_magnitude_good
+		    && is_tilt_good
+		    && is_body_rate_comp_available
+		    && is_delta_time_good) {
 			// compensate for body motion to give a LOS rate
 			_flow_compensated_XY_rad = _flow_sample_delayed.flow_xy_rad - _flow_sample_delayed.gyro_xyz.xy();
 
