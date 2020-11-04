@@ -345,7 +345,9 @@ bool Ekf::calcOptFlowBodyRateComp()
 
 		// if accumulation time differences are not excessive and accumulation time is adequate
 		// compare the optical flow and and navigation rate data and calculate a bias error
-		if ((fabsf(_delta_time_of - _flow_sample_delayed.dt) < 0.1f) && (_delta_time_of > FLT_EPSILON)) {
+		if ((_delta_time_of > FLT_EPSILON)
+		    && (_flow_sample_delayed.dt > FLT_EPSILON)
+		    && (fabsf(_delta_time_of - _flow_sample_delayed.dt) < 0.1f)) {
 
 			const Vector3f reference_body_rate(_imu_del_ang_of * (1.0f / _delta_time_of));
 

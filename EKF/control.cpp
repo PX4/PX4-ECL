@@ -360,14 +360,12 @@ void Ekf::controlOpticalFlowFusion()
 		const bool is_quality_good = (_flow_sample_delayed.quality >= _params.flow_qual_min);
 		const bool is_magnitude_good = !_flow_sample_delayed.flow_xy_rad.longerThan(_flow_sample_delayed.dt * _flow_max_rate);
 		const bool is_tilt_good = (_R_to_earth(2, 2) > _params.range_cos_max_tilt);
-		const bool is_body_rate_comp_available = calcOptFlowBodyRateComp();
 
-		// check if enough integration time and fail if integration time is less than 50%
-		// of min arrival interval because too much data is being lost
-		const float delta_time_min = 0.5e-6f * (float)_min_obs_interval_us;
-		const float delta_time_max = 0.2f;
+		const float delta_time_min = fmaxf(0.8f * _delta_time_of, 0.001f);
+		const float delta_time_max = fminf(1.2f * _delta_time_of, 0.2f);
 		const bool is_delta_time_good = _flow_sample_delayed.dt >= delta_time_min
 		                                && _flow_sample_delayed.dt <= delta_time_max;
+		const bool is_body_rate_comp_available = calcOptFlowBodyRateComp();
 
 		if (is_quality_good
 		    && is_magnitude_good
@@ -378,7 +376,15 @@ void Ekf::controlOpticalFlowFusion()
 			_flow_compensated_XY_rad = _flow_sample_delayed.flow_xy_rad - _flow_sample_delayed.gyro_xyz.xy();
 
 		} else if (!_control_status.flags.in_air && is_body_rate_comp_available) {
-			// when on the ground with poor flow quality, assume zero ground relative velocity and LOS rate
+
+			if (!is_delta_time_good) {
+				// handle special case of SITL and PX4Flow where dt is forced to
+				// zero when the quaity is 0
+				_flow_sample_delayed.dt = delta_time_min;
+			}
+
+			// when on the ground with poor flow quality,
+			// assume zero ground relative velocity and LOS rate
 			_flow_compensated_XY_rad.setZero();
 
 		} else {
