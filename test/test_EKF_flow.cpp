@@ -128,13 +128,18 @@ TEST_F(EkfFlowTest, resetToFlowVelocityOnGround)
 	reset_logging_checker.capturePreResetState();
 
 	// WHEN: start fusing flow data
+	flowSample flow_sample = _sensor_simulator._flow.dataAtRest();
+	flow_sample.dt = 0.f; // some sensors force dt to zero when quality is low
+	flow_sample.quality = 0;
+	_sensor_simulator._flow.setData(flow_sample);
 	_ekf_wrapper.enableFlowFusion();
 	_sensor_simulator.startFlow();
 	_sensor_simulator.runSeconds(1.0);
 
 	// THEN: estimated velocity should match simulated velocity
 	const Vector2f estimated_horz_velocity = Vector2f(_ekf->getVelocity());
-	EXPECT_TRUE(isEqual(estimated_horz_velocity, Vector2f(0.f, 0.f)));
+	EXPECT_TRUE(isEqual(estimated_horz_velocity, Vector2f(0.f, 0.f)))
+	<< estimated_horz_velocity(0) << ", " << estimated_horz_velocity(1);
 
 	// AND: the reset in velocity should be saved correctly
 	reset_logging_checker.capturePostResetState();
