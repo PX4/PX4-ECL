@@ -84,7 +84,7 @@ public:
 	}
 
 	void setQualityHysteresis(float valid_quality_threshold_s){
-		_quality_hyst_us = valid_quality_threshold_s * 1000000;
+		_quality_hyst_us = uint64_t(valid_quality_threshold_s * 1e6f);
 	}
 
 	float getCosTilt() const { return _cos_tilt_rng_to_earth; }
