@@ -46,7 +46,7 @@ class RingBuffer
 {
 public:
 	explicit RingBuffer(size_t size) { allocate(size); }
-	RingBuffer() { allocate(1); }
+	RingBuffer() = delete;
 	~RingBuffer() { delete[] _buffer; }
 
 	// no copy, assignment, move, move assignment

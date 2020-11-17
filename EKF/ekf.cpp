@@ -156,7 +156,7 @@ bool Ekf::initialiseFilter()
 	}
 
 	// Sum the magnetometer measurements
-	if (_mag_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_mag_sample_delayed)) {
+	if (_mag_buffer && _mag_buffer->pop_first_older_than(_imu_sample_delayed.time_us, &_mag_sample_delayed)) {
 		if (_mag_sample_delayed.time_us != 0) {
 			if (_mag_counter == 0) {
 				_mag_lpf.reset(_mag_sample_delayed.mag);
@@ -170,7 +170,7 @@ bool Ekf::initialiseFilter()
 	}
 
 	// accumulate enough height measurements to be confident in the quality of the data
-	if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
+	if (_baro_buffer && _baro_buffer->pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
 		if (_baro_sample_delayed.time_us != 0) {
 			if (_baro_counter == 0) {
 				_baro_hgt_offset = _baro_sample_delayed.hgt;

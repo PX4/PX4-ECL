@@ -257,9 +257,6 @@ void Ekf::resetVerticalPositionTo(const float &new_vert_pos)
 // Reset height state using the last height measurement
 void Ekf::resetHeight()
 {
-	// Get the most recent GPS data
-	const gpsSample &gps_newest = _gps_buffer.get_newest();
-
 	// reset the vertical position
 	if (_control_status.flags.rng_hgt) {
 		// update the state and associated variance
@@ -268,15 +265,17 @@ void Ekf::resetHeight()
 		// the state variance is the same as the observation
 		P.uncorrelateCovarianceSetVariance<1>(9, sq(_params.range_noise));
 
-		// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
-		const baroSample &baro_newest = _baro_buffer.get_newest();
-		_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+		if (_baro_buffer) {
+			// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
+			const baroSample &baro_newest = _baro_buffer->get_newest();
+			_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+		}
 
 	} else if (_control_status.flags.baro_hgt) {
-		// initialize vertical position with newest baro measurement
-		const baroSample &baro_newest = _baro_buffer.get_newest();
+		if (_baro_buffer && !_baro_hgt_faulty) {
+			// initialize vertical position with newest baro measurement
+			const baroSample &baro_newest = _baro_buffer->get_newest();
 
-		if (!_baro_hgt_faulty) {
 			resetVerticalPositionTo(-baro_newest.hgt + _baro_hgt_offset);
 
 			// the state variance is the same as the observation
@@ -288,36 +287,44 @@ void Ekf::resetHeight()
 
 	} else if (_control_status.flags.gps_hgt) {
 		// initialize vertical position and velocity with newest gps measurement
-		if (!_gps_hgt_intermittent) {
+		if (_gps_buffer && !_gps_hgt_intermittent) {
+			// Get the most recent GPS data
+			const gpsSample &gps_newest = _gps_buffer->get_newest();
+
 			resetVerticalPositionTo(_hgt_sensor_offset - gps_newest.hgt + _gps_alt_ref);
 
 			// the state variance is the same as the observation
 			P.uncorrelateCovarianceSetVariance<1>(9, sq(gps_newest.vacc));
 
-			// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
-			const baroSample &baro_newest = _baro_buffer.get_newest();
-			_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+			if (_baro_buffer) {
+				// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
+				const baroSample &baro_newest = _baro_buffer->get_newest();
+				_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+			}
 
 		} else {
 			// TODO: reset to last known gps based estimate
 		}
 
 	} else if (_control_status.flags.ev_hgt) {
-		// initialize vertical position with newest measurement
-		const extVisionSample &ev_newest = _ext_vision_buffer.get_newest();
+		if (_ext_vision_buffer) {
+			// initialize vertical position with newest measurement
+			const extVisionSample &ev_newest = _ext_vision_buffer->get_newest();
 
-		// use the most recent data if it's time offset from the fusion time horizon is smaller
-		if (ev_newest.time_us >= _ev_sample_delayed.time_us) {
-			resetVerticalPositionTo(ev_newest.pos(2));
+			// use the most recent data if it's time offset from the fusion time horizon is smaller
+			if (ev_newest.time_us >= _ev_sample_delayed.time_us) {
+				resetVerticalPositionTo(ev_newest.pos(2));
 
-		} else {
-			resetVerticalPositionTo(_ev_sample_delayed.pos(2));
+			} else {
+				resetVerticalPositionTo(_ev_sample_delayed.pos(2));
+			}
 		}
 	}
 
 	// reset the vertical velocity state
-	if (_control_status.flags.gps && !_gps_hgt_intermittent) {
+	if (_control_status.flags.gps && !_gps_hgt_intermittent && _gps_buffer) {
 		// If we are using GPS, then use it to reset the vertical velocity
+		const gpsSample &gps_newest = _gps_buffer->get_newest();
 		resetVerticalVelocityTo(gps_newest.vel(2));
 
 		// the state variance is the same as the observation
@@ -389,7 +396,7 @@ bool Ekf::realignYawGPS()
 	const bool badMagYaw = (badYawErr && badVelInnov);
 
 	if (badMagYaw) {
-		_num_bad_flight_yaw_events ++;
+		_num_bad_flight_yaw_events++;
 	}
 
 	// correct yaw angle using GPS ground course if compass yaw bad or yaw is previously not aligned
