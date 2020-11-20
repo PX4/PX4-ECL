@@ -38,6 +38,12 @@
  */
 #pragma once
 
+#if defined(ECL_FLOAT_TYPE)
+using ecl_float_t = ECL_FLOAT_TYPE;
+#else
+using ecl_float_t = float;
+#endif
+
 #if defined(__PX4_POSIX) || defined(__PX4_NUTTX)
 
 #include <drivers/drv_hrt.h>

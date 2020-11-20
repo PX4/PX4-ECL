@@ -41,9 +41,13 @@
  *
  */
 
-#include "ekf.h"
 #include <ecl.h>
+
+#include "ekf.h"
 #include <mathlib/mathlib.h>
+
+namespace estimator
+{
 
 void Ekf::fuseMag()
 {
@@ -947,10 +951,13 @@ float Ekf::calculate_synthetic_mag_z_measurement(const Vector3f& mag_meas, const
 {
 	// theoretical magnitude of the magnetometer Z component value given X and Y sensor measurement and our knowledge
 	// of the earth magnetic field vector at the current location
-	const float mag_z_abs = sqrtf(math::max(sq(mag_earth_predicted.length()) - sq(mag_meas(0)) - sq(mag_meas(1)), 0.0f));
+	const float mag_z_abs = sqrtf(math::max(sq(mag_earth_predicted.length()) - sq(mag_meas(0)) - sq(mag_meas(1)), 0.0));
 
 	// calculate sign of synthetic magnetomter Z component based on the sign of the predicted magnetomer Z component
 	const float mag_z_body_pred = mag_earth_predicted.dot(_R_to_earth.col(2));
 
 	return (mag_z_body_pred < 0) ? -mag_z_abs : mag_z_abs;
 }
+
+} // namespace estimator
+

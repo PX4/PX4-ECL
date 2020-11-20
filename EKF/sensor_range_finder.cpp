@@ -38,6 +38,8 @@
  *
  */
 
+#include <ecl.h>
+
 #include "sensor_range_finder.hpp"
 
 namespace estimator

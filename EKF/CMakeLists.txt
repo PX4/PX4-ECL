@@ -31,6 +31,20 @@
 #
 ############################################################################
 
+if((${CONFIG_ARCH_DPFPU} MATCHES "y") AND ECL_USE_DOUBLE_FPU) # DISABLED for now
+	message(STATUS "PX4 ECL: using double precision floating point (ecl_float_t = double)")
+	add_definitions(-DECL_FLOAT_TYPE=double)
+
+	add_compile_options(
+		-Wno-double-promotion
+		-Wno-narrowing
+		-Wno-absolute-value
+	)
+else()
+	# ONLY in ecl_float_t = float32 mode
+	add_compile_options(-fsingle-precision-constant -Wno-error=double-promotion)
+endif()
+
 add_library(ecl_EKF
 	airspeed_fusion.cpp
 	control.cpp

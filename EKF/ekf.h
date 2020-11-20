@@ -42,18 +42,23 @@
 
 #pragma once
 
+#include <ecl.h>
+
 #include "estimator_interface.h"
 
 #include "EKFGSF_yaw.h"
+
+namespace estimator
+{
 
 class Ekf final : public EstimatorInterface
 {
 public:
 	static constexpr uint8_t _k_num_states{24};		///< number of EKF states
-	typedef matrix::Vector<float, _k_num_states> Vector24f;
-	typedef matrix::SquareMatrix<float, _k_num_states> SquareMatrix24f;
-	typedef matrix::SquareMatrix<float, 2> Matrix2f;
-	typedef matrix::Vector<float, 4> Vector4f;
+	typedef matrix::Vector<ecl_float_t, _k_num_states> Vector24f;
+	typedef matrix::SquareMatrix<ecl_float_t, _k_num_states> SquareMatrix24f;
+	typedef matrix::SquareMatrix<ecl_float_t, 2> Matrix2f;
+	typedef matrix::Vector<ecl_float_t, 4> Vector4f;
 	template<int ... Idxs>
 	using SparseVector24f = matrix::SparseVectorf<24, Idxs...>;
 
@@ -86,26 +91,56 @@ public:
 	void getAuxVelInnovVar(float aux_vel_innov[2]) const;
 	void getAuxVelInnovRatio(float &aux_vel_innov_ratio) const { aux_vel_innov_ratio = _aux_vel_test_ratio(0); }
 
-	void getFlowInnov(float flow_innov[2]) const { _flow_innov.copyTo(flow_innov); }
-	void getFlowInnovVar(float flow_innov_var[2]) const { _flow_innov_var.copyTo(flow_innov_var); }
+	void getFlowInnov(float flow_innov[2]) const
+	{
+		flow_innov[0] = _flow_innov(0);
+		flow_innov[1] = _flow_innov(1);
+	}
+	void getFlowInnovVar(float flow_innov_var[2]) const
+	{
+		flow_innov_var[0] = _flow_innov_var(0);
+		flow_innov_var[1] = _flow_innov_var(1);
+	}
 	void getFlowInnovRatio(float &flow_innov_ratio) const { flow_innov_ratio = _optflow_test_ratio; }
-	const Vector2f &getFlowVelBody() const { return _flow_vel_body; }
-	const Vector2f &getFlowVelNE() const { return _flow_vel_ne; }
-	const Vector2f &getFlowCompensated() const { return _flow_compensated_XY_rad; }
-	const Vector2f &getFlowUncompensated() const { return _flow_sample_delayed.flow_xy_rad; }
-	const Vector3f &getFlowGyro() const { return _flow_sample_delayed.gyro_xyz; }
+	const matrix::Vector2<ecl_float_t> &getFlowVelBody() const { return _flow_vel_body; }
+	const matrix::Vector2<ecl_float_t> &getFlowVelNE() const { return _flow_vel_ne; }
+	const matrix::Vector2<ecl_float_t> &getFlowCompensated() const { return _flow_compensated_XY_rad; }
+	const matrix::Vector2<ecl_float_t> &getFlowUncompensated() const { return _flow_sample_delayed.flow_xy_rad; }
+	const matrix::Vector3<ecl_float_t> &getFlowGyro() const { return _flow_sample_delayed.gyro_xyz; }
 
 	void getHeadingInnov(float &heading_innov) const { heading_innov = _heading_innov; }
 	void getHeadingInnovVar(float &heading_innov_var) const { heading_innov_var = _heading_innov_var; }
 
 	void getHeadingInnovRatio(float &heading_innov_ratio) const { heading_innov_ratio = _yaw_test_ratio; }
-	void getMagInnov(float mag_innov[3]) const { _mag_innov.copyTo(mag_innov); }
-	void getMagInnovVar(float mag_innov_var[3]) const { _mag_innov_var.copyTo(mag_innov_var); }
+	void getMagInnov(float mag_innov[3]) const
+	{
+		mag_innov[0] = _mag_innov(0);
+		mag_innov[1] = _mag_innov(1);
+		mag_innov[2] = _mag_innov(2);
+	}
+	void getMagInnovVar(float mag_innov_var[3]) const
+	{
+		mag_innov_var[0] = _mag_innov_var(0);
+		mag_innov_var[1] = _mag_innov_var(1);
+		mag_innov_var[2] = _mag_innov_var(2);
+	}
 	void getMagInnovRatio(float &mag_innov_ratio) const { mag_innov_ratio = _mag_test_ratio.max(); }
 
-	void getDragInnov(float drag_innov[2]) const { _drag_innov.copyTo(drag_innov); }
-	void getDragInnovVar(float drag_innov_var[2]) const { _drag_innov_var.copyTo(drag_innov_var); }
-	void getDragInnovRatio(float drag_innov_ratio[2]) const { _drag_test_ratio.copyTo(drag_innov_ratio); }
+	void getDragInnov(float drag_innov[2]) const
+	{
+		drag_innov[0] = _drag_innov(0);
+		drag_innov[1] = _drag_innov(1);
+	}
+	void getDragInnovVar(float drag_innov_var[2]) const
+	{
+		drag_innov_var[0] = _drag_innov_var(0);
+		drag_innov_var[1] = _drag_innov_var(1);
+	}
+	void getDragInnovRatio(float drag_innov_ratio[2]) const
+	{
+		drag_innov_ratio[0] = _drag_test_ratio(0);
+		drag_innov_ratio[1] = _drag_test_ratio(1);
+	}
 
 	void getAirspeedInnov(float &airspeed_innov) const { airspeed_innov = _airspeed_innov; }
 	void getAirspeedInnovVar(float &airspeed_innov_var) const { airspeed_innov_var = _airspeed_innov_var; }
@@ -120,31 +155,31 @@ public:
 	void getHaglInnovRatio(float &hagl_innov_ratio) const { hagl_innov_ratio = _hagl_test_ratio; }
 
 	// get the state vector at the delayed time horizon
-	matrix::Vector<float, 24> getStateAtFusionHorizonAsVector() const;
+	matrix::Vector<ecl_float_t, 24> getStateAtFusionHorizonAsVector() const;
 
 	// get the wind velocity in m/s
-	const Vector2f &getWindVelocity() const { return _state.wind_vel; };
+	const matrix::Vector2<ecl_float_t> &getWindVelocity() const { return _state.wind_vel; };
 
 	// get the wind velocity var
-	Vector2f getWindVelocityVariance() const { return P.slice<2, 2>(22,22).diag(); }
+	matrix::Vector2<ecl_float_t> getWindVelocityVariance() const { return P.slice<2, 2>(22,22).diag(); }
 
 	// get the true airspeed in m/s
 	void get_true_airspeed(float *tas) const;
 
 	// get the full covariance matrix
-	const matrix::SquareMatrix<float, 24> &covariances() const { return P; }
+	const matrix::SquareMatrix<ecl_float_t, 24> &covariances() const { return P; }
 
 	// get the diagonal elements of the covariance matrix
-	matrix::Vector<float, 24> covariances_diagonal() const { return P.diag(); }
+	matrix::Vector<ecl_float_t, 24> covariances_diagonal() const { return P.diag(); }
 
 	// get the orientation (quaterion) covariances
-	matrix::SquareMatrix<float, 4> orientation_covariances() const { return P.slice<4, 4>(0, 0); }
+	matrix::SquareMatrix<ecl_float_t, 4> orientation_covariances() const { return P.slice<4, 4>(0, 0); }
 
 	// get the linear velocity covariances
-	matrix::SquareMatrix<float, 3> velocity_covariances() const { return P.slice<3, 3>(4, 4); }
+	matrix::SquareMatrix<ecl_float_t, 3> velocity_covariances() const { return P.slice<3, 3>(4, 4); }
 
 	// get the position covariances
-	matrix::SquareMatrix<float, 3> position_covariances() const { return P.slice<3, 3>(7, 7); }
+	matrix::SquareMatrix<ecl_float_t, 3> position_covariances() const { return P.slice<3, 3>(7, 7); }
 
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	bool collect_gps(const gps_message &gps) override;
@@ -209,10 +244,10 @@ public:
 	float get_terrain_var() const { return _terrain_var; }
 
 	// get the accelerometer bias in m/s**2
-	Vector3f getAccelBias() const { return _state.delta_vel_bias / _dt_ekf_avg; }
+	matrix::Vector3<ecl_float_t> getAccelBias() const { return _state.delta_vel_bias / _dt_ekf_avg; }
 
 	// get the gyroscope bias in rad/s
-	Vector3f getGyroBias() const { return _state.delta_ang_bias / _dt_ekf_avg; }
+	matrix::Vector3<ecl_float_t> getGyroBias() const { return _state.delta_ang_bias / _dt_ekf_avg; }
 
 	// get GPS check status
 	void get_gps_check_status(uint16_t *val) const { *val = _gps_check_fail_status.value; }
@@ -234,21 +269,27 @@ public:
 	// return the amount the local horizontal position changed in the last reset and the number of reset events
 	void get_posNE_reset(float delta[2], uint8_t *counter) const
 	{
-		_state_reset_status.posNE_change.copyTo(delta);
+		delta[0] = _state_reset_status.posNE_change(0);
+		delta[1] = _state_reset_status.posNE_change(1);
 		*counter = _state_reset_status.posNE_counter;
 	}
 
 	// return the amount the local horizontal velocity changed in the last reset and the number of reset events
 	void get_velNE_reset(float delta[2], uint8_t *counter) const
 	{
-		_state_reset_status.velNE_change.copyTo(delta);
+		delta[0] = _state_reset_status.velNE_change(0);
+		delta[1] = _state_reset_status.velNE_change(1);
 		*counter = _state_reset_status.velNE_counter;
 	}
 
 	// return the amount the quaternion has changed in the last reset and the number of reset events
 	void get_quat_reset(float delta_quat[4], uint8_t *counter) const
 	{
-		_state_reset_status.quat_change.copyTo(delta_quat);
+		delta_quat[0] = _state_reset_status.quat_change(0);
+		delta_quat[1] = _state_reset_status.quat_change(1);
+		delta_quat[2] = _state_reset_status.quat_change(2);
+		delta_quat[3] = _state_reset_status.quat_change(3);
+
 		*counter = _state_reset_status.quat_counter;
 	}
 
@@ -264,10 +305,10 @@ public:
 	void get_ekf_soln_status(uint16_t *status) const;
 
 	// return the quaternion defining the rotation from the External Vision to the EKF reference frame
-	matrix::Quatf getVisionAlignmentQuaternion() const { return Quatf(_R_ev_to_ekf); };
+	matrix::Quaternion<ecl_float_t> getVisionAlignmentQuaternion() const { return matrix::Quaternion<ecl_float_t>(_R_ev_to_ekf); };
 
 	// use the latest IMU data at the current time horizon.
-	Quatf calculate_quaternion() const;
+	matrix::Quaternion<float> calculate_quaternion() const;
 
 	// set minimum continuous period without GPS fail required to mark a healthy GPS status
 	void set_min_required_gps_health_time(uint32_t time_us) { _min_gps_health_time_us = time_us; }
@@ -308,7 +349,7 @@ private:
 		Quatf quat_change;	///< quaternion delta due to last reset - multiply pre-reset quaternion by this to get post-reset quaternion
 	} _state_reset_status{};	///< reset event monitoring structure containing velocity, position, height and yaw reset information
 
-	float _dt_ekf_avg{FILTER_UPDATE_PERIOD_S}; ///< average update rate of the ekf
+	ecl_float_t _dt_ekf_avg{FILTER_UPDATE_PERIOD_S}; ///< average update rate of the ekf
 
 	Vector3f _ang_rate_delayed_raw;	///< uncorrected angular rate vector at fusion time horizon (rad/sec)
 
@@ -944,3 +985,5 @@ private:
 
 	void resetGpsDriftCheckFilters();
 };
+
+} // namespace estimator

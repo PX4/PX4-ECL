@@ -44,6 +44,9 @@
 #include <ecl.h>
 #include <mathlib/mathlib.h>
 
+namespace estimator
+{
+
 void Ekf::fuseDrag()
 {
 	SparseVector24f<0,1,2,3,4,5,6,22,23> Hfusion;  // Observation Jacobians
@@ -268,3 +271,6 @@ void Ekf::fuseDrag()
 		}
 	}
 }
+
+} // namespace estimator
+

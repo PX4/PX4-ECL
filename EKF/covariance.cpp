@@ -40,13 +40,16 @@
  * @author Roman Bast <bastroman@gmail.com>
  *
  */
+#include <ecl.h>
 
 #include "ekf.h"
 #include "utils.hpp"
 
-#include <ecl.h>
 #include <math.h>
 #include <mathlib/mathlib.h>
+
+namespace estimator
+{
 
 // Sets initial values for the covariance matrix
 // Do not call before quaternion states have been initialised
@@ -57,7 +60,7 @@ void Ekf::initialiseCovariance()
 	_delta_angle_bias_var_accum.setZero();
 	_delta_vel_bias_var_accum.setZero();
 
-	const float dt = FILTER_UPDATE_PERIOD_S;
+	const ecl_float_t dt = FILTER_UPDATE_PERIOD_S;
 
 	resetQuatCov();
 
@@ -106,41 +109,41 @@ void Ekf::initialiseCovariance()
 void Ekf::predictCovariance()
 {
 	// assign intermediate state variables
-	const float &q0 = _state.quat_nominal(0);
-	const float &q1 = _state.quat_nominal(1);
-	const float &q2 = _state.quat_nominal(2);
-	const float &q3 = _state.quat_nominal(3);
+	const auto &q0 = _state.quat_nominal(0);
+	const auto &q1 = _state.quat_nominal(1);
+	const auto &q2 = _state.quat_nominal(2);
+	const auto &q3 = _state.quat_nominal(3);
 
-	const float &dax = _imu_sample_delayed.delta_ang(0);
-	const float &day = _imu_sample_delayed.delta_ang(1);
-	const float &daz = _imu_sample_delayed.delta_ang(2);
+	const auto &dax = _imu_sample_delayed.delta_ang(0);
+	const auto &day = _imu_sample_delayed.delta_ang(1);
+	const auto &daz = _imu_sample_delayed.delta_ang(2);
 
-	const float &dvx = _imu_sample_delayed.delta_vel(0);
-	const float &dvy = _imu_sample_delayed.delta_vel(1);
-	const float &dvz = _imu_sample_delayed.delta_vel(2);
+	const auto &dvx = _imu_sample_delayed.delta_vel(0);
+	const auto &dvy = _imu_sample_delayed.delta_vel(1);
+	const auto &dvz = _imu_sample_delayed.delta_vel(2);
 
-	const float &dax_b = _state.delta_ang_bias(0);
-	const float &day_b = _state.delta_ang_bias(1);
-	const float &daz_b = _state.delta_ang_bias(2);
+	const auto &dax_b = _state.delta_ang_bias(0);
+	const auto &day_b = _state.delta_ang_bias(1);
+	const auto &daz_b = _state.delta_ang_bias(2);
 
-	const float &dvx_b = _state.delta_vel_bias(0);
-	const float &dvy_b = _state.delta_vel_bias(1);
-	const float &dvz_b = _state.delta_vel_bias(2);
+	const auto &dvx_b = _state.delta_vel_bias(0);
+	const auto &dvy_b = _state.delta_vel_bias(1);
+	const auto &dvz_b = _state.delta_vel_bias(2);
 
 	// Use average update interval to reduce accumulated covariance prediction errors due to small single frame dt values
-	const float dt = FILTER_UPDATE_PERIOD_S;
-	const float dt_inv = 1.0f / dt;
+	const auto dt = FILTER_UPDATE_PERIOD_S;
+	const auto dt_inv = 1.0f / dt;
 
 	// convert rate of change of rate gyro bias (rad/s**2) as specified by the parameter to an expected change in delta angle (rad) since the last update
-	const float d_ang_bias_sig = dt * dt * math::constrain(_params.gyro_bias_p_noise, 0.0f, 1.0f);
+	const ecl_float_t d_ang_bias_sig = dt * dt * math::constrain(_params.gyro_bias_p_noise, 0.0f, 1.0f);
 
 	// convert rate of change of accelerometer bias (m/s**3) as specified by the parameter to an expected change in delta velocity (m/s) since the last update
-	const float d_vel_bias_sig = dt * dt * math::constrain(_params.accel_bias_p_noise, 0.0f, 1.0f);
+	const ecl_float_t d_vel_bias_sig = dt * dt * math::constrain(_params.accel_bias_p_noise, 0.0f, 1.0f);
 
 	// inhibit learning of imu accel bias if the manoeuvre levels are too high to protect against the effect of sensor nonlinearities or bad accel data is detected
 	// xy accel bias learning is also disabled on ground as those states are poorly observable when perpendicular to the gravity vector
-	const float alpha = math::constrain((dt / _params.acc_bias_learn_tc), 0.0f, 1.0f);
-	const float beta = 1.0f - alpha;
+	const ecl_float_t alpha = math::constrain((dt / _params.acc_bias_learn_tc), (ecl_float_t)0, (ecl_float_t)1);
+	const ecl_float_t beta = 1.0f - alpha;
 	_ang_rate_magnitude_filt = fmaxf(dt_inv * _imu_sample_delayed.delta_ang.norm(), beta * _ang_rate_magnitude_filt);
 	_accel_magnitude_filt = fmaxf(dt_inv * _imu_sample_delayed.delta_vel.norm(), beta * _accel_magnitude_filt);
 	_accel_vec_filt = alpha * dt_inv * _imu_sample_delayed.delta_vel + beta * _accel_vec_filt;
@@ -210,7 +213,7 @@ void Ekf::predictCovariance()
 	}
 
 	// compute noise variance for stationary processes
-	Vector24f process_noise;
+	matrix::Vector<ecl_float_t, 24> process_noise;
 
 	// Construct the process noise variance diagonal for those states with a stationary process model
 	// These are kinematic states and their error growth is controlled separately by the IMU noise variances
@@ -228,12 +231,12 @@ void Ekf::predictCovariance()
 
 	// assign IMU noise variances
 	// inputs to the system are 3 delta angles and 3 delta velocities
-	float gyro_noise = math::constrain(_params.gyro_noise, 0.0f, 1.0f);
-	const float daxVar = sq(dt * gyro_noise);
-	const float dayVar = daxVar;
-	const float dazVar = daxVar;
+	ecl_float_t gyro_noise = math::constrain(_params.gyro_noise, 0.0f, 1.0f);
+	const ecl_float_t daxVar = sq(dt * gyro_noise);
+	const ecl_float_t dayVar = daxVar;
+	const ecl_float_t dazVar = daxVar;
 
-	float accel_noise = math::constrain(_params.accel_noise, 0.0f, 1.0f);
+	ecl_float_t accel_noise = math::constrain(_params.accel_noise, 0.0f, 1.0f);
 
 	if (_fault_status.flags.bad_acc_vertical) {
 		// Increase accelerometer process noise if bad accel data is detected. Measurement errors due to
@@ -241,7 +244,7 @@ void Ekf::predictCovariance()
 		accel_noise = BADACC_BIAS_PNOISE;
 	}
 
-	float dvxVar, dvyVar, dvzVar;
+	ecl_float_t dvxVar, dvyVar, dvzVar;
 	dvxVar = dvyVar = dvzVar = sq(dt * accel_noise);
 
 	// Accelerometer Clipping
@@ -456,7 +459,7 @@ void Ekf::predictCovariance()
 	const float PS186 = P(0,6)*PS60 + P(1,6)*PS74 - P(2,6)*PS72 + P(3,6)*PS62 + P(6,13)*PS166 - P(6,14)*PS165 - P(6,15)*PS70 + P(6,6);
 
 	// covariance update
-	SquareMatrix24f nextP;
+	matrix::SquareMatrix<ecl_float_t, 24> nextP;
 
 	// calculate variances and upper diagonal covariances for quaternion, velocity, position and gyro bias states
 	nextP(0,0) = PS0*PS1 - PS11*PS23 - PS12*PS26 - PS13*PS29 + PS14*PS6 + PS17*PS7 + PS2*PS3 + PS20*PS9 + PS33 + PS4*PS5;
@@ -868,7 +871,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 	// and set corresponding entries in Q to zero when states exceed 50% of the limit
 	// Covariance diagonal limits. Use same values for states which
 	// belong to the same group (e.g. vel_x, vel_y, vel_z)
-	float P_lim[8] = {};
+	ecl_float_t P_lim[8] = {};
 	P_lim[0] = 1.0f;		// quaternion max var
 	P_lim[1] = 1e6f;		// velocity max var
 	P_lim[2] = 1e6f;		// positiion max var
@@ -880,22 +883,22 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 
 	for (int i = 0; i <= 3; i++) {
 		// quaternion states
-		P(i,i) = math::constrain(P(i,i), 0.0f, P_lim[0]);
+		P(i,i) = math::constrain(P(i,i), (ecl_float_t)0, P_lim[0]);
 	}
 
 	for (int i = 4; i <= 6; i++) {
 		// NED velocity states
-		P(i,i) = math::constrain(P(i,i), 1e-6f, P_lim[1]);
+		P(i,i) = math::constrain(P(i,i), (ecl_float_t)1e-6, P_lim[1]);
 	}
 
 	for (int i = 7; i <= 9; i++) {
 		// NED position states
-		P(i,i) = math::constrain(P(i,i), 1e-6f, P_lim[2]);
+		P(i,i) = math::constrain(P(i,i), (ecl_float_t)1e-6, P_lim[2]);
 	}
 
 	for (int i = 10; i <= 12; i++) {
 		// gyro bias states
-		P(i,i) = math::constrain(P(i,i), 0.0f, P_lim[3]);
+		P(i,i) = math::constrain(P(i,i), (ecl_float_t)0, P_lim[3]);
 	}
 
 	// force symmetry on the quaternion, velocity and position state covariances
@@ -929,15 +932,15 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 		// To ensure stability of the covariance matrix operations, the ratio of a max and min variance must
 		// not exceed 100 and the minimum variance must not fall below the target minimum
 		// Also limit variance to a maximum equivalent to a 0.1g uncertainty
-		const float minStateVarTarget = 5E-8f;
-		float minAllowedStateVar = fmaxf(0.01f * maxStateVar, minStateVarTarget);
+		const ecl_float_t minStateVarTarget = 5e-8f;
+		ecl_float_t minAllowedStateVar = math::max(0.01 * maxStateVar, minStateVarTarget);
 
 		for (uint8_t stateIndex = 13; stateIndex <= 15; stateIndex++) {
 			if (_accel_bias_inhibit[stateIndex - 13]) {
 				// Skip the check for the inhibited axis
 				continue;
 			}
-			P(stateIndex,stateIndex) = math::constrain(P(stateIndex,stateIndex), minAllowedStateVar, sq(0.1f * CONSTANTS_ONE_G * _dt_ekf_avg));
+			P(stateIndex,stateIndex) = math::constrain(P(stateIndex,stateIndex), minAllowedStateVar, sq(0.1 * CONSTANTS_ONE_G * _dt_ekf_avg));
 		}
 
 		// If any one axis has fallen below the safe minimum, all delta velocity covariance terms must be reset to zero
@@ -989,11 +992,11 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 	} else {
 		// constrain variances
 		for (int i = 16; i <= 18; i++) {
-			P(i,i) = math::constrain(P(i,i), 0.0f, P_lim[5]);
+			P(i,i) = math::constrain(P(i,i), (ecl_float_t)0, P_lim[5]);
 		}
 
 		for (int i = 19; i <= 21; i++) {
-			P(i,i) = math::constrain(P(i,i), 0.0f, P_lim[6]);
+			P(i,i) = math::constrain(P(i,i), (ecl_float_t)0, P_lim[6]);
 		}
 
 		// force symmetry
@@ -1011,7 +1014,7 @@ void Ekf::fixCovarianceErrors(bool force_symmetry)
 	} else {
 		// constrain variances
 		for (int i = 22; i <= 23; i++) {
-			P(i,i) = math::constrain(P(i,i), 0.0f, P_lim[7]);
+			P(i,i) = math::constrain(P(i,i), (ecl_float_t)0, P_lim[7]);
 		}
 
 		// force symmetry
@@ -1120,3 +1123,5 @@ void Ekf::resetWindCovariance()
 		P.uncorrelateCovarianceSetVariance<2>(22, _params.initial_wind_uncertainty);
 	}
 }
+
+} // namespace estimator

@@ -1,6 +1,8 @@
 #include "EKFGSF_yaw.h"
 #include <cstdlib>
 
+namespace estimator {
+
 EKFGSF_yaw::EKFGSF_yaw()
 {
 	// this flag must be false when we start
@@ -182,7 +184,7 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 	}
 
 	// Gyro bias estimation
-	constexpr float gyro_bias_limit = 0.05f;
+	constexpr ecl_float_t gyro_bias_limit = 0.05;
 	const float spinRate = ang_rate.length();
 	if (spinRate < 0.175f) {
 		_ahrs_ekf_gsf[model_index].gyro_bias -= tilt_correction * (_gyro_bias_gain * _delta_ang_dt);
@@ -548,3 +550,5 @@ void EKFGSF_yaw::setVelocity(const Vector2f &velocity, float accuracy)
 	_vel_accuracy = accuracy;
 	_vel_data_updated = true;
 }
+
+} // namespace estimator

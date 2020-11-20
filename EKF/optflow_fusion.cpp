@@ -47,6 +47,9 @@
 #include <float.h>
 #include "utils.hpp"
 
+namespace estimator
+{
+
 void Ekf::fuseOptFlow()
 {
 	float gndclearance = fmaxf(_params.rng_gnd_clearance, 0.1f);
@@ -119,60 +122,60 @@ void Ekf::fuseOptFlow()
 	// The derivation allows for an arbitrary body to flow sensor frame rotation which is
 	// currently not supported by the EKF, so assume sensor frame is aligned with the
 	// body frame
-	const Dcmf Tbs = matrix::eye<float, 3>();
+	const Dcmf Tbs = matrix::eye<ecl_float_t, 3>();
 
 	// Sub Expressions
-	const float HK0 = -Tbs(1,0)*q2 + Tbs(1,1)*q1 + Tbs(1,2)*q0;
-	const float HK1 = Tbs(1,0)*q3 + Tbs(1,1)*q0 - Tbs(1,2)*q1;
-	const float HK2 = Tbs(1,0)*q0 - Tbs(1,1)*q3 + Tbs(1,2)*q2;
-	const float HK3 = HK0*vd + HK1*ve + HK2*vn;
-	const float HK4 = 1.0F/range;
-	const float HK5 = 2*HK4;
-	const float HK6 = Tbs(1,0)*q1 + Tbs(1,1)*q2 + Tbs(1,2)*q3;
-	const float HK7 = -HK0*ve + HK1*vd + HK6*vn;
-	const float HK8 = HK0*vn - HK2*vd + HK6*ve;
-	const float HK9 = -HK1*vn + HK2*ve + HK6*vd;
-	const float HK10 = q0*q2;
-	const float HK11 = q1*q3;
-	const float HK12 = HK10 + HK11;
-	const float HK13 = 2*Tbs(1,2);
-	const float HK14 = q0*q3;
-	const float HK15 = q1*q2;
-	const float HK16 = HK14 - HK15;
-	const float HK17 = 2*Tbs(1,1);
-	const float HK18 = ecl::powf(q1, 2);
-	const float HK19 = ecl::powf(q2, 2);
-	const float HK20 = -HK19;
-	const float HK21 = ecl::powf(q0, 2);
-	const float HK22 = ecl::powf(q3, 2);
-	const float HK23 = HK21 - HK22;
-	const float HK24 = HK18 + HK20 + HK23;
-	const float HK25 = HK12*HK13 - HK16*HK17 + HK24*Tbs(1,0);
-	const float HK26 = HK14 + HK15;
-	const float HK27 = 2*Tbs(1,0);
-	const float HK28 = q0*q1;
-	const float HK29 = q2*q3;
-	const float HK30 = HK28 - HK29;
-	const float HK31 = -HK18;
-	const float HK32 = HK19 + HK23 + HK31;
-	const float HK33 = -HK13*HK30 + HK26*HK27 + HK32*Tbs(1,1);
-	const float HK34 = HK28 + HK29;
-	const float HK35 = HK10 - HK11;
-	const float HK36 = HK20 + HK21 + HK22 + HK31;
-	const float HK37 = HK17*HK34 - HK27*HK35 + HK36*Tbs(1,2);
-	const float HK38 = 2*HK3;
-	const float HK39 = 2*HK7;
-	const float HK40 = 2*HK8;
-	const float HK41 = 2*HK9;
-	const float HK42 = HK25*P(0,4) + HK33*P(0,5) + HK37*P(0,6) + HK38*P(0,0) + HK39*P(0,1) + HK40*P(0,2) + HK41*P(0,3);
-	const float HK43 = ecl::powf(range, -2);
-	const float HK44 = HK25*P(4,6) + HK33*P(5,6) + HK37*P(6,6) + HK38*P(0,6) + HK39*P(1,6) + HK40*P(2,6) + HK41*P(3,6);
-	const float HK45 = HK25*P(4,5) + HK33*P(5,5) + HK37*P(5,6) + HK38*P(0,5) + HK39*P(1,5) + HK40*P(2,5) + HK41*P(3,5);
-	const float HK46 = HK25*P(4,4) + HK33*P(4,5) + HK37*P(4,6) + HK38*P(0,4) + HK39*P(1,4) + HK40*P(2,4) + HK41*P(3,4);
-	const float HK47 = HK25*P(2,4) + HK33*P(2,5) + HK37*P(2,6) + HK38*P(0,2) + HK39*P(1,2) + HK40*P(2,2) + HK41*P(2,3);
-	const float HK48 = HK25*P(3,4) + HK33*P(3,5) + HK37*P(3,6) + HK38*P(0,3) + HK39*P(1,3) + HK40*P(2,3) + HK41*P(3,3);
-	const float HK49 = HK25*P(1,4) + HK33*P(1,5) + HK37*P(1,6) + HK38*P(0,1) + HK39*P(1,1) + HK40*P(1,2) + HK41*P(1,3);
-	// const float HK50 = HK4/(HK25*HK43*HK46 + HK33*HK43*HK45 + HK37*HK43*HK44 + HK38*HK42*HK43 + HK39*HK43*HK49 + HK40*HK43*HK47 + HK41*HK43*HK48 + R_LOS);
+	const ecl_float_t HK0 = -Tbs(1,0)*q2 + Tbs(1,1)*q1 + Tbs(1,2)*q0;
+	const ecl_float_t HK1 = Tbs(1,0)*q3 + Tbs(1,1)*q0 - Tbs(1,2)*q1;
+	const ecl_float_t HK2 = Tbs(1,0)*q0 - Tbs(1,1)*q3 + Tbs(1,2)*q2;
+	const ecl_float_t HK3 = HK0*vd + HK1*ve + HK2*vn;
+	const ecl_float_t HK4 = 1.0F/range;
+	const ecl_float_t HK5 = 2*HK4;
+	const ecl_float_t HK6 = Tbs(1,0)*q1 + Tbs(1,1)*q2 + Tbs(1,2)*q3;
+	const ecl_float_t HK7 = -HK0*ve + HK1*vd + HK6*vn;
+	const ecl_float_t HK8 = HK0*vn - HK2*vd + HK6*ve;
+	const ecl_float_t HK9 = -HK1*vn + HK2*ve + HK6*vd;
+	const ecl_float_t HK10 = q0*q2;
+	const ecl_float_t HK11 = q1*q3;
+	const ecl_float_t HK12 = HK10 + HK11;
+	const ecl_float_t HK13 = 2*Tbs(1,2);
+	const ecl_float_t HK14 = q0*q3;
+	const ecl_float_t HK15 = q1*q2;
+	const ecl_float_t HK16 = HK14 - HK15;
+	const ecl_float_t HK17 = 2*Tbs(1,1);
+	const ecl_float_t HK18 = ecl::powf(q1, 2);
+	const ecl_float_t HK19 = ecl::powf(q2, 2);
+	const ecl_float_t HK20 = -HK19;
+	const ecl_float_t HK21 = ecl::powf(q0, 2);
+	const ecl_float_t HK22 = ecl::powf(q3, 2);
+	const ecl_float_t HK23 = HK21 - HK22;
+	const ecl_float_t HK24 = HK18 + HK20 + HK23;
+	const ecl_float_t HK25 = HK12*HK13 - HK16*HK17 + HK24*Tbs(1,0);
+	const ecl_float_t HK26 = HK14 + HK15;
+	const ecl_float_t HK27 = 2*Tbs(1,0);
+	const ecl_float_t HK28 = q0*q1;
+	const ecl_float_t HK29 = q2*q3;
+	const ecl_float_t HK30 = HK28 - HK29;
+	const ecl_float_t HK31 = -HK18;
+	const ecl_float_t HK32 = HK19 + HK23 + HK31;
+	const ecl_float_t HK33 = -HK13*HK30 + HK26*HK27 + HK32*Tbs(1,1);
+	const ecl_float_t HK34 = HK28 + HK29;
+	const ecl_float_t HK35 = HK10 - HK11;
+	const ecl_float_t HK36 = HK20 + HK21 + HK22 + HK31;
+	const ecl_float_t HK37 = HK17*HK34 - HK27*HK35 + HK36*Tbs(1,2);
+	const ecl_float_t HK38 = 2*HK3;
+	const ecl_float_t HK39 = 2*HK7;
+	const ecl_float_t HK40 = 2*HK8;
+	const ecl_float_t HK41 = 2*HK9;
+	const ecl_float_t HK42 = HK25*P(0,4) + HK33*P(0,5) + HK37*P(0,6) + HK38*P(0,0) + HK39*P(0,1) + HK40*P(0,2) + HK41*P(0,3);
+	const ecl_float_t HK43 = ecl::powf(range, -2);
+	const ecl_float_t HK44 = HK25*P(4,6) + HK33*P(5,6) + HK37*P(6,6) + HK38*P(0,6) + HK39*P(1,6) + HK40*P(2,6) + HK41*P(3,6);
+	const ecl_float_t HK45 = HK25*P(4,5) + HK33*P(5,5) + HK37*P(5,6) + HK38*P(0,5) + HK39*P(1,5) + HK40*P(2,5) + HK41*P(3,5);
+	const ecl_float_t HK46 = HK25*P(4,4) + HK33*P(4,5) + HK37*P(4,6) + HK38*P(0,4) + HK39*P(1,4) + HK40*P(2,4) + HK41*P(3,4);
+	const ecl_float_t HK47 = HK25*P(2,4) + HK33*P(2,5) + HK37*P(2,6) + HK38*P(0,2) + HK39*P(1,2) + HK40*P(2,2) + HK41*P(2,3);
+	const ecl_float_t HK48 = HK25*P(3,4) + HK33*P(3,5) + HK37*P(3,6) + HK38*P(0,3) + HK39*P(1,3) + HK40*P(2,3) + HK41*P(3,3);
+	const ecl_float_t HK49 = HK25*P(1,4) + HK33*P(1,5) + HK37*P(1,6) + HK38*P(0,1) + HK39*P(1,1) + HK40*P(1,2) + HK41*P(1,3);
+	// const ecl_float_t HK50 = HK4/(HK25*HK43*HK46 + HK33*HK43*HK45 + HK37*HK43*HK44 + HK38*HK42*HK43 + HK39*HK43*HK49 + HK40*HK43*HK47 + HK41*HK43*HK48 + R_LOS);
 
 	// calculate innovation variance for X axis observation and protect against a badly conditioned calculation
 	_flow_innov_var(0) = (HK25*HK43*HK46 + HK33*HK43*HK45 + HK37*HK43*HK44 + HK38*HK42*HK43 + HK39*HK43*HK49 + HK40*HK43*HK47 + HK41*HK43*HK48 + R_LOS);
@@ -182,53 +185,53 @@ void Ekf::fuseOptFlow()
 		initialiseCovariance();
 		return;
 	}
-	const float HK50 = HK4/_flow_innov_var(0);
+	const ecl_float_t HK50 = HK4/_flow_innov_var(0);
 
-	const float HK51 = Tbs(0,1)*q1;
-	const float HK52 = Tbs(0,2)*q0;
-	const float HK53 = Tbs(0,0)*q2;
-	const float HK54 = HK51 + HK52 - HK53;
-	const float HK55 = Tbs(0,0)*q3;
-	const float HK56 = Tbs(0,1)*q0;
-	const float HK57 = Tbs(0,2)*q1;
-	const float HK58 = HK55 + HK56 - HK57;
-	const float HK59 = Tbs(0,0)*q0;
-	const float HK60 = Tbs(0,2)*q2;
-	const float HK61 = Tbs(0,1)*q3;
-	const float HK62 = HK59 + HK60 - HK61;
-	const float HK63 = HK54*vd + HK58*ve + HK62*vn;
-	const float HK64 = Tbs(0,0)*q1 + Tbs(0,1)*q2 + Tbs(0,2)*q3;
-	const float HK65 = HK58*vd + HK64*vn;
-	const float HK66 = -HK54*ve + HK65;
-	const float HK67 = HK54*vn + HK64*ve;
-	const float HK68 = -HK62*vd + HK67;
-	const float HK69 = HK62*ve + HK64*vd;
-	const float HK70 = -HK58*vn + HK69;
-	const float HK71 = 2*Tbs(0,1);
-	const float HK72 = 2*Tbs(0,2);
-	const float HK73 = HK12*HK72 + HK24*Tbs(0,0);
-	const float HK74 = -HK16*HK71 + HK73;
-	const float HK75 = 2*Tbs(0,0);
-	const float HK76 = HK26*HK75 + HK32*Tbs(0,1);
-	const float HK77 = -HK30*HK72 + HK76;
-	const float HK78 = HK34*HK71 + HK36*Tbs(0,2);
-	const float HK79 = -HK35*HK75 + HK78;
-	const float HK80 = 2*HK63;
-	const float HK81 = 2*HK65 + 2*ve*(-HK51 - HK52 + HK53);
-	const float HK82 = 2*HK67 + 2*vd*(-HK59 - HK60 + HK61);
-	const float HK83 = 2*HK69 + 2*vn*(-HK55 - HK56 + HK57);
-	const float HK84 = HK71*(-HK14 + HK15) + HK73;
-	const float HK85 = HK72*(-HK28 + HK29) + HK76;
-	const float HK86 = HK75*(-HK10 + HK11) + HK78;
-	const float HK87 = HK80*P(0,0) + HK81*P(0,1) + HK82*P(0,2) + HK83*P(0,3) + HK84*P(0,4) + HK85*P(0,5) + HK86*P(0,6);
-	const float HK88 = HK80*P(0,6) + HK81*P(1,6) + HK82*P(2,6) + HK83*P(3,6) + HK84*P(4,6) + HK85*P(5,6) + HK86*P(6,6);
-	const float HK89 = HK80*P(0,5) + HK81*P(1,5) + HK82*P(2,5) + HK83*P(3,5) + HK84*P(4,5) + HK85*P(5,5) + HK86*P(5,6);
-	const float HK90 = HK80*P(0,4) + HK81*P(1,4) + HK82*P(2,4) + HK83*P(3,4) + HK84*P(4,4) + HK85*P(4,5) + HK86*P(4,6);
-	const float HK91 = HK80*P(0,2) + HK81*P(1,2) + HK82*P(2,2) + HK83*P(2,3) + HK84*P(2,4) + HK85*P(2,5) + HK86*P(2,6);
-	const float HK92 = 2*HK43;
-	const float HK93 = HK80*P(0,3) + HK81*P(1,3) + HK82*P(2,3) + HK83*P(3,3) + HK84*P(3,4) + HK85*P(3,5) + HK86*P(3,6);
-	const float HK94 = HK80*P(0,1) + HK81*P(1,1) + HK82*P(1,2) + HK83*P(1,3) + HK84*P(1,4) + HK85*P(1,5) + HK86*P(1,6);
-	// const float HK95 = HK4/(HK43*HK74*HK90 + HK43*HK77*HK89 + HK43*HK79*HK88 + HK43*HK80*HK87 + HK66*HK92*HK94 + HK68*HK91*HK92 + HK70*HK92*HK93 + R_LOS);
+	const ecl_float_t HK51 = Tbs(0,1)*q1;
+	const ecl_float_t HK52 = Tbs(0,2)*q0;
+	const ecl_float_t HK53 = Tbs(0,0)*q2;
+	const ecl_float_t HK54 = HK51 + HK52 - HK53;
+	const ecl_float_t HK55 = Tbs(0,0)*q3;
+	const ecl_float_t HK56 = Tbs(0,1)*q0;
+	const ecl_float_t HK57 = Tbs(0,2)*q1;
+	const ecl_float_t HK58 = HK55 + HK56 - HK57;
+	const ecl_float_t HK59 = Tbs(0,0)*q0;
+	const ecl_float_t HK60 = Tbs(0,2)*q2;
+	const ecl_float_t HK61 = Tbs(0,1)*q3;
+	const ecl_float_t HK62 = HK59 + HK60 - HK61;
+	const ecl_float_t HK63 = HK54*vd + HK58*ve + HK62*vn;
+	const ecl_float_t HK64 = Tbs(0,0)*q1 + Tbs(0,1)*q2 + Tbs(0,2)*q3;
+	const ecl_float_t HK65 = HK58*vd + HK64*vn;
+	const ecl_float_t HK66 = -HK54*ve + HK65;
+	const ecl_float_t HK67 = HK54*vn + HK64*ve;
+	const ecl_float_t HK68 = -HK62*vd + HK67;
+	const ecl_float_t HK69 = HK62*ve + HK64*vd;
+	const ecl_float_t HK70 = -HK58*vn + HK69;
+	const ecl_float_t HK71 = 2*Tbs(0,1);
+	const ecl_float_t HK72 = 2*Tbs(0,2);
+	const ecl_float_t HK73 = HK12*HK72 + HK24*Tbs(0,0);
+	const ecl_float_t HK74 = -HK16*HK71 + HK73;
+	const ecl_float_t HK75 = 2*Tbs(0,0);
+	const ecl_float_t HK76 = HK26*HK75 + HK32*Tbs(0,1);
+	const ecl_float_t HK77 = -HK30*HK72 + HK76;
+	const ecl_float_t HK78 = HK34*HK71 + HK36*Tbs(0,2);
+	const ecl_float_t HK79 = -HK35*HK75 + HK78;
+	const ecl_float_t HK80 = 2*HK63;
+	const ecl_float_t HK81 = 2*HK65 + 2*ve*(-HK51 - HK52 + HK53);
+	const ecl_float_t HK82 = 2*HK67 + 2*vd*(-HK59 - HK60 + HK61);
+	const ecl_float_t HK83 = 2*HK69 + 2*vn*(-HK55 - HK56 + HK57);
+	const ecl_float_t HK84 = HK71*(-HK14 + HK15) + HK73;
+	const ecl_float_t HK85 = HK72*(-HK28 + HK29) + HK76;
+	const ecl_float_t HK86 = HK75*(-HK10 + HK11) + HK78;
+	const ecl_float_t HK87 = HK80*P(0,0) + HK81*P(0,1) + HK82*P(0,2) + HK83*P(0,3) + HK84*P(0,4) + HK85*P(0,5) + HK86*P(0,6);
+	const ecl_float_t HK88 = HK80*P(0,6) + HK81*P(1,6) + HK82*P(2,6) + HK83*P(3,6) + HK84*P(4,6) + HK85*P(5,6) + HK86*P(6,6);
+	const ecl_float_t HK89 = HK80*P(0,5) + HK81*P(1,5) + HK82*P(2,5) + HK83*P(3,5) + HK84*P(4,5) + HK85*P(5,5) + HK86*P(5,6);
+	const ecl_float_t HK90 = HK80*P(0,4) + HK81*P(1,4) + HK82*P(2,4) + HK83*P(3,4) + HK84*P(4,4) + HK85*P(4,5) + HK86*P(4,6);
+	const ecl_float_t HK91 = HK80*P(0,2) + HK81*P(1,2) + HK82*P(2,2) + HK83*P(2,3) + HK84*P(2,4) + HK85*P(2,5) + HK86*P(2,6);
+	const ecl_float_t HK92 = 2*HK43;
+	const ecl_float_t HK93 = HK80*P(0,3) + HK81*P(1,3) + HK82*P(2,3) + HK83*P(3,3) + HK84*P(3,4) + HK85*P(3,5) + HK86*P(3,6);
+	const ecl_float_t HK94 = HK80*P(0,1) + HK81*P(1,1) + HK82*P(1,2) + HK83*P(1,3) + HK84*P(1,4) + HK85*P(1,5) + HK86*P(1,6);
+	// const ecl_float_t HK95 = HK4/(HK43*HK74*HK90 + HK43*HK77*HK89 + HK43*HK79*HK88 + HK43*HK80*HK87 + HK66*HK92*HK94 + HK68*HK91*HK92 + HK70*HK92*HK93 + R_LOS);
 
 	// calculate innovation variance for Y axis observation and protect against a badly conditioned calculation
 	_flow_innov_var(1) = (HK43*HK74*HK90 + HK43*HK77*HK89 + HK43*HK79*HK88 + HK43*HK80*HK87 + HK66*HK92*HK94 + HK68*HK91*HK92 + HK70*HK92*HK93 + R_LOS);
@@ -237,7 +240,7 @@ void Ekf::fuseOptFlow()
 		initialiseCovariance();
 		return;
 	}
-	const float HK95 = HK4/_flow_innov_var(1);
+	const ecl_float_t HK95 = HK4/_flow_innov_var(1);
 
 
 	// run the innovation consistency check and record result
@@ -340,7 +343,7 @@ bool Ekf::calcOptFlowBodyRateComp()
 	// reset the accumulators if the time interval is too large
 	if (_delta_time_of > 1.0f) {
 		_imu_del_ang_of.setZero();
-		_delta_time_of = 0.0f;
+		_delta_time_of = 0;
 		return false;
 	}
 
@@ -350,14 +353,14 @@ bool Ekf::calcOptFlowBodyRateComp()
 
 		// if accumulation time differences are not excessive and accumulation time is adequate
 		// compare the optical flow and and navigation rate data and calculate a bias error
-		if ((fabsf(_delta_time_of - _flow_sample_delayed.dt) < 0.1f) && (_delta_time_of > FLT_EPSILON)) {
+		if ((fabsf(_delta_time_of - _flow_sample_delayed.dt) < 0.1) && (_delta_time_of > FLT_EPSILON)) {
 
-			const Vector3f reference_body_rate(_imu_del_ang_of * (1.0f / _delta_time_of));
+			const Vector3f reference_body_rate(_imu_del_ang_of * (1.0 / _delta_time_of));
 
-			const Vector3f measured_body_rate(_flow_sample_delayed.gyro_xyz * (1.0f / _flow_sample_delayed.dt));
+			const Vector3f measured_body_rate(_flow_sample_delayed.gyro_xyz * (1.0 / _flow_sample_delayed.dt));
 
 			// calculate the bias estimate using  a combined LPF and spike filter
-			_flow_gyro_bias = _flow_gyro_bias * 0.99f + matrix::constrain(measured_body_rate - reference_body_rate, -0.1f, 0.1f) * 0.01f;
+			_flow_gyro_bias = _flow_gyro_bias * 0.99 + matrix::constrain(measured_body_rate - reference_body_rate, -0.1, 0.1) * 0.01;
 		}
 
 	} else {
@@ -369,7 +372,7 @@ bool Ekf::calcOptFlowBodyRateComp()
 
 	// reset the accumulators
 	_imu_del_ang_of.setZero();
-	_delta_time_of = 0.0f;
+	_delta_time_of = 0;
 	return true;
 }
 
@@ -396,3 +399,6 @@ float Ekf::calcOptFlowMeasVar()
 
 	return R_LOS;
 }
+
+} // namespace estimator
+
