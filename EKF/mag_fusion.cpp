@@ -812,14 +812,15 @@ void Ekf::fuseDeclination(float decl_sigma)
 	const float HK6 = HK5*P(16,17) - P(17,17);
 	const float HK7 = ecl::powf(HK1, -2);
 	const float HK8 = HK5*P(16,16) - P(16,17);
+
 	const float innovation_variance = -HK0*HK6*HK7 + HK7*HK8*magE/ecl::powf(magN, 3) + R_DECL;
-	float HK9;
-	if (innovation_variance > R_DECL) {
-		HK9 = HK4/innovation_variance;
-	} else {
+
+	if (innovation_variance < R_DECL) {
 		// variance calculation is badly conditioned
 		return;
 	}
+
+	const float HK9 = HK4/innovation_variance;
 
 	// Calculate the observation Jacobian
 	// Note only 2 terms are non-zero which can be used in matrix operations for calculation of Kalman gains and covariance update to significantly reduce cost
