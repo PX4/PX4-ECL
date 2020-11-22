@@ -578,23 +578,14 @@ void Ekf::fuseYaw312(float yaw, float yaw_variance, bool zero_innovation)
 }
 
 // update quaternion states and covariances using the yaw innovation, yaw observation variance and yaw Jacobian
-void Ekf::updateQuaternion(const float innovation, const float variance, const float gate_sigma, const SparseVector24f<0,1,2,3>& yaw_jacobian)
+void Ekf::updateQuaternion(const float innovation, const float measurement_variance, const float gate_sigma, const SparseVector24f<0,1,2,3>& yaw_jacobian)
 {
 	// Calculate innovation variance and Kalman gains, taking advantage of the fact that only the first 4 elements in H are non zero
-	// calculate the innovation variance
-	_heading_innov_var = variance;
-	for (unsigned row = 0; row <= 3; row++) {
-		float tmp = 0.0f;
-
-		for (uint8_t col = 0; col <= 3; col++) {
-			tmp += P(row,col) * yaw_jacobian.atCompressedIndex(col);
-		}
-
-		_heading_innov_var += yaw_jacobian.atCompressedIndex(row) * tmp;
-	}
+	// calculate the innovation variance S = H * P * H^T + R
+	_heading_innov_var = matrix::quadraticForm(P, yaw_jacobian) + measurement_variance;
 
 	// check if the innovation variance calculation is badly conditioned
-	if (_heading_innov_var < variance) {
+	if (_heading_innov_var < measurement_variance) {
 		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
 		_fault_status.flags.bad_hdg = true;
 
@@ -607,25 +598,17 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 	_fault_status.flags.bad_hdg = false;
 	const float heading_innov_var_inv = 1.0f / _heading_innov_var;
 
-	// calculate the Kalman gains
-	// only calculate gains for states we are using
+	// calculate the Kalman gains K = P * H^T * S^(-1)
+	// only calculate gains for relevant states
 	Vector24f Kfusion;
 
-	for (uint8_t row = 0; row <= 15; row++) {
-		for (uint8_t col = 0; col <= 3; col++) {
-			Kfusion(row) += P(row,col) * yaw_jacobian.atCompressedIndex(col);
-		}
-
-		Kfusion(row) *= heading_innov_var_inv;
+	for (uint8_t i = 0; i <= 15; i++) {
+		Kfusion(i) = yaw_jacobian.dot(P.row(i)) * heading_innov_var_inv;
 	}
 
 	if (_control_status.flags.wind) {
-		for (uint8_t row = 22; row <= 23; row++) {
-			for (uint8_t col = 0; col <= 3; col++) {
-				Kfusion(row) += P(row,col) * yaw_jacobian.atCompressedIndex(col);
-			}
-
-			Kfusion(row) *= heading_innov_var_inv;
+		for (uint8_t i = 22; i <= 23; i++) {
+			Kfusion(i) = yaw_jacobian.dot(P.row(i)) * heading_innov_var_inv;
 		}
 	}
 
