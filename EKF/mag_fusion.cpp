@@ -639,24 +639,9 @@ void Ekf::updateQuaternion(const float innovation, const float measurement_varia
 		_heading_innov = innovation;
 	}
 
-	// apply covariance correction via P_new = (I -K*H)*P
-	// first calculate expression for KHP
-	// then calculate P - KHP
-	const SquareMatrix24f KHP = computeKHP(Kfusion, yaw_jacobian);
+	const bool is_fused = measurementUpdate(Kfusion, yaw_jacobian, _heading_innov);
 
-	const bool healthy = checkAndFixCovarianceUpdate(KHP);
-
-	_fault_status.flags.bad_hdg = !healthy;
-
-	if (healthy) {
-		// apply the covariance corrections
-		P -= KHP;
-
-		fixCovarianceErrors(true);
-
-		// apply the state corrections
-		fuse(Kfusion, _heading_innov);
-	}
+	_fault_status.flags.bad_hdg = !is_fused;
 }
 
 void Ekf::fuseHeading()
