@@ -48,6 +48,8 @@ template <typename T>
 class AlphaFilter {
 public:
 	AlphaFilter() = default;
+	explicit AlphaFilter(float alpha) : _alpha(alpha) {}
+
 	~AlphaFilter() = default;
 
 	/**
@@ -85,7 +87,11 @@ public:
 	 *
 	 * @return retrieve the filtered result
 	 */
-	void update(const T &sample) { _filter_state = updateCalculation(sample); }
+	const T& update(const T &sample)
+	{
+		_filter_state = updateCalculation(sample);
+		return _filter_state;
+	}
 
 	const T &getState() const { return _filter_state; }
 
