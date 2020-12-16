@@ -318,11 +318,11 @@ struct parameters {
 	float req_vdrift{0.5f};			///< maximum acceptable vertical drift speed (m/s)
 
 	// XYZ offset of sensors in body axes (m)
-	Vector3f imu_pos_body;			///< xyz position of IMU in body frame (m)
-	Vector3f gps_pos_body;			///< xyz position of the GPS antenna in body frame (m)
-	Vector3f rng_pos_body;			///< xyz position of range sensor in body frame (m)
-	Vector3f flow_pos_body;			///< xyz position of range sensor focal point in body frame (m)
-	Vector3f ev_pos_body;			///< xyz position of VI-sensor focal point in body frame (m)
+	Vector3f imu_pos_body{};		///< xyz position of IMU in body frame (m)
+	Vector3f gps_pos_body{};		///< xyz position of the GPS antenna in body frame (m)
+	Vector3f rng_pos_body{};		///< xyz position of range sensor in body frame (m)
+	Vector3f flow_pos_body{};		///< xyz position of range sensor focal point in body frame (m)
+	Vector3f ev_pos_body{};			///< xyz position of VI-sensor focal point in body frame (m)
 
 	// output complementary filter tuning
 	float vel_Tau{0.25f};			///< velocity state correction time constant (1/sec)
@@ -376,14 +376,14 @@ struct parameters {
 };
 
 struct stateSample {
-	Quatf  quat_nominal;	///< quaternion defining the rotation from body to earth frame
-	Vector3f    vel;	///< NED velocity in earth frame in m/s
-	Vector3f    pos;	///< NED position in earth frame in m
-	Vector3f    delta_ang_bias;	///< delta angle bias estimate in rad
-	Vector3f    delta_vel_bias;	///< delta velocity bias estimate in m/s
-	Vector3f    mag_I;	///< NED earth magnetic field in gauss
-	Vector3f    mag_B;	///< magnetometer bias estimate in body frame in gauss
-	Vector2f    wind_vel;	///< horizontal wind velocity in earth frame in m/s
+	Quatf  quat_nominal{};	///< quaternion defining the rotation from body to earth frame
+	Vector3f    vel{};	///< NED velocity in earth frame in m/s
+	Vector3f    pos{};	///< NED position in earth frame in m
+	Vector3f    delta_ang_bias{};	///< delta angle bias estimate in rad
+	Vector3f    delta_vel_bias{};	///< delta velocity bias estimate in m/s
+	Vector3f    mag_I{};	///< NED earth magnetic field in gauss
+	Vector3f    mag_B{};	///< magnetometer bias estimate in body frame in gauss
+	Vector2f    wind_vel{};	///< horizontal wind velocity in earth frame in m/s
 };
 
 union fault_status_u {

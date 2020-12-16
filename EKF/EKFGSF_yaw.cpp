@@ -133,7 +133,7 @@ void EKFGSF_yaw::update(const imuSample& imu_sample,
 	// Calculate a composite yaw vector as a weighted average of the states for each model.
 	// To avoid issues with angle wrapping, the yaw state is converted to a vector with length
 	// equal to the weighting value before it is summed.
-	Vector2f yaw_vector;
+	Vector2f yaw_vector{};
 	for (uint8_t model_index = 0; model_index < N_MODELS_EKFGSF; model_index ++) {
 		yaw_vector(0) += _model_weights(model_index) * cosf(_ekf_gsf[model_index].X(2));
 		yaw_vector(1) += _model_weights(model_index) * sinf(_ekf_gsf[model_index].X(2));
@@ -163,7 +163,7 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 
 	// Perform angular rate correction using accel data and reduce correction as accel magnitude moves away from 1 g (reduces drift when vehicle picked up and moved).
 	// During fixed wing flight, compensate for centripetal acceleration assuming coordinated turns and X axis forward
-	Vector3f tilt_correction;
+	Vector3f tilt_correction{};
 	if (_ahrs_accel_fusion_gain > 0.0f) {
 
 		Vector3f accel = _ahrs_accel;
@@ -178,7 +178,6 @@ void EKFGSF_yaw::ahrsPredict(const uint8_t model_index)
 		}
 
 		tilt_correction = (gravity_direction_bf % accel) * _ahrs_accel_fusion_gain / _ahrs_accel_norm;
-
 	}
 
 	// Gyro bias estimation

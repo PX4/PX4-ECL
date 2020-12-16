@@ -593,7 +593,7 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 		_heading_innov_var += yaw_jacobian(row) * tmp;
 	}
 
-	float heading_innov_var_inv;
+	float heading_innov_var_inv = 0.f;
 
 	// check if the innovation variance calculation is badly conditioned
 	if (_heading_innov_var >= variance) {
@@ -613,7 +613,7 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 
 	// calculate the Kalman gains
 	// only calculate gains for states we are using
-	Vector24f Kfusion;
+	Vector24f Kfusion{};
 
 	for (uint8_t row = 0; row <= 15; row++) {
 		for (uint8_t col = 0; col <= 3; col++) {
@@ -663,7 +663,7 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 	// apply covariance correction via P_new = (I -K*H)*P
 	// first calculate expression for KHP
 	// then calculate P - KHP
-	SquareMatrix24f KHP;
+	SquareMatrix24f KHP{};
 	float KH[4];
 
 	for (unsigned row = 0; row < _k_num_states; row++) {
@@ -700,11 +700,11 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 
 void Ekf::fuseHeading()
 {
-	Vector3f mag_earth_pred;
-	float measured_hdg;
+	Vector3f mag_earth_pred{};
+	float measured_hdg = 0.f;
 
 	// Calculate the observation variance
-	float R_YAW;
+	float R_YAW = 0.01f; // default value
 	if (_control_status.flags.mag_hdg) {
 		// using magnetic heading tuning parameter
 		R_YAW = sq(_params.mag_heading_noise);
@@ -712,10 +712,6 @@ void Ekf::fuseHeading()
 	} else if (_control_status.flags.ev_yaw) {
 		// using error estimate from external vision data
 		R_YAW = _ev_sample_delayed.angVar;
-
-	} else {
-		// default value
-		R_YAW = 0.01f;
 	}
 
 	// update transformation matrix from body to world frame using the current state estimate

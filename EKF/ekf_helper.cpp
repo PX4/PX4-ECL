@@ -557,8 +557,8 @@ float Ekf::getMagDeclination()
 
 void Ekf::constrainStates()
 {
-	_state.quat_nominal = matrix::constrain(_state.quat_nominal, -1.0f, 1.0f);
-	_state.vel = matrix::constrain(_state.vel, -1000.0f, 1000.0f);
+	_state.quat_nominal = matrix::constrain(_state.quat_nominal, -1.f, 1.f);
+	_state.vel = matrix::constrain(_state.vel, -1000.f, 1000.f);
 	_state.pos = matrix::constrain(_state.pos, -1.e6f, 1.e6f);
 
 	const float delta_ang_bias_limit = math::radians(20.f) * _dt_ekf_avg;

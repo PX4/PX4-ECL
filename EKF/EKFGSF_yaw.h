@@ -55,10 +55,10 @@ private:
 
 	// Parameters - these could be made tuneable
 	const float _gyro_noise{1.0e-1f}; 	// yaw rate noise used for covariance prediction (rad/sec)
-	const float _accel_noise{2.0f};		// horizontal accel noise used for covariance prediction (m/sec**2)
+	const float _accel_noise{2.f};		// horizontal accel noise used for covariance prediction (m/sec**2)
 	const float _tilt_gain{0.2f};		// gain from tilt error to gyro correction for complementary filter (1/sec)
 	const float _gyro_bias_gain{0.04f};	// gain applied to integral of gyro correction for complementary filter (1/sec)
-	const float _weight_min{0.0f};		// minimum value of an individual model weighting
+	const float _weight_min{0.f};		// minimum value of an individual model weighting
 
 	// Declarations used by the bank of N_MODELS_EKFGSF AHRS complementary filters
 
@@ -123,7 +123,7 @@ private:
 	// return false if update failed
 	bool updateEKF(const uint8_t model_index);
 
-	inline float sq(float x) const { return x * x; };
+	static constexpr float sq(float x) { return x * x; };
 
 	// Declarations used by the Gaussian Sum Filter (GSF) that combines the individual EKF yaw estimates
 

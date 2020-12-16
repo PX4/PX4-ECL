@@ -232,7 +232,7 @@ protected:
 
 	virtual bool init(uint64_t timestamp) = 0;
 
-	parameters _params;		// filter parameters
+	parameters _params{};		// filter parameters
 
 	/*
 	 OBS_BUFFER_LENGTH defines how many observations (non-IMU measurements) we can buffer
@@ -270,45 +270,45 @@ protected:
 	float _air_density{CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C};		// air density (kg/m**3)
 
 	// Sensor limitations
-	float _flow_max_rate{0.0f}; ///< maximum angular flow rate that the optical flow sensor can measure (rad/s)
-	float _flow_min_distance{0.0f};	///< minimum distance that the optical flow sensor can operate at (m)
-	float _flow_max_distance{0.0f};	///< maximum distance that the optical flow sensor can operate at (m)
+	float _flow_max_rate{0.f}; ///< maximum angular flow rate that the optical flow sensor can measure (rad/s)
+	float _flow_min_distance{0.f};	///< minimum distance that the optical flow sensor can operate at (m)
+	float _flow_max_distance{0.f};	///< maximum distance that the optical flow sensor can operate at (m)
 
 	// Output Predictor
 	outputSample _output_new{};		// filter output on the non-delayed time horizon
 	outputVert _output_vert_new{};		// vertical filter output on the non-delayed time horizon
 	imuSample _newest_high_rate_imu_sample{};		// imu sample capturing the newest imu data
-	Matrix3f _R_to_earth_now;		// rotation matrix from body to earth frame at current time
-	Vector3f _vel_imu_rel_body_ned;		// velocity of IMU relative to body origin in NED earth frame
-	Vector3f _vel_deriv;		// velocity derivative at the IMU in NED earth frame (m/s/s)
+	Matrix3f _R_to_earth_now{};		// rotation matrix from body to earth frame at current time
+	Vector3f _vel_imu_rel_body_ned{};		// velocity of IMU relative to body origin in NED earth frame
+	Vector3f _vel_deriv{};		// velocity derivative at the IMU in NED earth frame (m/s/s)
 
 	bool _imu_updated{false};      // true if the ekf should update (completed downsampling process)
 	bool _initialised{false};      // true if the ekf interface instance (data buffering) is initialized
 
 	bool _NED_origin_initialised{false};
 	bool _gps_speed_valid{false};
-	float _gps_origin_eph{0.0f}; // horizontal position uncertainty of the GPS origin
-	float _gps_origin_epv{0.0f}; // vertical position uncertainty of the GPS origin
+	float _gps_origin_eph{0.f}; // horizontal position uncertainty of the GPS origin
+	float _gps_origin_epv{0.f}; // vertical position uncertainty of the GPS origin
 	struct map_projection_reference_s _pos_ref {};   // Contains WGS-84 position latitude and longitude (radians) of the EKF origin
 	struct map_projection_reference_s _gps_pos_prev {};   // Contains WGS-84 position latitude and longitude (radians) of the previous GPS message
-	float _gps_alt_prev{0.0f};	// height from the previous GPS message (m)
-	float _gps_yaw_offset{0.0f};	// Yaw offset angle for dual GPS antennas used for yaw estimation (radians).
+	float _gps_alt_prev{0.f};	// height from the previous GPS message (m)
+	float _gps_yaw_offset{0.f};	// Yaw offset angle for dual GPS antennas used for yaw estimation (radians).
 
 	// innovation consistency check monitoring ratios
 	float _yaw_test_ratio{};		// yaw innovation consistency check ratio
-	Vector3f _mag_test_ratio;		// magnetometer XYZ innovation consistency check ratios
-	Vector2f _gps_vel_test_ratio;		// GPS velocity innovation consistency check ratios
-	Vector2f _gps_pos_test_ratio;		// GPS position innovation consistency check ratios
-	Vector2f _ev_vel_test_ratio;		// EV velocity innovation consistency check ratios
-	Vector2f _ev_pos_test_ratio ;		// EV position innovation consistency check ratios
-	Vector2f _aux_vel_test_ratio;		// Auxiliray horizontal velocity innovation consistency check ratio
-	Vector2f _baro_hgt_test_ratio;		// baro height innovation consistency check ratios
-	Vector2f _rng_hgt_test_ratio;		// range finder height innovation consistency check ratios
+	Vector3f _mag_test_ratio{};		// magnetometer XYZ innovation consistency check ratios
+	Vector2f _gps_vel_test_ratio{};		// GPS velocity innovation consistency check ratios
+	Vector2f _gps_pos_test_ratio{};		// GPS position innovation consistency check ratios
+	Vector2f _ev_vel_test_ratio{};		// EV velocity innovation consistency check ratios
+	Vector2f _ev_pos_test_ratio{};		// EV position innovation consistency check ratios
+	Vector2f _aux_vel_test_ratio{};		// Auxiliray horizontal velocity innovation consistency check ratio
+	Vector2f _baro_hgt_test_ratio{};	// baro height innovation consistency check ratios
+	Vector2f _rng_hgt_test_ratio{};		// range finder height innovation consistency check ratios
 	float _optflow_test_ratio{};		// Optical flow innovation consistency check ratio
 	float _tas_test_ratio{};		// tas innovation consistency check ratio
 	float _hagl_test_ratio{};		// height above terrain measurement innovation consistency check ratio
 	float _beta_test_ratio{};		// sideslip innovation consistency check ratio
-	Vector2f _drag_test_ratio;		// drag innovation consistency check ratio
+	Vector2f _drag_test_ratio{};		// drag innovation consistency check ratio
 	innovation_fault_status_u _innov_check_fail_status{};
 
 	bool _is_dead_reckoning{false};		// true if we are no longer fusing measurements that constrain horizontal velocity drift
@@ -381,16 +381,16 @@ private:
 	unsigned _min_obs_interval_us{0}; // minimum time interval between observations that will guarantee data is not lost (usec)
 
 	// IMU vibration and movement monitoring
-	Vector3f _delta_ang_prev;	// delta angle from the previous IMU measurement
-	Vector3f _delta_vel_prev;	// delta velocity from the previous IMU measurement
-	Vector3f _vibe_metrics;	// IMU vibration metrics
+	Vector3f _delta_ang_prev{};	// delta angle from the previous IMU measurement
+	Vector3f _delta_vel_prev{};	// delta velocity from the previous IMU measurement
+	Vector3f _vibe_metrics{};	// IMU vibration metrics
 					// [0] Level of coning vibration in the IMU delta angles (rad^2)
 					// [1] high frequency vibration level in the IMU delta angle data (rad)
 					// [2] high frequency vibration level in the IMU delta velocity data (m/s)
 
 	// Used to down sample barometer data
 	uint64_t _baro_timestamp_sum{0};	// summed timestamp to provide the timestamp of the averaged sample
-	float _baro_alt_sum{0.0f};			// summed pressure altitude readings (m)
+	float _baro_alt_sum{0.f};			// summed pressure altitude readings (m)
 	uint8_t _baro_sample_count{0};		// number of barometric altitude measurements summed
 
 	// Used by the multi-rotor specific drag force fusion
@@ -399,7 +399,7 @@ private:
 
 	// Used to downsample magnetometer data
 	uint64_t _mag_timestamp_sum{0};
-	Vector3f _mag_data_sum;
+	Vector3f _mag_data_sum{};
 	uint8_t _mag_sample_count{0};
 
 	// observation buffer final allocation failed
