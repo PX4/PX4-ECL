@@ -109,7 +109,7 @@ bool Ekf::collect_gps(const gps_message &gps)
 			startGpsHgtFusion();
 		}
 
-		ECL_INFO_TIMESTAMPED("GPS checks passed");
+		ECL_INFO("GPS checks passed");
 
 	} else if (!_NED_origin_initialised) {
 		// a rough 2D fix is still sufficient to lookup declination
