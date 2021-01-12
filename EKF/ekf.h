@@ -149,9 +149,7 @@ public:
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	bool collect_gps(const gps_message &gps) override;
 
-	// get the ekf WGS-84 origin position and height and the system time it was last set
-	// return true if the origin is valid
-	bool get_ekf_origin(uint64_t *origin_time, map_projection_reference_s *origin_pos, float *origin_alt) const;
+	bool setGlobalOrigin(const double &latitude, const double &longitude, const float &altitude);
 
 	// get the 1-sigma horizontal and vertical position uncertainty of the ekf WGS-84 position
 	void get_ekf_gpos_accuracy(float *ekf_eph, float *ekf_epv) const;
@@ -260,6 +258,8 @@ public:
 		_state_reset_status.quat_change.copyTo(delta_quat);
 		*counter = _state_reset_status.quat_counter;
 	}
+
+	const float &global_origin_altitude() const { return _gps_alt_ref; }
 
 	// get EKF innovation consistency check status information comprising of:
 	// status - a bitmask integer containing the pass/fail status for each EKF measurement innovation consistency check
@@ -461,7 +461,6 @@ private:
 	bool _gps_checks_passed{false};		///> true when all active GPS checks have passed
 
 	// Variables used to publish the WGS-84 location of the EKF local NED origin
-	uint64_t _last_gps_origin_time_us{0};	///< time the origin was last set (uSec)
 	float _gps_alt_ref{0.0f};		///< WGS-84 height (m)
 
 	// Variables used by the initial filter alignment
@@ -609,6 +608,8 @@ private:
 	inline void resetHorizontalPositionToVision();
 
 	inline void resetHorizontalPositionTo(const Vector2f &new_horz_pos);
+
+	inline void resetVerticalPositionTo(const float &new_vert_pos);
 
 	void resetHeight();
 
