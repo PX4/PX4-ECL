@@ -86,11 +86,7 @@ void Gps::stepHorizontalPositionByMeters(Vector2f hpos_change)
 {
 	float hposN_curr;
 	float hposE_curr;
-	map_projection_reference_s origin;
-	uint64_t time;
-	float alt;
-	_ekf->get_ekf_origin(&time, &origin, &alt);
-	map_projection_project(&origin, _gps_data.lat * 1e-7, _gps_data.lon * 1e-7, &hposN_curr, &hposE_curr);
+	map_projection_project(&_ekf->global_origin(), _gps_data.lat * 1e-7, _gps_data.lon * 1e-7, &hposN_curr, &hposE_curr);
 	Vector2f hpos_new = Vector2f{hposN_curr, hposE_curr} + hpos_change;
 	double lat_new;
 	double lon_new;

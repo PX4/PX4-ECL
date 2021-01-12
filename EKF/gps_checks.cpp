@@ -65,52 +65,39 @@ bool Ekf::collect_gps(const gps_message &gps)
 		// If we have good GPS data set the origin's WGS-84 position to the last gps fix
 		const double lat = gps.lat * 1.0e-7;
 		const double lon = gps.lon * 1.0e-7;
-		map_projection_init_timestamped(&_pos_ref, lat, lon, _time_last_imu);
+		const float alt = 1e-3f * (float)gps.alt;
 
-		// if we are already doing aiding, correct for the change in position since the EKF started navigationg
-		if (isHorizontalAidingActive()) {
-			double est_lat, est_lon;
-			map_projection_reproject(&_pos_ref, -_state.pos(0), -_state.pos(1), &est_lat, &est_lon);
-			map_projection_init_timestamped(&_pos_ref, est_lat, est_lon, _time_last_imu);
-		}
+		if (setGlobalOrigin(lat, lon, alt)) {
+			const bool declination_was_valid = ISFINITE(_mag_declination_gps);
 
-		// Take the current GPS height and subtract the filter height above origin to estimate the GPS height of the origin
-		_gps_alt_ref = 1e-3f * (float)gps.alt + _state.pos(2);
-		_NED_origin_initialised = true;
-		_earth_rate_NED = calcEarthRateNED((float)_pos_ref.lat_rad);
-		_last_gps_origin_time_us = _time_last_imu;
+			// set the magnetic field data returned by the geo library using the current GPS position
+			_mag_declination_gps = get_mag_declination_radians(lat, lon);
+			_mag_inclination_gps = get_mag_inclination_radians(lat, lon);
+			_mag_strength_gps = get_mag_strength_gauss(lat, lon);
 
-		const bool declination_was_valid = ISFINITE(_mag_declination_gps);
+			// request a reset of the yaw using the new declination
+			if (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE) {
+				// try to reset the yaw using the EKF-GSF yaw esitimator
+				_do_ekfgsf_yaw_reset = true;
+				_ekfgsf_yaw_reset_time = 0;
 
-		// set the magnetic field data returned by the geo library using the current GPS position
-		_mag_declination_gps = get_mag_declination_radians(lat, lon);
-		_mag_inclination_gps = get_mag_inclination_radians(lat, lon);
-		_mag_strength_gps = get_mag_strength_gauss(lat, lon);
-
-		// request a reset of the yaw using the new declination
-		if (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE) {
-			// try to reset the yaw using the EKF-GSF yaw esitimator
-			_do_ekfgsf_yaw_reset = true;
-			_ekfgsf_yaw_reset_time = 0;
-
-		} else {
-			if (!declination_was_valid) {
-				_mag_yaw_reset_req = true;
+			} else {
+				if (!declination_was_valid) {
+					_mag_yaw_reset_req = true;
+				}
 			}
+
+			// save the horizontal and vertical position uncertainty of the origin
+			_gps_origin_eph = gps.eph;
+			_gps_origin_epv = gps.epv;
+
+			// if the user has selected GPS as the primary height source, switch across to using it
+			if (_params.vdist_sensor_type == VDIST_SENSOR_GPS) {
+				startGpsHgtFusion();
+			}
+
+			ECL_INFO_TIMESTAMPED("GPS checks passed");
 		}
-
-		// save the horizontal and vertical position uncertainty of the origin
-		_gps_origin_eph = gps.eph;
-		_gps_origin_epv = gps.epv;
-
-		// if the user has selected GPS as the primary height source, switch across to using it
-
-		if (_params.vdist_sensor_type == VDIST_SENSOR_GPS) {
-			startGpsHgtFusion();
-		}
-
-		ECL_INFO_TIMESTAMPED("GPS checks passed");
-
 	} else if (!_NED_origin_initialised) {
 		// a rough 2D fix is still sufficient to lookup declination
 		if ((gps.fix_type >= 2) && (gps.eph < 1000)) {
