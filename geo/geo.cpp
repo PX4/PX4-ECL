@@ -58,7 +58,6 @@ using matrix::wrap_2pi;
  */
 
 static struct map_projection_reference_s mp_ref;
-static struct globallocal_converter_reference_s gl_ref = {0.0f, false};
 
 bool map_projection_global_initialized()
 {
@@ -89,7 +88,6 @@ int map_projection_global_init(double lat_0, double lon_0, uint64_t timestamp)
 // lat_0, lon_0 are expected to be in correct format: -> 47.1234567 and not 471234567
 int map_projection_init_timestamped(struct map_projection_reference_s *ref, double lat_0, double lon_0, uint64_t timestamp)
 {
-
 	ref->lat_rad = math::radians(lat_0);
 	ref->lon_rad = math::radians(lon_0);
 	ref->sin_lat = sin(ref->lat_rad);
@@ -203,65 +201,6 @@ int map_projection_global_getref(double *lat_0, double *lon_0)
 
 	if (lon_0 != nullptr) {
 		*lon_0 = math::degrees(mp_ref.lon_rad);
-	}
-
-	return 0;
-
-}
-int globallocalconverter_init(double lat_0, double lon_0, float alt_0, uint64_t timestamp)
-{
-	gl_ref.alt = alt_0;
-
-	if (!map_projection_global_init(lat_0, lon_0, timestamp)) {
-		gl_ref.init_done = true;
-		return 0;
-	}
-
-	gl_ref.init_done = false;
-	return -1;
-}
-
-bool globallocalconverter_initialized()
-{
-	return gl_ref.init_done && map_projection_global_initialized();
-}
-
-int globallocalconverter_tolocal(double lat, double lon, float alt, float *x, float *y, float *z)
-{
-	if (!map_projection_global_initialized()) {
-		return -1;
-	}
-
-	map_projection_global_project(lat, lon, x, y);
-	*z = gl_ref.alt - alt;
-
-	return 0;
-}
-
-int globallocalconverter_toglobal(float x, float y, float z,  double *lat, double *lon, float *alt)
-{
-	if (!map_projection_global_initialized()) {
-		return -1;
-	}
-
-	map_projection_global_reproject(x, y, lat, lon);
-	*alt = gl_ref.alt - z;
-
-	return 0;
-}
-
-int globallocalconverter_getref(double *lat_0, double *lon_0, float *alt_0)
-{
-	if (map_projection_global_initialized() != 0) {
-		return -1;
-	}
-
-	if (map_projection_global_getref(lat_0, lon_0)) {
-		return -1;
-	}
-
-	if (alt_0 != nullptr) {
-		*alt_0 = gl_ref.alt;
 	}
 
 	return 0;

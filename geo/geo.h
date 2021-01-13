@@ -81,11 +81,6 @@ struct map_projection_reference_s {
 	bool init_done;
 };
 
-struct globallocal_converter_reference_s {
-	float alt;
-	bool init_done;
-};
-
 /**
  * Checks if global projection was initialized
  * @return true if map was initialized before, false else
@@ -201,32 +196,6 @@ int map_projection_reproject(const struct map_projection_reference_s *ref, float
  * Get reference position of the global map projection
  */
 int map_projection_global_getref(double *lat_0, double *lon_0);
-
-/**
- * Initialize the global mapping between global position (spherical) and local position (NED).
- */
-int globallocalconverter_init(double lat_0, double lon_0, float alt_0, uint64_t timestamp);
-
-/**
- * Checks if globallocalconverter was initialized
- * @return true if map was initialized before, false else
- */
-bool globallocalconverter_initialized(void);
-
-/**
- * Convert from global position coordinates to local position coordinates using the global reference
- */
-int globallocalconverter_tolocal(double lat, double lon, float alt, float *x, float *y, float *z);
-
-/**
- * Convert from local position coordinates to global position coordinates using the global reference
- */
-int globallocalconverter_toglobal(float x, float y, float z,  double *lat, double *lon, float *alt);
-
-/**
- * Get reference position of the global to local converter
- */
-int globallocalconverter_getref(double *lat_0, double *lon_0, float *alt_0);
 
 /**
  * Returns the distance to the next waypoint in meters.
