@@ -149,7 +149,11 @@ public:
 	// ask estimator for sensor data collection decision and do any preprocessing if required, returns true if not defined
 	bool collect_gps(const gps_message &gps) override;
 
-	bool setGlobalOrigin(const double &latitude, const double &longitude, const float &altitude);
+	// get the ekf WGS-84 origin position and height and the system time it was last set
+	// return true if the origin is valid
+	bool getEkfGlobalOrigin(uint64_t &origin_time, map_projection_reference_s &origin_pos, float &origin_alt) const;
+
+	bool setEkfGlobalOrigin(const double &latitude, const double &longitude, const float &altitude);
 
 	// get the 1-sigma horizontal and vertical position uncertainty of the ekf WGS-84 position
 	void get_ekf_gpos_accuracy(float *ekf_eph, float *ekf_epv) const;
@@ -461,6 +465,7 @@ private:
 	bool _gps_checks_passed{false};		///> true when all active GPS checks have passed
 
 	// Variables used to publish the WGS-84 location of the EKF local NED origin
+	uint64_t _last_gps_origin_time_us{0};	///< time the origin was last set (uSec)
 	float _gps_alt_ref{0.0f};		///< WGS-84 height (m)
 
 	// Variables used by the initial filter alignment

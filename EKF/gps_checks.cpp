@@ -82,6 +82,7 @@ bool Ekf::collect_gps(const gps_message &gps)
 		_gps_alt_ref = 1e-3f * (float)gps.alt + _state.pos(2);
 		_NED_origin_initialised = true;
 		_earth_rate_NED = calcEarthRateNED((float)_pos_ref.lat_rad);
+		_last_gps_origin_time_us = _time_last_imu;
 
 		const bool declination_was_valid = ISFINITE(_mag_declination_gps);
 
