@@ -72,6 +72,8 @@ void Ekf::controlMagFusion()
 		return;
 	}
 
+	_mag_yaw_reset_req |= otherHeadingSourcesHaveFinished();
+
 	if (noOtherYawAidingThanMag() && _mag_data_ready) {
 		if (_control_status.flags.in_air) {
 			checkHaglYawResetReq();
@@ -327,3 +329,14 @@ void Ekf::run3DMagAndDeclFusions()
 	}
 }
 
+bool Ekf::otherHeadingSourcesHaveFinished()
+{
+    bool no_other_yaw_aiding_than_mag = noOtherYawAidingThanMag();
+
+    // detect rising edge
+    bool result = no_other_yaw_aiding_than_mag && !_no_other_yaw_aiding_than_mag;
+
+    _no_other_yaw_aiding_than_mag = no_other_yaw_aiding_than_mag;
+
+    return  result;
+}
