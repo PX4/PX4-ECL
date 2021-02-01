@@ -331,12 +331,10 @@ void Ekf::run3DMagAndDeclFusions()
 
 bool Ekf::otherHeadingSourcesHaveFinished()
 {
-    bool no_other_yaw_aiding_than_mag = noOtherYawAidingThanMag();
-
     // detect rising edge
-    bool result = no_other_yaw_aiding_than_mag && !_no_other_yaw_aiding_than_mag;
+    bool result = noOtherYawAidingThanMag() && !_no_non_mag_heading_aiding_running;
 
-    _no_other_yaw_aiding_than_mag = no_other_yaw_aiding_than_mag;
+    _no_non_mag_heading_aiding_running = noOtherYawAidingThanMag();
 
     return  result;
 }

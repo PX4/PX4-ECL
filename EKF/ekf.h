@@ -381,7 +381,7 @@ private:
 	bool _mag_yaw_reset_req{false};		///< true when a reset of the yaw using the magnetometer data has been requested
 	bool _mag_decl_cov_reset{false};	///< true after the fuseDeclination() function has been used to modify the earth field covariances after a magnetic field reset event.
 	bool _synthetic_mag_z_active{false};	///< true if we are generating synthetic magnetometer Z measurements
-	bool _no_other_yaw_aiding_than_mag{false};  ///< true when heading is not being fused from other sources than magnetometer (for example EV or GPS) 
+	bool _no_non_mag_heading_aiding_running{false};  ///< true when heading is not being fused from other sources than magnetometer (for example EV or GPS) 
 
 	bool _is_yaw_fusion_inhibited{false};		///< true when yaw sensor use is being inhibited
 
