@@ -617,12 +617,18 @@ void Ekf::controlGpsFusion()
 			bool is_yaw_failure = false;
 			if ((recent_takeoff_nav_failure || inflight_nav_failure) && _time_last_hor_vel_fuse > 0) {
 				// Do sanity check to see if the innovation failures is likely caused by a yaw angle error
-				// A 180 deg yaw error would (in the absence of other errors) generate a velocity innovation
-				// magnitude of twice the measured speed so allow up to 3 times to allow for additional errors.
-				const float hvel_obs_sq = sq(_last_vel_obs(0)) + sq(_last_vel_obs(1));
-				const float hvel_innov_sq = sq(_last_fail_hvel_innov(0)) + sq(_last_fail_hvel_innov(1));
-				if (hvel_innov_sq > 9.0f * hvel_obs_sq) {
-					is_yaw_failure = true;
+				const float norm_sq_vel_obs_xy = _last_vel_obs.xy().norm_squared();
+				const float norm_sq_vel_xy = _state.vel.xy().norm_squared();
+				const float obs_dot_vel = Vector2f(_last_vel_obs).dot(_state.vel.xy());
+				float cos_sq = 1.f;
+
+				if (norm_sq_vel_obs_xy > 4.f && norm_sq_vel_xy > 4.f) {
+					cos_sq = sq(obs_dot_vel) / (norm_sq_vel_xy * norm_sq_vel_obs_xy);
+
+					if (cos_sq < sq(cosf(math::radians(25.f))) || obs_dot_vel < 0.f) {
+						// The angle between the observation and the velocity estimate is greater than 25 degrees
+						is_yaw_failure = true;
+					}
 				}
 			}
 
