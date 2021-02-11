@@ -454,7 +454,7 @@ void Ekf::fuseYaw321(float yaw, float yaw_variance, bool zero_innovation)
 		canUseB = fabsf(SB5_inv) > 1e-6f;
 	}
 
-	Vector4f H_YAW;
+	SparseVector24f<0,1,2,3> H_YAW;
 
 	if (canUseA && (!canUseB || fabsf(SA5_inv) >= fabsf(SB5_inv))) {
 		const float SA5 = 1.0F/SA5_inv;
@@ -463,10 +463,10 @@ void Ekf::fuseYaw321(float yaw, float yaw_variance, bool zero_innovation)
 		const float SA8 = 2*SA7;
 		const float SA9 = 2*SA6;
 
-		H_YAW(0) = SA5*(SA0*SA6 - SA8*q0);
-		H_YAW(1) = SA5*(SA1*SA6 - SA8*q1);
-		H_YAW(2) = SA5*(SA1*SA7 + SA9*q1);
-		H_YAW(3) = SA5*(SA0*SA7 + SA9*q0);
+		H_YAW.at<0>() = SA5*(SA0*SA6 - SA8*q0);
+		H_YAW.at<1>() = SA5*(SA1*SA6 - SA8*q1);
+		H_YAW.at<2>() = SA5*(SA1*SA7 + SA9*q1);
+		H_YAW.at<3>() = SA5*(SA0*SA7 + SA9*q0);
 	} else if (canUseB && (!canUseA || fabsf(SB5_inv) > fabsf(SA5_inv))) {
 		const float SB5 = 1.0F/SB5_inv;
 		const float SB6 = 1.0F/SB2;
@@ -474,10 +474,10 @@ void Ekf::fuseYaw321(float yaw, float yaw_variance, bool zero_innovation)
 		const float SB8 = 2*SB7;
 		const float SB9 = 2*SB6;
 
-		H_YAW(0) = -SB5*(SB0*SB6 - SB8*q3);
-		H_YAW(1) = -SB5*(SB1*SB6 - SB8*q2);
-		H_YAW(2) = -SB5*(-SB1*SB7 - SB9*q2);
-		H_YAW(3) = -SB5*(-SB0*SB7 - SB9*q3);
+		H_YAW.at<0>() = -SB5*(SB0*SB6 - SB8*q3);
+		H_YAW.at<1>() = -SB5*(SB1*SB6 - SB8*q2);
+		H_YAW.at<2>() = -SB5*(-SB1*SB7 - SB9*q2);
+		H_YAW.at<3>() = -SB5*(-SB0*SB7 - SB9*q3);
 	} else {
 		return;
 	}
@@ -534,7 +534,7 @@ void Ekf::fuseYaw312(float yaw, float yaw_variance, bool zero_innovation)
 		canUseB = fabsf(SB5_inv) > 1e-6f;
 	}
 
-	Vector4f H_YAW;
+	SparseVector24f<0,1,2,3> H_YAW;
 
 	if (canUseA && (!canUseB || fabsf(SA5_inv) >= fabsf(SB5_inv))) {
 		const float SA5 = 1.0F/SA5_inv;
@@ -543,10 +543,10 @@ void Ekf::fuseYaw312(float yaw, float yaw_variance, bool zero_innovation)
 		const float SA8 = 2*SA7;
 		const float SA9 = 2*SA6;
 
-		H_YAW(0) = SA5*(SA0*SA6 - SA8*q0);
-		H_YAW(1) = SA5*(-SA1*SA6 + SA8*q1);
-		H_YAW(2) = SA5*(-SA1*SA7 - SA9*q1);
-		H_YAW(3) = SA5*(SA0*SA7 + SA9*q0);
+		H_YAW.at<0>() = SA5*(SA0*SA6 - SA8*q0);
+		H_YAW.at<1>() = SA5*(-SA1*SA6 + SA8*q1);
+		H_YAW.at<2>() = SA5*(-SA1*SA7 - SA9*q1);
+		H_YAW.at<3>() = SA5*(SA0*SA7 + SA9*q0);
 	} else if (canUseB && (!canUseA || fabsf(SB5_inv) > fabsf(SA5_inv))) {
 		const float SB5 = 1.0F/SB5_inv;
 		const float SB6 = 1.0F/SB2;
@@ -554,10 +554,10 @@ void Ekf::fuseYaw312(float yaw, float yaw_variance, bool zero_innovation)
 		const float SB8 = 2*SB7;
 		const float SB9 = 2*SB6;
 
-		H_YAW(0) = -SB5*(-SB0*SB6 + SB8*q3);
-		H_YAW(1) = -SB5*(SB1*SB6 - SB8*q2);
-		H_YAW(2) = -SB5*(-SB1*SB7 - SB9*q2);
-		H_YAW(3) = -SB5*(SB0*SB7 + SB9*q3);
+		H_YAW.at<0>() = -SB5*(-SB0*SB6 + SB8*q3);
+		H_YAW.at<1>() = -SB5*(SB1*SB6 - SB8*q2);
+		H_YAW.at<2>() = -SB5*(-SB1*SB7 - SB9*q2);
+		H_YAW.at<3>() = -SB5*(SB0*SB7 + SB9*q3);
 	} else {
 		return;
 	}
@@ -578,30 +578,14 @@ void Ekf::fuseYaw312(float yaw, float yaw_variance, bool zero_innovation)
 }
 
 // update quaternion states and covariances using the yaw innovation, yaw observation variance and yaw Jacobian
-void Ekf::updateQuaternion(const float innovation, const float variance, const float gate_sigma, const Vector4f& yaw_jacobian)
+void Ekf::updateQuaternion(const float innovation, const float measurement_variance, const float gate_sigma, const SparseVector24f<0,1,2,3>& yaw_jacobian)
 {
 	// Calculate innovation variance and Kalman gains, taking advantage of the fact that only the first 4 elements in H are non zero
-	// calculate the innovation variance
-	_heading_innov_var = variance;
-	for (unsigned row = 0; row <= 3; row++) {
-		float tmp = 0.0f;
-
-		for (uint8_t col = 0; col <= 3; col++) {
-			tmp += P(row,col) * yaw_jacobian(col);
-		}
-
-		_heading_innov_var += yaw_jacobian(row) * tmp;
-	}
-
-	float heading_innov_var_inv;
+	// calculate the innovation variance S = H * P * H^T + R
+	_heading_innov_var = matrix::quadraticForm(P, yaw_jacobian) + measurement_variance;
 
 	// check if the innovation variance calculation is badly conditioned
-	if (_heading_innov_var >= variance) {
-		// the innovation variance contribution from the state covariances is not negative, no fault
-		_fault_status.flags.bad_hdg = false;
-		heading_innov_var_inv = 1.0f / _heading_innov_var;
-
-	} else {
+	if (_heading_innov_var < measurement_variance) {
 		// the innovation variance contribution from the state covariances is negative which means the covariance matrix is badly conditioned
 		_fault_status.flags.bad_hdg = true;
 
@@ -611,25 +595,20 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 		return;
 	}
 
-	// calculate the Kalman gains
-	// only calculate gains for states we are using
+	_fault_status.flags.bad_hdg = false;
+	const float heading_innov_var_inv = 1.0f / _heading_innov_var;
+
+	// calculate the Kalman gains K = P * H^T * S^(-1)
+	// only calculate gains for relevant states
 	Vector24f Kfusion;
 
-	for (uint8_t row = 0; row <= 15; row++) {
-		for (uint8_t col = 0; col <= 3; col++) {
-			Kfusion(row) += P(row,col) * yaw_jacobian(col);
-		}
-
-		Kfusion(row) *= heading_innov_var_inv;
+	for (uint8_t i = 0; i <= 15; i++) {
+		Kfusion(i) = yaw_jacobian.dot(P.row(i)) * heading_innov_var_inv;
 	}
 
 	if (_control_status.flags.wind) {
-		for (uint8_t row = 22; row <= 23; row++) {
-			for (uint8_t col = 0; col <= 3; col++) {
-				Kfusion(row) += P(row,col) * yaw_jacobian(col);
-			}
-
-			Kfusion(row) *= heading_innov_var_inv;
+		for (uint8_t i = 22; i <= 23; i++) {
+			Kfusion(i) = yaw_jacobian.dot(P.row(i)) * heading_innov_var_inv;
 		}
 	}
 
@@ -651,7 +630,7 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 
 		} else {
 			// constrain the innovation to the maximum set by the gate
-			float gate_limit = sqrtf((sq(gate_sigma) * _heading_innov_var));
+			const float gate_limit = sqrtf((sq(gate_sigma) * _heading_innov_var));
 			_heading_innov = math::constrain(innovation, -gate_limit, gate_limit);
 		}
 
@@ -660,42 +639,9 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 		_heading_innov = innovation;
 	}
 
-	// apply covariance correction via P_new = (I -K*H)*P
-	// first calculate expression for KHP
-	// then calculate P - KHP
-	SquareMatrix24f KHP;
-	float KH[4];
+	const bool is_fused = measurementUpdate(Kfusion, yaw_jacobian, _heading_innov);
 
-	for (unsigned row = 0; row < _k_num_states; row++) {
-
-		KH[0] = Kfusion(row) * yaw_jacobian(0);
-		KH[1] = Kfusion(row) * yaw_jacobian(1);
-		KH[2] = Kfusion(row) * yaw_jacobian(2);
-		KH[3] = Kfusion(row) * yaw_jacobian(3);
-
-		for (unsigned column = 0; column < _k_num_states; column++) {
-			float tmp = KH[0] * P(0,column);
-			tmp += KH[1] * P(1,column);
-			tmp += KH[2] * P(2,column);
-			tmp += KH[3] * P(3,column);
-			KHP(row,column) = tmp;
-		}
-	}
-
-	const bool healthy = checkAndFixCovarianceUpdate(KHP);
-
-	_fault_status.flags.bad_hdg = !healthy;
-
-	if (healthy) {
-		// apply the covariance corrections
-		P -= KHP;
-
-		fixCovarianceErrors(true);
-
-		// apply the state corrections
-		fuse(Kfusion, _heading_innov);
-
-	}
+	_fault_status.flags.bad_hdg = !is_fused;
 }
 
 void Ekf::fuseHeading()
@@ -851,14 +797,15 @@ void Ekf::fuseDeclination(float decl_sigma)
 	const float HK6 = HK5*P(16,17) - P(17,17);
 	const float HK7 = ecl::powf(HK1, -2);
 	const float HK8 = HK5*P(16,16) - P(16,17);
+
 	const float innovation_variance = -HK0*HK6*HK7 + HK7*HK8*magE/ecl::powf(magN, 3) + R_DECL;
-	float HK9;
-	if (innovation_variance > R_DECL) {
-		HK9 = HK4/innovation_variance;
-	} else {
+
+	if (innovation_variance < R_DECL) {
 		// variance calculation is badly conditioned
 		return;
 	}
+
+	const float HK9 = HK4/innovation_variance;
 
 	// Calculate the observation Jacobian
 	// Note only 2 terms are non-zero which can be used in matrix operations for calculation of Kalman gains and covariance update to significantly reduce cost

@@ -564,8 +564,7 @@ private:
 	// variance : observaton variance
 	// gate_sigma : innovation consistency check gate size (Sigma)
 	// jacobian : 4x1 vector of partial derivatives of observation wrt each quaternion state
-	void updateQuaternion(const float innovation, const float variance, const float gate_sigma,
-			      const Vector4f &yaw_jacobian);
+	void updateQuaternion(const float innovation, const float variance, const float gate_sigma, const SparseVector24f<0,1,2,3>& yaw_jacobian);
 
 	// fuse the yaw angle obtained from a dual antenna GPS unit
 	void fuseGpsYaw();
