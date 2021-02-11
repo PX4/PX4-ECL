@@ -306,7 +306,6 @@ void Ekf::controlExternalVisionFusion()
 		// determine if we should use the velocity observations
 		if (_control_status.flags.ev_vel) {
 
-			Vector3f ev_vel_obs_var;
 			Vector2f ev_vel_innov_gates;
 
 			_last_vel_obs = getVisionVelocityInEkfFrame();
@@ -321,12 +320,12 @@ void Ekf::controlExternalVisionFusion()
 				}
 			}
 
-			ev_vel_obs_var = matrix::max(getVisionVelocityVarianceInEkfFrame(), sq(0.05f));
+			_last_vel_obs_var = matrix::max(getVisionVelocityVarianceInEkfFrame(), sq(0.05f));
 
 			ev_vel_innov_gates.setAll(fmaxf(_params.ev_vel_innov_gate, 1.0f));
 
-			fuseHorizontalVelocity(_ev_vel_innov, ev_vel_innov_gates,ev_vel_obs_var, _ev_vel_innov_var, _ev_vel_test_ratio);
-			fuseVerticalVelocity(_ev_vel_innov, ev_vel_innov_gates, ev_vel_obs_var, _ev_vel_innov_var, _ev_vel_test_ratio);
+			fuseHorizontalVelocity(_ev_vel_innov, ev_vel_innov_gates,_last_vel_obs_var, _ev_vel_innov_var, _ev_vel_test_ratio);
+			fuseVerticalVelocity(_ev_vel_innov, ev_vel_innov_gates, _last_vel_obs_var, _ev_vel_innov_var, _ev_vel_test_ratio);
 		}
 
 		// determine if we should use the yaw observation
@@ -619,11 +618,14 @@ void Ekf::controlGpsFusion()
 				// Do sanity check to see if the innovation failures is likely caused by a yaw angle error
 				const float norm_sq_vel_obs_xy = _last_vel_obs.xy().norm_squared();
 				const float norm_sq_vel_xy = _state.vel.xy().norm_squared();
-				const float obs_dot_vel = Vector2f(_last_vel_obs).dot(_state.vel.xy());
-				float cos_sq = 1.f;
 
-				if (norm_sq_vel_obs_xy > 4.f && norm_sq_vel_xy > 4.f) {
-					cos_sq = sq(obs_dot_vel) / (norm_sq_vel_xy * norm_sq_vel_obs_xy);
+				// Only use those vectors if their norm if they are larger than 4 times their noise standard deviation
+				const float vel_obs_threshold_sq = fmaxf(sq(4.f) * (_last_vel_obs_var(0) + _last_vel_obs_var(1)), 1.f);
+				const float vel_state_threshold_sq = fmaxf(sq(4.f) * (P(4, 4) + P(5, 5)), 1.f);
+
+				if (norm_sq_vel_obs_xy > vel_obs_threshold_sq && norm_sq_vel_xy > vel_state_threshold_sq) {
+					const float obs_dot_vel = Vector2f(_last_vel_obs).dot(_state.vel.xy());
+					const float cos_sq = sq(obs_dot_vel) / (norm_sq_vel_xy * norm_sq_vel_obs_xy);
 
 					if (cos_sq < sq(cosf(math::radians(25.f))) || obs_dot_vel < 0.f) {
 						// The angle between the observation and the velocity estimate is greater than 25 degrees
@@ -675,7 +677,6 @@ void Ekf::controlGpsFusion()
 
 			Vector2f gps_vel_innov_gates; // [horizontal vertical]
 			Vector2f gps_pos_innov_gates; // [horizontal vertical]
-			Vector3f gps_vel_obs_var;
 			Vector3f gps_pos_obs_var;
 
 			// correct velocity for offset relative to IMU
@@ -703,8 +704,8 @@ void Ekf::controlGpsFusion()
 				gps_pos_obs_var(0) = gps_pos_obs_var(1) = sq(math::constrain(_gps_sample_delayed.hacc, lower_limit, upper_limit));
 			}
 
-			gps_vel_obs_var.setAll(sq(fmaxf(_gps_sample_delayed.sacc, _params.gps_vel_noise)));
-			gps_vel_obs_var(2) = sq(1.5f) * gps_vel_obs_var(2);
+			_last_vel_obs_var.setAll(sq(fmaxf(_gps_sample_delayed.sacc, _params.gps_vel_noise)));
+			_last_vel_obs_var(2) *= sq(1.5f);
 
 			// calculate innovations
 			_last_vel_obs = _gps_sample_delayed.vel;
@@ -716,8 +717,8 @@ void Ekf::controlGpsFusion()
 			gps_vel_innov_gates(0) = gps_vel_innov_gates(1) = fmaxf(_params.gps_vel_innov_gate, 1.0f);
 
 			// fuse GPS measurement
-			fuseHorizontalVelocity(_gps_vel_innov, gps_vel_innov_gates,gps_vel_obs_var, _gps_vel_innov_var, _gps_vel_test_ratio);
-			fuseVerticalVelocity(_gps_vel_innov, gps_vel_innov_gates, gps_vel_obs_var, _gps_vel_innov_var, _gps_vel_test_ratio);
+			fuseHorizontalVelocity(_gps_vel_innov, gps_vel_innov_gates, _last_vel_obs_var, _gps_vel_innov_var, _gps_vel_test_ratio);
+			fuseVerticalVelocity(_gps_vel_innov, gps_vel_innov_gates, _last_vel_obs_var, _gps_vel_innov_var, _gps_vel_test_ratio);
 			fuseHorizontalPosition(_gps_pos_innov, gps_pos_innov_gates, gps_pos_obs_var, _gps_pos_innov_var, _gps_pos_test_ratio);
 		}
 
@@ -1335,6 +1336,7 @@ void Ekf::controlAuxVelFusion()
 
 		_last_vel_obs = _auxvel_sample_delayed.vel;
 		_aux_vel_innov = _state.vel - _last_vel_obs;
+		_last_vel_obs_var = _aux_vel_innov_var;
 
 		fuseHorizontalVelocity(_aux_vel_innov, aux_vel_innov_gate, _auxvel_sample_delayed.velVar,
 				_aux_vel_innov_var, _aux_vel_test_ratio);
