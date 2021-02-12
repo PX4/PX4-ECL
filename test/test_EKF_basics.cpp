@@ -214,11 +214,15 @@ TEST_F(EkfBasicsTest, reset_ekf_global_origin_gps_initialized)
 	_ekf->set_min_required_gps_health_time(1e6);
 	_sensor_simulator.runSeconds(1);
 
-	_ekf->getEkfGlobalOrigin(_origin_time, _latitude_new, _longitude_new, _altitude_new);
+	_sensor_simulator.setGpsLatitude(_latitude_new);
+	_sensor_simulator.setGpsLongitude(_longitude_new);
+	_sensor_simulator.setGpsAltitude(_altitude_new);
 
-	EXPECT_NE(_latitude, _latitude_new);
-	EXPECT_NE(_longitude, _longitude_new);
-	EXPECT_NE(_altitude, _altitude_new);
+	_ekf->getEkfGlobalOrigin(_origin_time, _latitude, _longitude, _altitude);
+
+	EXPECT_DOUBLE_EQ(_latitude, _latitude_new);
+	EXPECT_DOUBLE_EQ(_longitude, _longitude_new);
+	EXPECT_FLOAT_EQ(_altitude, _altitude_new);
 
 	_latitude_new  = -15.0000005;
 	_longitude_new = -115.0000005;
