@@ -113,7 +113,12 @@ public:
 	void startAirspeedSensor(){ _airspeed.start(); }
 	void stopAirspeedSensor(){ _airspeed.stop(); }
 
+	void setGpsLatitude(const double latitude);
+	void setGpsLongitude(const double longitude);
+	void setGpsAltitude(const float altitude);
+
 	void setImuBias(Vector3f accel_bias, Vector3f gyro_bias);
+
 	void simulateOrientation(Quatf orientation);
 
 	void loadSensorDataFromFile(std::string filename);
@@ -126,6 +131,10 @@ public:
 	RangeFinder _rng;
 	Vio _vio;
 	Airspeed _airspeed;
+
+protected:
+
+private:
 
 	bool _has_replay_data {false};
 	std::vector<sensor_info> _replay_data;

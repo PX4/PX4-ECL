@@ -280,6 +280,24 @@ void SensorSimulator::setSingleReplaySample(const sensor_info& sample)
 	}
 }
 
+void SensorSimulator::setGpsLatitude(const double latitude)
+{
+	int32_t lat = static_cast<int32_t>(latitude * 1e7);
+	_gps.setLatitude(lat);
+}
+
+void SensorSimulator::setGpsLongitude(const double longitude)
+{
+	int32_t lon = static_cast<int32_t>(longitude * 1e7);
+	_gps.setLongitude(lon);
+}
+
+void SensorSimulator::setGpsAltitude(const float altitude)
+{
+	int32_t alt = static_cast<int32_t>(altitude * 1e3);
+	_gps.setAltitude(alt);
+}
+
 void SensorSimulator::setImuBias(Vector3f accel_bias, Vector3f gyro_bias)
 {
 	_imu.setData(Vector3f{0.0f,0.0f,-CONSTANTS_ONE_G} + accel_bias,
