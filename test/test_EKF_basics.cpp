@@ -41,17 +41,13 @@
 
 class EkfBasicsTest : public ::testing::Test {
  public:
-	EkfBasicsTest(): ::testing::Test(),
-	_ekf{std::make_shared<Ekf>()},
-	_sensor_simulator(_ekf),
-	_ekf_wrapper(_ekf) {};
-
-	std::shared_ptr<Ekf> _ekf;
-	SensorSimulator _sensor_simulator;
-	EkfWrapper _ekf_wrapper;
-
-	// Duration of initalization with only providing baro,mag and IMU
-	const uint32_t _init_duration_s{7};
+	EkfBasicsTest():
+		::testing::Test(),
+		_ekf{std::make_shared<Ekf>()},
+		_ekf_wrapper(_ekf) ,
+		_sensor_simulator(_ekf)
+	{
+	};
 
 	// Setup the Ekf with synthetic measurements
 	void SetUp() override
@@ -65,6 +61,13 @@ class EkfBasicsTest : public ::testing::Test {
 	{
 	}
 
+	std::shared_ptr<Ekf> _ekf {nullptr};
+	EkfWrapper _ekf_wrapper;
+	SensorSimulator _sensor_simulator;
+
+	// Duration of initalization with only providing baro,mag and IMU
+	const uint32_t _init_duration_s{7};
+
 protected:
 	double _latitude  {0.0};
 	double _longitude {0.0};
@@ -77,6 +80,7 @@ protected:
 	uint64_t _origin_time = 0;
 
 private:
+
 };
 
 
@@ -206,10 +210,6 @@ TEST_F(EkfBasicsTest, reset_ekf_global_origin_gps_initialized)
 	_longitude_new = 115.0000005;
 	_altitude_new  = 100.0;
 
-	_sensor_simulator.setGpsLatitude(_latitude_new);
-	_sensor_simulator.setGpsLongitude(_longitude_new);
-	_sensor_simulator.setGpsAltitude(_altitude_new);
-
 	_sensor_simulator.startGps();
 	_ekf->set_min_required_gps_health_time(1e6);
 	_sensor_simulator.runSeconds(1);
@@ -219,6 +219,10 @@ TEST_F(EkfBasicsTest, reset_ekf_global_origin_gps_initialized)
 	EXPECT_NE(_latitude, _latitude_new);
 	EXPECT_NE(_longitude, _longitude_new);
 	EXPECT_NE(_altitude, _altitude_new);
+
+	_latitude_new  = -15.0000005;
+	_longitude_new = -115.0000005;
+	_altitude_new  = 1500.0;
 
 	_ekf->setEkfGlobalOrigin(_latitude_new, _longitude_new, _altitude_new);
 	_ekf->getEkfGlobalOrigin(_origin_time, _latitude, _longitude, _altitude);

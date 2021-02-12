@@ -13,8 +13,7 @@ Sensor::~Sensor()
 
 void Sensor::update(uint64_t time)
 {
-	if(should_send(time))
-	{
+	if(should_send(time)) {
 		send(time);
 		_time_last_data_sent = time;
 	}

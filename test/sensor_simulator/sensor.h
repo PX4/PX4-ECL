@@ -54,31 +54,30 @@ public:
 
 	void update(uint64_t time);
 
-	void setRateHz(uint32_t rate){ _update_period = uint32_t(1000000)/rate; }
+	void setRateHz(uint32_t rate) { _update_period = uint32_t(1000000) / rate; }
 
 	bool isRunning() const { return _is_running; }
 
-	void start(){ _is_running = true; }
+	void start() { _is_running = true; }
 
-	void stop(){ _is_running = false; }
+	void stop() { _is_running = false; }
 
 	bool should_send(uint64_t time) const;
 
 protected:
 
-	std::shared_ptr<Ekf> _ekf;
-	// time in microseconds
-	uint32_t _update_period;
-	uint64_t _time_last_data_sent{0};
-
-	bool _is_running{false};
+	// call set*Data function of Ekf
+	virtual void send(uint64_t time) = 0;
 
 	// Checks that the right amount time passed since last send data to fulfill rate
 	bool is_time_to_send(uint64_t time) const;
 
-	// call set*Data function of Ekf
-	virtual void send(uint64_t time) = 0;
+	std::shared_ptr<Ekf> _ekf {nullptr};
 
+	uint32_t _update_period {0}; // time in microseconds
+	uint64_t _time_last_data_sent {0};
+
+	bool _is_running {false};
 };
 
 } // namespace sensor_simulator

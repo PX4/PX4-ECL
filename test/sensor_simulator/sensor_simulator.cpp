@@ -2,15 +2,15 @@
 
 
 SensorSimulator::SensorSimulator(std::shared_ptr<Ekf> ekf):
-_ekf{ekf},
-_imu(ekf),
-_mag(ekf),
-_baro(ekf),
-_gps(ekf),
-_flow(ekf),
-_rng(ekf),
-_vio(ekf),
-_airspeed(ekf)
+	_airspeed(ekf),
+	_baro(ekf),
+	_flow(ekf),
+	_gps(ekf),
+	_imu(ekf),
+	_mag(ekf),
+	_rng(ekf),
+	_vio(ekf),
+	_ekf{ekf}
 {
 	setSensorRateToDefault();
 	setSensorDataToDefault();
@@ -115,23 +115,24 @@ void SensorSimulator::setSensorRateToDefault()
 	_vio.setRateHz(30);
 	_airspeed.setRateHz(100);
 }
+
 void SensorSimulator::setSensorDataToDefault()
 {
-	_imu.setData(Vector3f{0.0f,0.0f,-CONSTANTS_ONE_G},
-		     Vector3f{0.0f,0.0f,0.0f});
-	_mag.setData(Vector3f{0.2f, 0.0f, 0.4f});
+	_airspeed.setData(0.0f, 0.0f);
 	_baro.setData(122.2f);
-	_gps.setData(_gps.getDefaultGpsData());
 	_flow.setData(_flow.dataAtRest());
+	_gps.setData(_gps.getDefaultGpsData());
+	_imu.setData(Vector3f{0.0f,0.0f,-CONSTANTS_ONE_G}, Vector3f{0.0f,0.0f,0.0f});
+	_mag.setData(Vector3f{0.2f, 0.0f, 0.4f});
 	_rng.setData(0.2f, 100);
 	_vio.setData(_vio.dataAtRest());
-	_airspeed.setData(0.0f, 0.0f);
 }
+
 void SensorSimulator::startBasicSensor()
 {
+	_baro.start();
 	_imu.start();
 	_mag.start();
-	_baro.start();
 }
 
 void SensorSimulator::runSeconds(float duration_seconds)
