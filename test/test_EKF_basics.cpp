@@ -206,31 +206,41 @@ TEST_F(EkfBasicsTest, reset_ekf_global_origin)
 	EXPECT_DOUBLE_EQ(longitude, longitude_new);
 	EXPECT_FLOAT_EQ(altitude, altitude_new);
 
+	latitude_new  = 45.0000005;
+	longitude_new = 111.0000005;
+	altitude_new  = 1500.0;
+
 	_sensor_simulator.startGps();
 	_ekf->set_min_required_gps_health_time(1e6);
 	_sensor_simulator.runSeconds(1);
-	sleep(1);
-
-	latitude_new  = 45.0000005;
-	longitude_new = -111.0000005;
-	altitude_new  = 1500.0;
 
 	_ekf->setEkfGlobalOrigin(latitude_new, longitude_new, altitude_new);
 	_ekf->getEkfGlobalOrigin(origin_time, latitude, longitude, altitude);
 
+	EXPECT_DOUBLE_EQ(latitude, latitude_new);
+	EXPECT_DOUBLE_EQ(longitude, longitude_new);
+	EXPECT_FLOAT_EQ(altitude, altitude_new);
+
+	latitude_new  = -45.0000005;
+	longitude_new = -111.0000005;
+	altitude_new  = 100.0;
+
+	_ekf->setEkfGlobalOrigin(latitude_new, longitude_new, altitude_new);
+	_ekf->getEkfGlobalOrigin(origin_time, latitude, longitude, altitude);
+
+	_sensor_simulator.runSeconds(1);
+
 	// EKF origin MSL altitude cannot be reset without valid MSL origin.
 	EXPECT_DOUBLE_EQ(latitude, latitude_new);
 	EXPECT_DOUBLE_EQ(longitude, longitude_new);
-
-	// After the change of origin, the pos and vel innovations should stay small
-	_sensor_simulator.runSeconds(1);
-	sleep(1);
+	EXPECT_FLOAT_EQ(altitude, altitude_new);
 
 	float hpos = 0.f;
 	float vpos = 0.f;
 	float hvel = 0.f;
 	float vvel = 0.f;
 
+	// After the change of origin, the pos and vel innovations should stay small
 	_ekf->getGpsVelPosInnovRatio(hvel, vvel, hpos, vpos);
 
 	EXPECT_NEAR(hvel, 0.f, 0.02f);
