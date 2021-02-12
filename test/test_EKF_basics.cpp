@@ -210,9 +210,20 @@ TEST_F(EkfBasicsTest, reset_ekf_global_origin)
 	longitude_new = 111.0000005;
 	altitude_new  = 1500.0;
 
+	_ekf->setEkfGlobalOrigin(latitude_new, longitude_new, altitude_new);
+	_ekf->getEkfGlobalOrigin(origin_time, latitude, longitude, altitude);
+
+	EXPECT_DOUBLE_EQ(latitude, latitude_new);
+	EXPECT_DOUBLE_EQ(longitude, longitude_new);
+	EXPECT_FLOAT_EQ(altitude, altitude_new);
+
 	_sensor_simulator.startGps();
 	_ekf->set_min_required_gps_health_time(1e6);
 	_sensor_simulator.runSeconds(1);
+
+	latitude_new  = 15.0000005;
+	longitude_new = 115.0000005;
+	altitude_new  = 100.0;
 
 	_ekf->setEkfGlobalOrigin(latitude_new, longitude_new, altitude_new);
 	_ekf->getEkfGlobalOrigin(origin_time, latitude, longitude, altitude);
@@ -221,9 +232,9 @@ TEST_F(EkfBasicsTest, reset_ekf_global_origin)
 	EXPECT_DOUBLE_EQ(longitude, longitude_new);
 	EXPECT_FLOAT_EQ(altitude, altitude_new);
 
-	latitude_new  = -45.0000005;
-	longitude_new = -111.0000005;
-	altitude_new  = 100.0;
+	latitude_new  = 45.0000005;
+	longitude_new = 111.0000005;
+	altitude_new  = 1500.0;
 
 	_ekf->setEkfGlobalOrigin(latitude_new, longitude_new, altitude_new);
 	_ekf->getEkfGlobalOrigin(origin_time, latitude, longitude, altitude);
