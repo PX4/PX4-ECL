@@ -72,7 +72,7 @@ void Ekf::controlMagFusion()
 		return;
 	}
 
-	_mag_yaw_reset_req |= otherHeadingSourcesHaveFinished();
+	_mag_yaw_reset_req |= otherHeadingSourcesHaveStopped();
 
 	if (noOtherYawAidingThanMag() && _mag_data_ready) {
 		if (_control_status.flags.in_air) {
@@ -329,12 +329,12 @@ void Ekf::run3DMagAndDeclFusions()
 	}
 }
 
-bool Ekf::otherHeadingSourcesHaveFinished()
+bool Ekf::otherHeadingSourcesHaveStopped()
 {
-    // detect rising edge
-    bool result = noOtherYawAidingThanMag() && !_no_non_mag_heading_aiding_running;
+    // detect rising edge of noOtherYawAidingThanMag()
+    bool result = noOtherYawAidingThanMag() && _non_mag_yaw_aiding_running_prev;
 
-    _no_non_mag_heading_aiding_running = noOtherYawAidingThanMag();
+    _non_mag_yaw_aiding_running_prev = !noOtherYawAidingThanMag();
 
     return  result;
 }
