@@ -357,7 +357,6 @@ private:
 	uint64_t _time_last_arsp_fuse{0};	///< time the last fusion of airspeed measurements were performed (uSec)
 	uint64_t _time_last_beta_fuse{0};	///< time the last fusion of synthetic sideslip measurements were performed (uSec)
 	uint64_t _time_last_fake_pos{0};	///< last time we faked position measurements to constrain tilt errors during operation without external aiding (uSec)
-
 	uint64_t _time_last_gps_yaw_fuse{0};	///< time the last fusion of GPS yaw measurements were performed (uSec)
 
 	Vector2f _last_known_posNE;		///< last known local NE position vector (m)
@@ -385,8 +384,9 @@ private:
 	bool _mag_decl_cov_reset{false};	///< true after the fuseDeclination() function has been used to modify the earth field covariances after a magnetic field reset event.
 	bool _synthetic_mag_z_active{false};	///< true if we are generating synthetic magnetometer Z measurements
 	bool _non_mag_yaw_aiding_running_prev{false};  ///< true when heading is being fused from other sources that are not the magnetometer (for example EV or GPS).
-
-	bool _is_yaw_fusion_inhibited{false};		///< true when yaw sensor use is being inhibited
+	bool _is_yaw_fusion_inhibited{false};	///< true when yaw sensor use is being inhibited
+	uint64_t _time_last_in_air{0};		///< most recent time the in_air status flag was true (uSec)
+	bool _reset_yaw_after_landing{false};	///< true when yaw measurement is being rejected and a yaw reset is required after landing is complete
 
 	SquareMatrix24f P;	///< state covariance matrix
 

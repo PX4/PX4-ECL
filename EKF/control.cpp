@@ -45,6 +45,11 @@
 
 void Ekf::controlFusionModes()
 {
+	// record when last in air
+	if (_control_status.flags.in_air) {
+		_time_last_in_air = _time_last_imu;
+	}
+
 	// Store the status to enable change detection
 	_control_status_prev.value = _control_status.value;
 

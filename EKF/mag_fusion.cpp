@@ -643,19 +643,35 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 	if (_yaw_test_ratio > 1.0f) {
 		_innov_check_fail_status.flags.reject_yaw = true;
 
+		// When on the ground because the large innovation could be caused
+		// by interference or a large initial gyro bias we never reject the
+		// measurement, but limit it. This exception is delayed by 5sec after landing
+		// to stop a possible large yaw innovation upsetting the EKF and delaying
+		// the autopilot motor shutoff checks completing.
 		// if we are in air we don't want to fuse the measurement
-		// we allow to use it when on the ground because the large innovation could be caused
-		// by interference or a large initial gyro bias
-		if (_control_status.flags.in_air) {
-			return;
-
+		if (!_control_status.flags.in_air) {
+			if (isTimedOut(_time_last_in_air, 5E6)) {
+				if (_reset_yaw_after_landing) {
+					// If landed and yaw measurements were being rejected then we
+					// need to reset the yaw before recommencing fusion to prevent
+					// large innovations corrupting the state estimates
+					resetMagHeading(_mag_lpf.getState());
+					_reset_yaw_after_landing = false;
+				}
+				// constrain the innovation to the maximum set by the gate
+				float gate_limit = sqrtf((sq(gate_sigma) * _heading_innov_var));
+				_heading_innov = math::constrain(innovation, -gate_limit, gate_limit);
+			} else {
+				_reset_yaw_after_landing = true;
+				return;
+			}
 		} else {
-			// constrain the innovation to the maximum set by the gate
-			float gate_limit = sqrtf((sq(gate_sigma) * _heading_innov_var));
-			_heading_innov = math::constrain(innovation, -gate_limit, gate_limit);
+			_reset_yaw_after_landing = true;
+			return;
 		}
 
 	} else {
+		_reset_yaw_after_landing = true;
 		_innov_check_fail_status.flags.reject_yaw = false;
 		_heading_innov = innovation;
 	}
