@@ -1,0 +1,31 @@
+
+name: Feature Build Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - CMAKE_OPTIONS: "-DECL_EKF_AIRSPEED_FUSION=OFF"
+          - CMAKE_OPTIONS: "-DECL_EKF_DRAG_FUSION=OFF"
+          - CMAKE_OPTIONS: "-DECL_EKF_GPS_YAW_FUSION=OFF"
+          - CMAKE_OPTIONS: "-DECL_EKF_OPTICAL_FLOW=OFF"
+          - CMAKE_OPTIONS: "-DECL_EKF_TERRAIN_EST=OFF"
+          - CMAKE_OPTIONS: "-DECL_EKF_YAW_ESTIMATOR_GSF=OFF"
+    container: px4io/px4-dev-base-focal:2020-09-14
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        token: ${{ secrets.ACCESS_TOKEN }}
+    - name: build ${{matrix.config.CMAKE_OPTIONS}}
+      run: mkdir build && cd build && cmake ${{matrix.config.CMAKE_OPTIONS}} .. && make

@@ -140,6 +140,7 @@ void Ekf::controlFusionModes()
 		_range_sensor.setRange(_range_sensor.getRange() + pos_offset_earth(2) / _range_sensor.getCosTilt());
 	}
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	// We don't fuse flow data immediately because we have to wait for the mid integration point to fall behind the fusion time horizon.
 	// This means we stop looking for new data until the old data has been fused, unless we are not fusing optical flow,
 	// in this case we need to empty the buffer
@@ -156,20 +157,27 @@ void Ekf::controlFusionModes()
 		// only fuse flow for terrain if the main filter is not fusing flow and we are using gps
 		_flow_for_terrain_data_ready &= (!_control_status.flags.opt_flow && _control_status.flags.gps);
 	}
+#endif //
 
 	_ev_data_ready = _ext_vision_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_ev_sample_delayed);
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	_tas_data_ready = _airspeed_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_airspeed_sample_delayed);
+#endif // ECL_EKF_AIRSPEED_FUSION
 
 	// check for height sensor timeouts and reset and change sensor if necessary
 	controlHeightSensorTimeouts();
 
 	// control use of observations for aiding
 	controlMagFusion();
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	controlOpticalFlowFusion();
+#endif // ECL_EKF_OPTICAL_FLOW
 	controlGpsFusion();
 	controlAirDataFusion();
 	controlBetaFusion();
+#if defined(ECL_EKF_DRAG_FUSION)
 	controlDragFusion();
+#endif // ECL_EKF_DRAG_FUSION
 	controlHeightFusion();
 
 	// Additional data odoemtery data from an external estimator can be fused.
@@ -342,6 +350,7 @@ void Ekf::controlExternalVisionFusion()
 	}
 }
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 void Ekf::controlOpticalFlowFusion()
 {
 	// Check if on ground motion is un-suitable for use of optical flow
@@ -503,13 +512,16 @@ void Ekf::resetOnGroundMotionForOpticalFlowChecks()
 	_time_bad_motion_us = 0;
 	_time_good_motion_us = _imu_sample_delayed.time_us;
 }
+#endif // ECL_EKF_OPTICAL_FLOW
 
 void Ekf::controlGpsFusion()
 {
 	// Check for new GPS data that has fallen behind the fusion time horizon
 	if (_gps_data_ready) {
 
+#if defined(ECL_EKF_GPS_YAW_FUSION)
 		controlGpsYawFusion();
+#endif // ECL_EKF_GPS_YAW_FUSION
 
 		// Determine if we should use GPS aiding for velocity and horizontal position
 		// To start using GPS we need angular alignment completed, the local NED origin set and GPS data that has not failed checks recently
@@ -557,6 +569,7 @@ void Ekf::controlGpsFusion()
 			ECL_WARN("GPS quality poor - stopping use");
 		}
 
+#if defined(ECL_EKF_YAW_ESTIMATOR_GSF)
 		// handle case where we are not currently using GPS, but need to align yaw angle using EKF-GSF before
 		// we can start using GPS
 		const bool align_yaw_using_gsf = !_control_status.flags.gps && _do_ekfgsf_yaw_reset && isTimedOut(_ekfgsf_yaw_reset_time, 5000000);
@@ -566,6 +579,7 @@ void Ekf::controlGpsFusion()
 				_do_ekfgsf_yaw_reset = false;
 			}
 		}
+#endif // ECL_EKF_YAW_ESTIMATOR_GSF
 
 		// handle the case when we now have GPS, but have not been fusing it for an extended period
 		if (_control_status.flags.gps) {
@@ -579,6 +593,7 @@ void Ekf::controlGpsFusion()
 			// We haven't had an absolute position fix for a longer time so need to do something
 			do_vel_pos_reset = do_vel_pos_reset || isTimedOut(_time_last_hor_pos_fuse, 2 * _params.reset_timeout_max);
 
+#if defined(ECL_EKF_YAW_ESTIMATOR_GSF)
 			/* Logic controlling the reset of navigation filter yaw to the EKF-GSF estimate to recover from loss of
 			   navigation casued by a bad yaw estimate.
 
@@ -633,6 +648,8 @@ void Ekf::controlGpsFusion()
 
 			// Detect if coming back after significant time without GPS data
 			const bool gps_signal_was_lost = isTimedOut(_time_prev_gps_us, 1000000);
+
+
 			const bool do_yaw_vel_pos_reset = (_do_ekfgsf_yaw_reset || is_yaw_failure) &&
 							  _ekfgsf_yaw_reset_count < _params.EKFGSF_reset_count_limit &&
 							  isTimedOut(_ekfgsf_yaw_reset_time, 5000000) &&
@@ -651,7 +668,9 @@ void Ekf::controlGpsFusion()
 					_time_last_of_fuse = _time_last_imu;
 				}
 
-			} else if (do_vel_pos_reset) {
+			} else
+#endif // ECL_EKF_YAW_ESTIMATOR_GSF
+			if (do_vel_pos_reset) {
 				// use GPS velocity data to check and correct yaw angle if a FW vehicle
 				if (_control_status.flags.fixed_wing && _control_status.flags.in_air) {
 					// if flying a fixed wing aircraft, do a complete reset that includes yaw
@@ -735,6 +754,7 @@ void Ekf::controlGpsFusion()
 	}
 }
 
+#if defined(ECL_EKF_GPS_YAW_FUSION)
 void Ekf::controlGpsYawFusion()
 {
 	if (!(_params.fusion_mode & MASK_USE_GPSYAW)
@@ -771,6 +791,7 @@ void Ekf::controlGpsYawFusion()
 		stopGpsYawFusion();
 	}
 }
+#endif // ECL_EKF_GPS_YAW_FUSION
 
 void Ekf::controlHeightSensorTimeouts()
 {
@@ -1237,11 +1258,15 @@ void Ekf::controlAirDataFusion()
 			// reset the timout timer to prevent repeated resets
 			_time_last_arsp_fuse = _time_last_imu;
 			// reset the wind speed states and corresponding covariances
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 			resetWindStates();
+#endif // ECL_EKF_AIRSPEED_FUSION
 			resetWindCovariance();
 		}
 
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 		fuseAirspeed();
+#endif // ECL_EKF_AIRSPEED_FUSION
 	}
 }
 
@@ -1263,7 +1288,9 @@ void Ekf::controlBetaFusion()
 			// reset the timeout timers to prevent repeated resets
 			_time_last_beta_fuse = _time_last_imu;
 			// reset the wind speed states and corresponding covariances
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 			resetWindStates();
+#endif // ECL_EKF_AIRSPEED_FUSION
 			resetWindCovariance();
 		}
 
@@ -1271,24 +1298,28 @@ void Ekf::controlBetaFusion()
 	}
 }
 
+#if defined(ECL_EKF_DRAG_FUSION)
 void Ekf::controlDragFusion()
 {
 	if ((_params.fusion_mode & MASK_USE_DRAG) &&
 	    !_using_synthetic_position &&
 	    _control_status.flags.in_air &&
 	    !_mag_inhibit_yaw_reset_req) {
-			if (!_control_status.flags.wind) {
-				// reset the wind states and covariances when starting drag accel fusion
-				_control_status.flags.wind = true;
-				resetWindStates();
-				resetWindCovariance();
 
-			} else if (_drag_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_drag_sample_delayed)) {
-				fuseDrag();
-			}
+		if (!_control_status.flags.wind) {
+			// reset the wind states and covariances when starting drag accel fusion
+			_control_status.flags.wind = true;
+#if defined(ECL_EKF_AIRSPEED_FUSION)
+			resetWindStates();
+#endif // ECL_EKF_AIRSPEED_FUSION
+			resetWindCovariance();
 
+		} else if (_drag_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_drag_sample_delayed)) {
+			fuseDrag();
+		}
 	}
 }
+#endif // ECL_EKF_DRAG_FUSION
 
 void Ekf::controlFakePosFusion()
 {

@@ -93,9 +93,11 @@ bool Ekf::collect_gps(const gps_message &gps)
 
 		// request a reset of the yaw using the new declination
 		if (_params.mag_fusion_type == MAG_FUSE_TYPE_NONE) {
+#if defined(ECL_EKF_YAW_ESTIMATOR_GSF)
 			// try to reset the yaw using the EKF-GSF yaw estimator
 			_do_ekfgsf_yaw_reset = true;
 			_ekfgsf_yaw_reset_time = 0;
+#endif // ECL_EKF_YAW_ESTIMATOR_GSF
 
 		} else {
 			if (!declination_was_valid) {

@@ -86,6 +86,7 @@ public:
 	void getAuxVelInnovVar(float aux_vel_innov[2]) const;
 	void getAuxVelInnovRatio(float &aux_vel_innov_ratio) const { aux_vel_innov_ratio = _aux_vel_test_ratio(0); }
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	void getFlowInnov(float flow_innov[2]) const { _flow_innov.copyTo(flow_innov); }
 	void getFlowInnovVar(float flow_innov_var[2]) const { _flow_innov_var.copyTo(flow_innov_var); }
 	void getFlowInnovRatio(float &flow_innov_ratio) const { flow_innov_ratio = _optflow_test_ratio; }
@@ -94,6 +95,7 @@ public:
 	const Vector2f &getFlowCompensated() const { return _flow_compensated_XY_rad; }
 	const Vector2f &getFlowUncompensated() const { return _flow_sample_delayed.flow_xy_rad; }
 	const Vector3f &getFlowGyro() const { return _flow_sample_delayed.gyro_xyz; }
+#endif // ECL_EKF_OPTICAL_FLOW
 
 	void getHeadingInnov(float &heading_innov) const { heading_innov = _heading_innov; }
 	void getHeadingInnovVar(float &heading_innov_var) const { heading_innov_var = _heading_innov_var; }
@@ -103,13 +105,17 @@ public:
 	void getMagInnovVar(float mag_innov_var[3]) const { _mag_innov_var.copyTo(mag_innov_var); }
 	void getMagInnovRatio(float &mag_innov_ratio) const { mag_innov_ratio = _mag_test_ratio.max(); }
 
+#if defined(ECL_EKF_DRAG_FUSION)
 	void getDragInnov(float drag_innov[2]) const { _drag_innov.copyTo(drag_innov); }
 	void getDragInnovVar(float drag_innov_var[2]) const { _drag_innov_var.copyTo(drag_innov_var); }
 	void getDragInnovRatio(float drag_innov_ratio[2]) const { _drag_test_ratio.copyTo(drag_innov_ratio); }
+#endif // ECL_EKF_DRAG_FUSION
 
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	void getAirspeedInnov(float &airspeed_innov) const { airspeed_innov = _airspeed_innov; }
 	void getAirspeedInnovVar(float &airspeed_innov_var) const { airspeed_innov_var = _airspeed_innov_var; }
 	void getAirspeedInnovRatio(float &airspeed_innov_ratio) const { airspeed_innov_ratio = _tas_test_ratio; }
+#endif // ECL_EKF_AIRSPEED_FUSION
 
 	void getBetaInnov(float &beta_innov) const { beta_innov = _beta_innov; }
 	void getBetaInnovVar(float &beta_innov_var) const { beta_innov_var = _beta_innov_var; }
@@ -291,10 +297,12 @@ public:
 	// set minimum continuous period without GPS fail required to mark a healthy GPS status
 	void set_min_required_gps_health_time(uint32_t time_us) { _min_gps_health_time_us = time_us; }
 
+#if defined(ECL_EKF_YAW_ESTIMATOR_GSF)
 	// get solution data from the EKF-GSF emergency yaw estimator
 	// returns false when data is not available
 	bool getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_MODELS_EKFGSF],
 			   float innov_VN[N_MODELS_EKFGSF], float innov_VE[N_MODELS_EKFGSF], float weight[N_MODELS_EKFGSF]);
+#endif // ECL_EKF_YAW_ESTIMATOR_GSF
 
 private:
 
@@ -303,11 +311,13 @@ private:
 
 	bool initialiseTilt();
 
+#if defined(ECL_EKF_YAW_ESTIMATOR_GSF)
 	// Request the EKF reset the yaw to the estimate from the internal EKF-GSF filter
 	// and reset the velocity and position states to the GPS. This will cause the EKF
 	// to ignore the magnetometer for the remainder of flight.
 	// This should only be used as a last resort before activating a loss of navigation failsafe
 	void requestEmergencyNavReset() { _do_ekfgsf_yaw_reset = true; }
+#endif // ECL_EKF_YAW_ESTIMATOR_GSF
 
 	// check if the EKF is dead reckoning horizontal velocity using inertial data only
 	void update_deadreckoning_status();
@@ -346,10 +356,12 @@ private:
 	bool _gps_data_ready{false};	///< true when new GPS data has fallen behind the fusion time horizon and is available to be fused
 	bool _mag_data_ready{false};	///< true when new magnetometer data has fallen behind the fusion time horizon and is available to be fused
 	bool _baro_data_ready{false};	///< true when new baro height data has fallen behind the fusion time horizon and is available to be fused
-	bool _flow_data_ready{false};	///< true when the leading edge of the optical flow integration period has fallen behind the fusion time horizon
 	bool _ev_data_ready{false};	///< true when new external vision system data has fallen behind the fusion time horizon and is available to be fused
 	bool _tas_data_ready{false};	///< true when new true airspeed data has fallen behind the fusion time horizon and is available to be fused
+#if defined(ECL_EKF_OPTICAL_FLOW)
+	bool _flow_data_ready{false};	///< true when the leading edge of the optical flow integration period has fallen behind the fusion time horizon
 	bool _flow_for_terrain_data_ready{false}; /// same flag as "_flow_data_ready" but used for separate terrain estimator
+#endif // ECL_EKF_OPTICAL_FLOW
 
 	uint64_t _time_prev_gps_us{0};	///< time stamp of previous GPS data retrieved from the buffer (uSec)
 	uint64_t _time_last_aiding{0};	///< amount of time we have been doing inertial only deadreckoning (uSec)
@@ -436,11 +448,15 @@ private:
 	Vector3f _mag_innov;		///< earth magnetic field innovations (Gauss)
 	Vector3f _mag_innov_var;	///< earth magnetic field innovation variance (Gauss**2)
 
+#if defined(ECL_EKF_DRAG_FUSION)
 	Vector2f _drag_innov;		///< multirotor drag measurement innovation (m/sec**2)
 	Vector2f _drag_innov_var;	///< multirotor drag measurement innovation variance ((m/sec**2)**2)
+#endif // ECL_EKF_DRAG_FUSION
 
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	float _airspeed_innov{0.0f};		///< airspeed measurement innovation (m/sec)
 	float _airspeed_innov_var{0.0f};	///< airspeed measurement innovation variance ((m/sec)**2)
+#endif // ECL_EKF_AIRSPEED_FUSION
 
 	float _beta_innov{0.0f};	///< synthetic sideslip measurement innovation (rad)
 	float _beta_innov_var{0.0f};	///< synthetic sideslip measurement innovation variance (rad**2)
@@ -448,6 +464,7 @@ private:
 	float _hagl_innov{0.0f};		///< innovation of the last height above terrain measurement (m)
 	float _hagl_innov_var{0.0f};		///< innovation variance for the last height above terrain measurement (m**2)
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	// optical flow processing
 	Vector2f _flow_innov;		///< flow measurement innovation (rad/sec)
 	Vector2f _flow_innov_var;	///< flow innovation variance ((rad/sec)**2)
@@ -460,6 +477,7 @@ private:
 	uint64_t _time_good_motion_us{0};	///< last system time that on-ground motion was within limits (uSec)
 	bool _inhibit_flow_use{false};	///< true when use of optical flow and range finder is being inhibited
 	Vector2f _flow_compensated_XY_rad;	///< measured delta angle of the image about the X and Y body axes after removal of body rotation (rad), RH rotation is positive
+#endif // ECL_EKF_OPTICAL_FLOW
 
 	// output predictor states
 	Vector3f _delta_angle_corr;	///< delta angle correction vector (rad)
@@ -580,8 +598,10 @@ private:
 	void updateQuaternion(const float innovation, const float variance, const float gate_sigma,
 			      const Vector4f &yaw_jacobian);
 
+#if defined(ECL_EKF_GPS_YAW_FUSION)
 	// fuse the yaw angle obtained from a dual antenna GPS unit
 	void fuseGpsYaw();
+#endif // ECL_EKF_GPS_YAW_FUSION
 
 	// reset the quaternions states using the yaw angle obtained from a dual antenna GPS unit
 	// return true if the reset was successful
@@ -594,8 +614,10 @@ private:
 	// apply sensible limits to the declination and length of the NE mag field states estimates
 	void limitDeclination();
 
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	// fuse airspeed measurement
 	void fuseAirspeed();
+#endif // ECL_EKF_AIRSPEED_FUSION
 
 	// fuse synthetic zero sideslip measurement
 	void fuseSideslip();
@@ -649,10 +671,13 @@ private:
 	bool fuseVerticalPosition(const Vector3f &innov, const Vector2f &innov_gate, const Vector3f &obs_var,
 				  Vector3f &innov_var, Vector2f &test_ratio);
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	// calculate optical flow body angular rate compensation
 	// returns false if bias corrected body rate data is unavailable
 	bool calcOptFlowBodyRateComp();
+#endif // ECL_EKF_OPTICAL_FLOW
 
+#if defined(ECL_EKF_TERRAIN_EST)
 	// initialise the terrain vertical position estimator
 	// return true if the initialisation is successful
 	bool initHagl();
@@ -668,6 +693,7 @@ private:
 
 	// update the terrain vertical position estimate using an optical flow measurement
 	void fuseFlowForTerrain();
+#endif // ECL_EKF_TERRAIN_EST
 
 	// reset the heading and magnetic field states using the declination and magnetometer/external vision measurements
 	// return true if successful
@@ -779,14 +805,18 @@ private:
 	// control fusion of external vision observations
 	void controlExternalVisionFusion();
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	// control fusion of optical flow observations
 	void controlOpticalFlowFusion();
 	void updateOnGroundMotionForOpticalFlowChecks();
 	void resetOnGroundMotionForOpticalFlowChecks();
+#endif // ECL_EKF_OPTICAL_FLOW
 
 	// control fusion of GPS observations
 	void controlGpsFusion();
+#if defined(ECL_EKF_GPS_YAW_FUSION)
 	void controlGpsYawFusion();
+#endif // ECL_EKF_GPS_YAW_FUSION
 
 	// control fusion of magnetometer observations
 	void controlMagFusion();
@@ -832,8 +862,10 @@ private:
 	// control fusion of synthetic sideslip observations
 	void controlBetaFusion();
 
+#if defined(ECL_EKF_DRAG_FUSION)
 	// control fusion of multi-rotor drag specific force observations
 	void controlDragFusion();
+#endif // ECL_EKF_DRAG_FUSION
 
 	// control fusion of pressure altitude observations
 	void controlBaroFusion();
@@ -882,8 +914,10 @@ private:
 	// return an estimation of the GPS altitude variance
 	float getGpsHeightVariance();
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	// calculate the measurement variance for the optical flow sensor
 	float calcOptFlowMeasVar();
+#endif // ECL_EKF_OPTICAL_FLOW
 
 	// rotate quaternion covariances into variances for an equivalent rotation vector
 	Vector3f calcRotVecVariances();
@@ -954,7 +988,9 @@ private:
 
 	void stopAuxVelFusion();
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	void stopFlowFusion();
+#endif // ECL_EKF_OPTICAL_FLOW
 
 	void setVelPosFaultStatus(const int index, const bool status);
 
@@ -964,6 +1000,7 @@ private:
 	// update_buffer : true if the state change should be also applied to the output observer buffer
 	void resetQuatStateYaw(float yaw, float yaw_variance, bool update_buffer);
 
+#if defined(ECL_EKF_YAW_ESTIMATOR_GSF)
 	// Declarations used to control use of the EKF-GSF yaw estimator
 
 	// yaw estimator instance
@@ -980,6 +1017,7 @@ private:
 	// Resets the horizontal velocity and position to the default navigation sensor
 	// Returns true if the reset was successful
 	bool resetYawToEKFGSF();
+#endif // ECL_EKF_YAW_ESTIMATOR_GSF
 
 	void resetGpsDriftCheckFilters();
 };

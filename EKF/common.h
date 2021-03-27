@@ -128,12 +128,15 @@ struct rangeSample {
 	int8_t	    quality;    ///< Signal quality in percent (0...100%), where 0 = invalid signal, 100 = perfect signal, and -1 = unknown signal quality.
 };
 
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 struct airspeedSample {
 	uint64_t    time_us{0};		///< timestamp of the measurement (uSec)
 	float       true_airspeed;	///< true airspeed measurement (m/sec)
 	float       eas2tas;		///< equivalent to true airspeed factor
 };
+#endif // ECL_EKF_AIRSPEED_FUSION
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 struct flowSample {
 	uint64_t time_us{0};	///< timestamp of the integration period leading edge (uSec)
 	Vector2f flow_xy_rad;	///< measured delta angle of the image about the X and Y body axes (rad), RH rotation is positive
@@ -141,6 +144,7 @@ struct flowSample {
 	float    dt;		///< amount of integration time (sec)
 	uint8_t  quality;	///< quality indicator between 0 and 255
 };
+#endif // ECL_EKF_OPTICAL_FLOW
 
 struct extVisionSample {
 	uint64_t time_us{0};	///< timestamp of the measurement (uSec)
@@ -153,10 +157,12 @@ struct extVisionSample {
 	velocity_frame_t vel_frame = velocity_frame_t::BODY_FRAME_FRD;
 };
 
+#if defined(ECL_EKF_DRAG_FUSION)
 struct dragSample {
 	uint64_t time_us{0};	///< timestamp of the measurement (uSec)
 	Vector2f accelXY;	///< measured specific force along the X and Y body axes (m/sec**2)
 };
+#endif // ECL_EKF_DRAG_FUSION
 
 struct auxVelSample {
 	uint64_t time_us{0};	///< timestamp of the measurement (uSec)
