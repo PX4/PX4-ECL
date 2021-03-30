@@ -881,13 +881,7 @@ void Ekf::controlHeightSensorTimeouts()
 			// Fallback to rangefinder data if available
 			} else if (_range_sensor.isHealthy()) {
 				setControlRangeHeight();
-				if (_control_status.flags.in_air && isTerrainEstimateValid()) {
-					_hgt_sensor_offset = _terrain_vpos;
-				} else if (_control_status.flags.in_air) {
-				    _hgt_sensor_offset = _range_sensor.getDistBottom() + _state.pos(2);
-			    } else {
-					_hgt_sensor_offset = _params.rng_gnd_clearance;
-				}
+				request_height_reset = true;
 				failing_height_source = "ev";
 				new_height_source = "rng";
 
