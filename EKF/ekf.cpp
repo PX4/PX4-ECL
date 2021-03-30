@@ -155,43 +155,15 @@ bool Ekf::initialiseFilter()
 		_gyro_lpf.update(imu_init.delta_ang / imu_init.delta_ang_dt);
 	}
 
-	// Sum the magnetometer measurements
-	if (_mag_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_mag_sample_delayed)) {
-		if (_mag_sample_delayed.time_us != 0) {
-			if (_mag_counter == 0) {
-				_mag_lpf.reset(_mag_sample_delayed.mag);
-
-			} else {
-				_mag_lpf.update(_mag_sample_delayed.mag);
-			}
-
-			_mag_counter++;
-		}
-	}
-
-	// accumulate enough height measurements to be confident in the quality of the data
-	if (_baro_buffer.pop_first_older_than(_imu_sample_delayed.time_us, &_baro_sample_delayed)) {
-		if (_baro_sample_delayed.time_us != 0) {
-			if (_baro_counter == 0) {
-				_baro_hgt_offset = _baro_sample_delayed.hgt;
-
-			} else {
-				_baro_hgt_offset = 0.9f * _baro_hgt_offset + 0.1f * _baro_sample_delayed.hgt;
-			}
-
-			_baro_counter++;
-		}
-	}
-
 	if (_params.mag_fusion_type <= MAG_FUSE_TYPE_3D) {
-		if (_mag_counter < _obs_buffer_length) {
+		if (_mag_counter_initialise < _obs_buffer_length) {
 			// not enough mag samples accumulated
 			return false;
 		}
 	}
 
-	if (_baro_counter < _obs_buffer_length) {
-		// not enough baro samples accumulated
+	if (_baro_counter_initialise < _obs_buffer_length) {
+		// accumulate enough height measurements to be confident in the quality of the data
 		return false;
 	}
 

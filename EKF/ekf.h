@@ -333,8 +333,6 @@ private:
 
 	stateSample _state{};		///< state struct of the ekf running at the delayed time horizon
 
-	bool _filter_initialised{false};	///< true when the EKF sttes and covariances been initialised
-
 	// variables used when position data is being fused using a relative position odometry model
 	bool _fuse_hpos_as_odom{false};		///< true when the NE position data is being fused using an odometry assumption
 	Vector3f _pos_meas_prev;		///< previous value of NED position measurement fused using odometry assumption (m)
@@ -480,18 +478,6 @@ private:
 	// Variables used to publish the WGS-84 location of the EKF local NED origin
 	uint64_t _last_gps_origin_time_us{0};	///< time the origin was last set (uSec)
 	float _gps_alt_ref{0.0f};		///< WGS-84 height (m)
-
-	// Variables used by the initial filter alignment
-	bool _is_first_imu_sample{true};
-	uint32_t _baro_counter{0};		///< number of baro samples read during initialisation
-	uint32_t _mag_counter{0};		///< number of magnetometer samples read during initialisation
-	AlphaFilter<Vector3f> _accel_lpf{0.1f};	///< filtered accelerometer measurement used to align tilt (m/s/s)
-	AlphaFilter<Vector3f> _gyro_lpf{0.1f};	///< filtered gyro measurement used for alignment excessive movement check (rad/sec)
-
-	// Variables used to perform in flight resets and switch between height sources
-	AlphaFilter<Vector3f> _mag_lpf{0.1f};	///< filtered magnetometer measurement for instant reset (Gauss)
-	float _hgt_sensor_offset{0.0f};		///< set as necessary if desired to maintain the same height after a height reset (m)
-	float _baro_hgt_offset{0.0f};		///< baro height reading at the local NED origin (m)
 
 	// Variables used to control activation of post takeoff functionality
 	float _last_on_ground_posD{0.0f};	///< last vertical position when the in_air status was false (m)

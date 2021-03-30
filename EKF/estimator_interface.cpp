@@ -139,6 +139,18 @@ void EstimatorInterface::setMagData(const magSample &mag_sample)
 		}
 	}
 
+	if (!_filter_initialised) {
+		// Sum the magnetometer measurements
+		if (_mag_counter_initialise == 0) {
+			_mag_lpf.reset(mag_sample.mag);
+
+		} else {
+			_mag_lpf.update(mag_sample.mag);
+		}
+
+		_mag_counter_initialise++;
+	}
+
 	// downsample to highest possible sensor rate
 	// by taking the average of incoming sample
 	_mag_sample_count++;
@@ -245,6 +257,18 @@ void EstimatorInterface::setBaroData(const baroSample &baro_sample)
 			printBufferAllocationFailed("baro");
 			return;
 		}
+	}
+
+	if (!_filter_initialised) {
+		// accumulate enough height measurements to be confident in the quality of the data
+		if (_baro_counter_initialise == 0) {
+			_baro_hgt_offset = baro_sample.hgt;
+
+		} else {
+			_baro_hgt_offset = 0.9f * _baro_hgt_offset + 0.1f * baro_sample.hgt;
+		}
+
+		_baro_counter_initialise++;
 	}
 
 	// downsample to highest possible sensor rate
