@@ -120,8 +120,9 @@ bool Ekf::update()
 		controlFusionModes();
 
 		// run a separate filter for terrain estimation if not in vision fallback with rangefinder
-		if(!(_control_status.flags.rng_hgt && _params.vdist_sensor_type == VDIST_SENSOR_EV))
+		if(!(_control_status.flags.rng_hgt && _params.vdist_sensor_type == VDIST_SENSOR_EV)) {
 			runTerrainEstimator();
+		}
 
 		updated = true;
 
