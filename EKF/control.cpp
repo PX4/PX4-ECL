@@ -1139,7 +1139,6 @@ void Ekf::controlHeightFusion()
 			// fuse height information
 			fuseVerticalPosition(_baro_hgt_innov,baro_hgt_innov_gate,
 				baro_hgt_obs_var, _baro_hgt_innov_var,_baro_hgt_test_ratio);
-			_time_last_hgt_fuse = _time_last_imu;
 
 		} else if (_control_status.flags.gps_hgt) {
 			Vector2f gps_hgt_innov_gate;
@@ -1152,7 +1151,6 @@ void Ekf::controlHeightFusion()
 			// fuse height information
 			fuseVerticalPosition(_gps_pos_innov,gps_hgt_innov_gate,
 				gps_hgt_obs_var, _gps_pos_innov_var, _gps_pos_test_ratio);
-			_time_last_hgt_fuse = _time_last_imu;
 
 		} else if (_control_status.flags.rng_hgt) {
 			Vector2f rng_hgt_innov_gate;
@@ -1168,7 +1166,6 @@ void Ekf::controlHeightFusion()
 			// fuse height information
 			fuseVerticalPosition(_rng_hgt_innov,rng_hgt_innov_gate,
 				rng_hgt_obs_var, _rng_hgt_innov_var,_rng_hgt_test_ratio);
-			_time_last_hgt_fuse = _time_last_imu;
 
 		} else if (_control_status.flags.ev_hgt) {
 			Vector2f ev_hgt_innov_gate;
@@ -1182,7 +1179,6 @@ void Ekf::controlHeightFusion()
 			// fuse height information
 			fuseVerticalPosition(_ev_pos_innov,ev_hgt_innov_gate,
 				ev_hgt_obs_var, _ev_pos_innov_var,_ev_pos_test_ratio);
-			_time_last_hgt_fuse = _time_last_imu;
 		}
 	}
 }
