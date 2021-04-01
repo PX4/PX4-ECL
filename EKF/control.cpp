@@ -1079,6 +1079,11 @@ void Ekf::controlHeightFusion()
 			}
 		}
 
+		if (_control_status.flags.rng_hgt) {
+			// Allow RangeFinder Fusion
+			fuse_height = true;
+		}
+
 		if (_control_status.flags.baro_hgt && _baro_data_ready && !_baro_hgt_faulty) {
 			// switch to baro if there was a reset to baro
 			fuse_height = true;
