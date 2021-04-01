@@ -1079,7 +1079,7 @@ void Ekf::controlHeightFusion()
 			}
 		}
 
-		if (_control_status.flags.rng_hgt) {
+		if (_control_status.flags.rng_hgt && _range_sensor.isDataHealthy()) {
 			// Allow RangeFinder Fusion
 			fuse_height = true;
 		}
