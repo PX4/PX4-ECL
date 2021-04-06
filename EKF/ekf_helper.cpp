@@ -719,6 +719,8 @@ bool Ekf::setEkfGlobalOrigin(const double latitude, const double longitude, cons
 		map_projection_reproject(&_pos_ref, _state.pos(0), _state.pos(1), &current_lat, &current_lon);
 		current_alt = -_state.pos(2) + _gps_alt_ref;
 		current_pos_available = true;
+	} else {
+		_NED_origin_initialised = true;
 	}
 
 	// reinitialize map projection to latitude, longitude, altitude, and reset position
