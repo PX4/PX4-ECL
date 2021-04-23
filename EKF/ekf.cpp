@@ -119,8 +119,11 @@ bool Ekf::update()
 		// control fusion of observation data
 		controlFusionModes();
 
-		// run a separate filter for terrain estimation if not in vision fallback with rangefinder
-		if(!(_control_status.flags.rng_hgt && _params.vdist_sensor_type == VDIST_SENSOR_EV)) {
+		if(_control_status.flags.rng_hgt) {
+		    // do not update hagl in range finder mode, but keep it valid
+			_time_last_hagl_fuse = _time_last_imu;
+		} else {
+		    // run a separate filter for terrain if other height sources available
 			runTerrainEstimator();
 		}
 
