@@ -1079,20 +1079,13 @@ void Ekf::controlHeightFusion()
 			}
 		}
 
-		if (_control_status.flags.rng_hgt && _range_sensor.isDataHealthy()) {
-			// Allow RangeFinder Fusion
-			fuse_height = true;
-		}
-
-		if (_control_status.flags.baro_hgt && _baro_data_ready && !_baro_hgt_faulty) {
-			// switch to baro if there was a reset to baro
-			fuse_height = true;
-		}
-
-		// determine if we should use the vertical position observation
-		if (_control_status.flags.ev_hgt) {
-			fuse_height = true;
-		}
+		if (_control_status.flags.ev_hgt && _ev_data_ready) {
+		     fuse_height = true;
+		} else if (_control_status.flags.rng_hgt && _range_sensor.isDataHealthy()) {
+		      fuse_height = true;
+		} else if (_control_status.flags.baro_hgt && _baro_data_ready && !_baro_hgt_faulty) {
+		      fuse_height = true;
+	    }
 
 		break;
 	}
