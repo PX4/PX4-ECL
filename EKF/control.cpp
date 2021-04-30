@@ -788,8 +788,7 @@ void Ekf::controlHeightSensorTimeouts()
 
 	// check if height has been inertial deadreckoning for too long
 	// in vision hgt mode check for vision data
-	const bool hgt_fusion_timeout = isTimedOut(_time_last_hgt_fuse, (uint64_t)5e6)  ||
-			 (_control_status.flags.ev_hgt && !isRecent(_time_last_ext_vision, 5 * EV_MAX_INTERVAL));
+	const bool hgt_fusion_timeout = isTimedOut(_time_last_hgt_fuse, (uint64_t)5e6);
 
 	if (hgt_fusion_timeout || continuous_bad_accel_hgt) {
 
