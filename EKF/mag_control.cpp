@@ -75,6 +75,9 @@ void Ekf::controlMagFusion()
 	_mag_yaw_reset_req |= otherHeadingSourcesHaveStopped();
 
 	if (noOtherYawAidingThanMag() && _mag_data_ready) {
+		// Restarting mag aiding after a period of no aiding
+		_mag_yaw_reset_req |= !_control_status.flags.mag_hdg && !_control_status.flags.mag_3D;
+
 		if (_control_status.flags.in_air) {
 			checkHaglYawResetReq();
 			runInAirYawReset();
