@@ -73,6 +73,7 @@ void Ekf::resetVelocityToGps()
 
 void Ekf::resetHorizontalVelocityToOpticalFlow()
 {
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	_information_events.flags.reset_vel_to_flow = true;
 	ECL_INFO("reset velocity to flow");
 	// constrain height above ground to be above minimum possible
@@ -100,6 +101,7 @@ void Ekf::resetHorizontalVelocityToOpticalFlow()
 
 	// reset the horizontal velocity variance using the optical flow noise variance
 	P.uncorrelateCovarianceSetVariance<2>(4, sq(range) * calcOptFlowMeasVar());
+#endif // ECL_EKF_OPTICAL_FLOW
 }
 
 void Ekf::resetVelocityToVision()
@@ -814,10 +816,12 @@ void Ekf::get_ekf_vel_accuracy(float *ekf_evh, float *ekf_evv) const
 	if (_deadreckon_time_exceeded) {
 		float vel_err_conservative = 0.0f;
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 		if (_control_status.flags.opt_flow) {
 			float gndclearance = math::max(_params.rng_gnd_clearance, 0.1f);
 			vel_err_conservative = math::max((_terrain_vpos - _state.pos(2)), gndclearance) * _flow_innov.norm();
 		}
+#endif // ECL_EKF_OPTICAL_FLOW
 
 		if (_control_status.flags.gps) {
 			vel_err_conservative = math::max(vel_err_conservative, sqrtf(sq(_gps_pos_innov(0)) + sq(_gps_pos_innov(1))));
@@ -1563,6 +1567,7 @@ void Ekf::stopAuxVelFusion()
 	_aux_vel_test_ratio.setZero();
 }
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 void Ekf::stopFlowFusion()
 {
 	_control_status.flags.opt_flow = false;
@@ -1570,6 +1575,7 @@ void Ekf::stopFlowFusion()
 	_flow_innov_var.setZero();
 	_optflow_test_ratio = 0.0f;
 }
+#endif // ECL_EKF_OPTICAL_FLOW
 
 void Ekf::resetQuatStateYaw(float yaw, float yaw_variance, bool update_buffer)
 {
@@ -1614,6 +1620,7 @@ void Ekf::resetQuatStateYaw(float yaw, float yaw_variance, bool update_buffer)
 	_state_reset_status.quat_counter++;
 }
 
+#if defined(ECL_EKF_YAW_ESTIMATOR_GSF)
 // Resets the main Nav EKf yaw to the estimator from the EKF-GSF yaw estimator
 // Resets the horizontal velocity and position to the default navigation sensor
 // Returns true if the reset was successful
@@ -1666,14 +1673,13 @@ bool Ekf::getDataEKFGSF(float *yaw_composite, float *yaw_variance, float yaw[N_M
 
 void Ekf::runYawEKFGSF()
 {
-	float TAS;
+	float TAS = _params.EKFGSF_tas_default;
 
-	if (isTimedOut(_airspeed_sample_delayed.time_us, 1000000) && _control_status.flags.fixed_wing) {
-		TAS = _params.EKFGSF_tas_default;
-
-	} else {
+#if defined(ECL_EKF_AIRSPEED_FUSION)
+	if (!isTimedOut(_airspeed_sample_delayed.time_us, 1000000) && !_control_status.flags.fixed_wing) {
 		TAS = _airspeed_sample_delayed.true_airspeed;
 	}
+#endif // ECL_EKF_AIRSPEED_FUSION
 
 	const Vector3f imu_gyro_bias = getGyroBias();
 	_yawEstimator.update(_imu_sample_delayed, _control_status.flags.in_air, TAS, imu_gyro_bias);
@@ -1684,6 +1690,7 @@ void Ekf::runYawEKFGSF()
 		_yawEstimator.setVelocity(_gps_sample_delayed.vel.xy(), _gps_sample_delayed.vacc);
 	}
 }
+#endif // ECL_EKF_YAW_ESTIMATOR_GSF
 
 void Ekf::resetGpsDriftCheckFilters()
 {

@@ -139,7 +139,9 @@ void Ekf::fuseSideslip()
 			// if we are getting aiding from other sources, warn and reset the wind states and covariances only
 			const char* action_string = nullptr;
 			if (update_wind_only) {
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 				resetWindStates();
+#endif // ECL_EKF_AIRSPEED_FUSION
 				resetWindCovariance();
 				action_string = "wind";
 

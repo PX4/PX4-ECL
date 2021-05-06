@@ -77,12 +77,16 @@ public:
 
 	void setBaroData(const baroSample &baro_sample);
 
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	void setAirspeedData(const airspeedSample &airspeed_sample);
+#endif // ECL_EKF_AIRSPEED_FUSION
 
 	void setRangeData(const rangeSample &range_sample);
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	// if optical flow sensor gyro delta angles are not available, set gyro_xyz vector fields to NaN and the EKF will use its internal delta angle data instead
 	void setOpticalFlowData(const flowSample &flow);
+#endif // ECL_EKF_OPTICAL_FLOW
 
 	// set external vision position and attitude data
 	void setExtVisionData(const extVisionSample &evdata);
@@ -280,11 +284,17 @@ protected:
 	baroSample _baro_sample_delayed{};
 	gpsSample _gps_sample_delayed{};
 	sensor::SensorRangeFinder _range_sensor{};
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	airspeedSample _airspeed_sample_delayed{};
+#endif // ECL_EKF_AIRSPEED_FUSION
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	flowSample _flow_sample_delayed{};
+#endif // ECL_EKF_OPTICAL_FLOW
 	extVisionSample _ev_sample_delayed{};
+#if defined(ECL_EKF_DRAG_FUSION)
 	dragSample _drag_sample_delayed{};
 	dragSample _drag_down_sampled{};	// down sampled drag specific force data (filter prediction rate -> observation rate)
+#endif // ECL_EKF_DRAG_FUSION
 	auxVelSample _auxvel_sample_delayed{};
 
 	float _air_density{CONSTANTS_AIR_DENSITY_SEA_LEVEL_15C};		// air density (kg/m**3)
@@ -353,10 +363,16 @@ protected:
 	RingBuffer<magSample> _mag_buffer;
 	RingBuffer<baroSample> _baro_buffer;
 	RingBuffer<rangeSample> _range_buffer;
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	RingBuffer<airspeedSample> _airspeed_buffer;
+#endif // ECL_EKF_AIRSPEED_FUSION
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	RingBuffer<flowSample> 	_flow_buffer;
+#endif // ECL_EKF_OPTICAL_FLOW
 	RingBuffer<extVisionSample> _ext_vision_buffer;
+#if defined(ECL_EKF_DRAG_FUSION)
 	RingBuffer<dragSample> _drag_buffer;
+#endif // ECL_EKF_DRAG_FUSION
 	RingBuffer<auxVelSample> _auxvel_buffer;
 
 	// timestamps of latest in buffer saved measurement in microseconds
@@ -420,9 +436,11 @@ private:
 	float _baro_alt_sum{0.0f};			// summed pressure altitude readings (m)
 	uint8_t _baro_sample_count{0};		// number of barometric altitude measurements summed
 
+#if defined(ECL_EKF_DRAG_FUSION)
 	// Used by the multi-rotor specific drag force fusion
 	uint8_t _drag_sample_count{0};	// number of drag specific force samples assumulated at the filter prediction rate
 	float _drag_sample_time_dt{0.0f};	// time integral across all samples used to form _drag_down_sampled (sec)
+#endif // ECL_EKF_DRAG_FUSION
 
 	// Used to downsample magnetometer data
 	uint64_t _mag_timestamp_sum{0};
@@ -434,10 +452,16 @@ private:
 	bool _mag_buffer_fail{false};
 	bool _baro_buffer_fail{false};
 	bool _range_buffer_fail{false};
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	bool _airspeed_buffer_fail{false};
+#endif // ECL_EKF_AIRSPEED_FUSION
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	bool _flow_buffer_fail{false};
+#endif // ECL_EKF_OPTICAL_FLOW
 	bool _ev_buffer_fail{false};
+#if defined(ECL_EKF_DRAG_FUSION)
 	bool _drag_buffer_fail{false};
+#endif // ECL_EKF_DRAG_FUSION
 	bool _auxvel_buffer_fail{false};
 
 };

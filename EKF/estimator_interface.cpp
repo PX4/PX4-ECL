@@ -81,7 +81,9 @@ void EstimatorInterface::setIMUData(const imuSample &imu_sample)
 		// this will occur if data is overwritten before its time stamp falls behind the fusion time horizon
 		_min_obs_interval_us = (imu_sample.time_us - _imu_sample_delayed.time_us) / (_obs_buffer_length - 1);
 
+#if defined(ECL_EKF_DRAG_FUSION)
 		setDragData(imu_sample);
+#endif // ECL_EKF_DRAG_FUSION
 	}
 }
 
@@ -275,6 +277,7 @@ void EstimatorInterface::setBaroData(const baroSample &baro_sample)
 	}
 }
 
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 void EstimatorInterface::setAirspeedData(const airspeedSample &airspeed_sample)
 {
 	if (!_initialised || _airspeed_buffer_fail) {
@@ -304,6 +307,7 @@ void EstimatorInterface::setAirspeedData(const airspeedSample &airspeed_sample)
 		_airspeed_buffer.push(airspeed_sample_new);
 	}
 }
+#endif // ECL_EKF_AIRSPEED_FUSION
 
 void EstimatorInterface::setRangeData(const rangeSample &range_sample)
 {
@@ -334,6 +338,7 @@ void EstimatorInterface::setRangeData(const rangeSample &range_sample)
 	}
 }
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 void EstimatorInterface::setOpticalFlowData(const flowSample &flow)
 {
 	if (!_initialised || _flow_buffer_fail) {
@@ -363,6 +368,7 @@ void EstimatorInterface::setOpticalFlowData(const flowSample &flow)
 		_flow_buffer.push(optflow_sample_new);
 	}
 }
+#endif // ECL_EKF_OPTICAL_FLOW
 
 // set attitude and position data derived from an external vision system
 void EstimatorInterface::setExtVisionData(const extVisionSample &evdata)
@@ -425,6 +431,7 @@ void EstimatorInterface::setAuxVelData(const auxVelSample &auxvel_sample)
 	}
 }
 
+#if defined(ECL_EKF_DRAG_FUSION)
 void EstimatorInterface::setDragData(const imuSample &imu)
 {
 	// down-sample the drag specific force data by accumulating and calculating the mean when
@@ -442,7 +449,7 @@ void EstimatorInterface::setDragData(const imuSample &imu)
 			}
 		}
 
-		_drag_sample_count ++;
+		_drag_sample_count++;
 		// note acceleration is accumulated as a delta velocity
 		_drag_down_sampled.accelXY(0) += imu.delta_vel(0);
 		_drag_down_sampled.accelXY(1) += imu.delta_vel(1);
@@ -474,6 +481,7 @@ void EstimatorInterface::setDragData(const imuSample &imu)
 		}
 	}
 }
+#endif // ECL_EKF_DRAG_FUSION
 
 bool EstimatorInterface::initialise_interface(uint64_t timestamp)
 {
@@ -572,10 +580,16 @@ void EstimatorInterface::print_status()
 	ECL_INFO("mag buffer: %d (%d Bytes)", _mag_buffer.get_length(), _mag_buffer.get_total_size());
 	ECL_INFO("baro buffer: %d (%d Bytes)", _baro_buffer.get_length(), _baro_buffer.get_total_size());
 	ECL_INFO("range buffer: %d (%d Bytes)", _range_buffer.get_length(), _range_buffer.get_total_size());
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	ECL_INFO("airspeed buffer: %d (%d Bytes)", _airspeed_buffer.get_length(), _airspeed_buffer.get_total_size());
+#endif // ECL_EKF_AIRSPEED_FUSION
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	ECL_INFO("flow buffer: %d (%d Bytes)", _flow_buffer.get_length(), _flow_buffer.get_total_size());
+#endif // ECL_EKF_OPTICAL_FLOW
 	ECL_INFO("vision buffer: %d (%d Bytes)", _ext_vision_buffer.get_length(), _ext_vision_buffer.get_total_size());
 	ECL_INFO("output buffer: %d (%d Bytes)", _output_buffer.get_length(), _output_buffer.get_total_size());
 	ECL_INFO("output vert buffer: %d (%d Bytes)", _output_vert_buffer.get_length(), _output_vert_buffer.get_total_size());
+#if defined(ECL_EKF_DRAG_FUSION)
 	ECL_INFO("drag buffer: %d (%d Bytes)", _drag_buffer.get_length(), _drag_buffer.get_total_size());
+#endif // ECL_EKF_DRAG_FUSION
 }

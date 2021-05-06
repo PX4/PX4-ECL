@@ -119,13 +119,17 @@ bool Ekf::update()
 		// control fusion of observation data
 		controlFusionModes();
 
+#if defined(ECL_EKF_TERRAIN_EST)
 		// run a separate filter for terrain estimation
 		runTerrainEstimator();
+#endif // ECL_EKF_TERRAIN_EST
 
 		updated = true;
 
+#if defined(ECL_EKF_YAW_ESTIMATOR_GSF)
 		// run EKF-GSF yaw estimator
 		runYawEKFGSF();
+#endif // ECL_EKF_YAW_ESTIMATOR_GSF
 	}
 
 	// the output observer always runs
@@ -214,8 +218,10 @@ bool Ekf::initialiseFilter()
 		increaseQuatYawErrVariance(sq(fmaxf(_params.mag_heading_noise, 1.0e-2f)));
 	}
 
+#if defined(ECL_EKF_TERRAIN_EST)
 	// try to initialise the terrain estimator
 	_terrain_initialised = initHagl();
+#endif // ECL_EKF_TERRAIN_EST
 
 	// reset the essential fusion timeout counters
 	_time_last_hgt_fuse = _time_last_imu;

@@ -1,6 +1,6 @@
 ############################################################################
 #
-#   Copyright (c) 2015-2018 ECL Development Team. All rights reserved.
+#   Copyright (c) 2015-2021 ECL Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,27 +31,70 @@
 #
 ############################################################################
 
+option(ECL_EKF_AIRSPEED_FUSION "ecl/EKF airspeed fusion" ON)
+option(ECL_EKF_DRAG_FUSION "ecl/EKF drag fusion" ON)
+option(ECL_EKF_GPS_YAW_FUSION "ecl/EKF GPS yaw fusion" ON)
+option(ECL_EKF_OPTICAL_FLOW "ecl/EKF optical flow fusion" ON)
+option(ECL_EKF_TERRAIN_EST "ecl/EKF terrain estimator" ON)
+option(ECL_EKF_YAW_ESTIMATOR_GSF "ecl/EKF yaw estimator GSF" ON)
+
 add_library(ecl_EKF
-	airspeed_fusion.cpp
 	control.cpp
-	mag_control.cpp
 	covariance.cpp
-	drag_fusion.cpp
 	ekf.cpp
 	ekf_helper.cpp
 	estimator_interface.cpp
 	gps_checks.cpp
-	mag_fusion.cpp
-	optflow_fusion.cpp
-	sideslip_fusion.cpp
-	terrain_estimator.cpp
-	vel_pos_fusion.cpp
-	gps_yaw_fusion.cpp
 	imu_down_sampler.cpp
-	EKFGSF_yaw.cpp
+	mag_control.cpp
+	mag_fusion.cpp
 	sensor_range_finder.cpp
+	sideslip_fusion.cpp
 	utils.cpp
+	vel_pos_fusion.cpp
 )
+
+if(ECL_EKF_AIRSPEED_FUSION)
+	target_compile_definitions(ecl_EKF PUBLIC ECL_EKF_AIRSPEED_FUSION)
+	target_sources(ecl_EKF PRIVATE airspeed_fusion.cpp)
+else()
+	message(STATUS "ecl/EKF airspeed fusion disabled")
+endif()
+
+if(ECL_EKF_DRAG_FUSION)
+	target_compile_definitions(ecl_EKF PUBLIC ECL_EKF_DRAG_FUSION)
+	target_sources(ecl_EKF PRIVATE drag_fusion.cpp)
+else()
+	message(STATUS "ecl/EKF drag fusion disabled")
+endif()
+
+if(ECL_EKF_GPS_YAW_FUSION)
+	target_compile_definitions(ecl_EKF PUBLIC ECL_EKF_GPS_YAW_FUSION)
+	target_sources(ecl_EKF PRIVATE gps_yaw_fusion.cpp)
+else()
+	message(STATUS "ecl/EKF GPS yaw fusion disabled")
+endif()
+
+if(ECL_EKF_OPTICAL_FLOW)
+	target_compile_definitions(ecl_EKF PUBLIC ECL_EKF_OPTICAL_FLOW)
+	target_sources(ecl_EKF PRIVATE optflow_fusion.cpp)
+else()
+	message(STATUS "ecl/EKF optical flow disabled")
+endif()
+
+if(ECL_EKF_TERRAIN_EST)
+	target_compile_definitions(ecl_EKF PUBLIC ECL_EKF_TERRAIN_EST)
+	target_sources(ecl_EKF PRIVATE terrain_estimator.cpp)
+else()
+	message(STATUS "ecl/EKF terrain estimator disabled")
+endif()
+
+if(ECL_EKF_YAW_ESTIMATOR_GSF)
+	target_compile_definitions(ecl_EKF PUBLIC ECL_EKF_YAW_ESTIMATOR_GSF)
+	target_sources(ecl_EKF PRIVATE EKFGSF_yaw.cpp)
+else()
+	message(STATUS "ecl/EKF emergency yaw estimator GSF disabled")
+endif()
 
 add_dependencies(ecl_EKF prebuild_targets)
 target_compile_definitions(ecl_EKF PRIVATE -DMODULE_NAME="ecl/EKF")

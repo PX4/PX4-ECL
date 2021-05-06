@@ -64,13 +64,14 @@ bool Ekf::initHagl()
 		// success
 		initialized = true;
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	} else if (shouldUseOpticalFlowForHagl()
 		   && _flow_for_terrain_data_ready) {
 		// initialise terrain vertical position to origin as this is the best guess we have
 		_terrain_vpos = fmaxf(0.0f,  _state.pos(2));
 		_terrain_var = 100.0f;
 		initialized = true;
-
+#endif // ECL_EKF_OPTICAL_FLOW
 	} else {
 		// no information - cannot initialise
 	}
@@ -115,11 +116,13 @@ void Ekf::runTerrainEstimator()
 			fuseHagl();
 		}
 
+#if defined(ECL_EKF_OPTICAL_FLOW)
 		if (shouldUseOpticalFlowForHagl()
 		    && _flow_for_terrain_data_ready) {
 			fuseFlowForTerrain();
 			_flow_for_terrain_data_ready = false;
 		}
+#endif // ECL_EKF_OPTICAL_FLOW
 
 		// constrain _terrain_vpos to be a minimum of _params.rng_gnd_clearance larger than _state.pos(2)
 		if (_terrain_vpos - _state.pos(2) < _params.rng_gnd_clearance) {
@@ -180,6 +183,7 @@ void Ekf::fuseHagl()
 
 void Ekf::fuseFlowForTerrain()
 {
+#if defined(ECL_EKF_OPTICAL_FLOW)
 	// calculate optical LOS rates using optical flow rates that have had the body angular rate contribution removed
 	// correct for gyro bias errors in the data used to do the motion compensation
 	// Note the sign convention used: A positive LOS rate is a RH rotation of the scene about that axis.
@@ -276,6 +280,7 @@ void Ekf::fuseFlowForTerrain()
 		_terrain_var = fmaxf(_terrain_var - KyHyP, 0.0f);
 		_time_last_flow_terrain_fuse = _time_last_imu;
 	}
+#endif // ECL_EKF_OPTICAL_FLOW
 }
 
 void Ekf::updateTerrainValidity()

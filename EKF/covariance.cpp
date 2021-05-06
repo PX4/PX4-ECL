@@ -1086,6 +1086,7 @@ void Ekf::zeroMagCov()
 
 void Ekf::resetWindCovariance()
 {
+#if defined(ECL_EKF_AIRSPEED_FUSION)
 	if (_tas_data_ready && (_imu_sample_delayed.time_us - _airspeed_sample_delayed.time_us < (uint64_t)5e5)) {
 		// Derived using EKF/matlab/scripts/Inertial Nav EKF/wind_cov.py
 		// TODO: explicitly include the sideslip angle in the derivation
@@ -1114,7 +1115,9 @@ void Ekf::resetWindCovariance()
 		P(22,22) += P(4,4);
 		P(23,23) += P(5,5);
 
-	} else {
+	} else
+#endif // ECL_EKF_AIRSPEED_FUSION
+	{
 		// without airspeed, start with a small initial uncertainty to improve the initial estimate
 		P.uncorrelateCovarianceSetVariance<2>(22, _params.initial_wind_uncertainty);
 	}
