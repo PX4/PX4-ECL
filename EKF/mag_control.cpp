@@ -87,12 +87,6 @@ void Ekf::controlMagFusion()
 		// Determine if we should use simple magnetic heading fusion which works better when
 		// there are large external disturbances or the more accurate 3-axis fusion
 		switch (_params.mag_fusion_type) {
-		case MAG_FUSE_TYPE_AUTO:
-			selectMagAuto();
-			break;
-
-		case MAG_FUSE_TYPE_INDOOR:
-		/* fallthrough */
 		case MAG_FUSE_TYPE_HEADING:
 			startMagHdgFusion();
 			break;
@@ -101,6 +95,10 @@ void Ekf::controlMagFusion()
 			startMag3DFusion();
 			break;
 
+		case MAG_FUSE_TYPE_INDOOR:
+		/* fallthrough */
+		case MAG_FUSE_TYPE_AUTO:
+		/* fallthrough */
 		default:
 			selectMagAuto();
 			break;
