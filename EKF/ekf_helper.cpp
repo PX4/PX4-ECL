@@ -952,8 +952,8 @@ void Ekf::get_innovation_test_status(uint16_t &status, float &mag, float &vel, f
 		vel = math::max(vel, sqrtf(math::max(_ev_vel_test_ratio(0), _ev_vel_test_ratio(1))));
 		pos = math::max(pos, sqrtf(_ev_pos_test_ratio(0)));
 	}
-	if (isOnlyActiveSourceOfHorizontalAiding(_control_status.flags.opt_flow)) {
-		vel = sqrtf(_optflow_test_ratio);
+	if (_control_status.flags.opt_flow) {
+		vel = math::max(vel, sqrtf(_optflow_test_ratio));
 	}
 
 	// return the vertical position innovation test ratio
