@@ -71,7 +71,7 @@ void Ekf::fuseGpsYaw()
 
 	// using magnetic heading process noise
 	// TODO extend interface to use yaw uncertainty provided by GPS if available
-	const float R_YAW = sq(fmaxf(_params.mag_heading_noise, 1.0e-2f));
+	const float R_YAW = sq(fmaxf(_params.gps_heading_noise, 1.0e-2f));
 
 	// calculate intermediate variables
 	const float HK0 = sinf(_gps_yaw_offset);
@@ -150,21 +150,21 @@ void Ekf::fuseGpsYaw()
 
 	if (_yaw_test_ratio > 1.0f) {
 		_innov_check_fail_status.flags.reject_yaw = true;
-
-		// if we are in air we don't want to fuse the measurement
-		// we allow to use it when on the ground because the large innovation could be caused
-		// by interference or a large initial gyro bias
-		if (_control_status.flags.in_air) {
-			return;
-
-		} else {
-			// constrain the innovation to the maximum set by the gate
-			const float gate_limit = sqrtf((sq(innov_gate) * _heading_innov_var));
-			_heading_innov = math::constrain(_heading_innov, -gate_limit, gate_limit);
-		}
+		return;
 
 	} else {
 		_innov_check_fail_status.flags.reject_yaw = false;
+	}
+
+	_yaw_signed_test_ratio_lpf.update(matrix::sign(_heading_innov) * _yaw_test_ratio);
+
+	if (!_control_status.flags.in_air
+	    && fabsf(_yaw_signed_test_ratio_lpf.getState()) > 0.2f) {
+
+		// A constant large signed test ratio is a sign of wrong gyro bias
+		// Reset the yaw gyro variance to converge faster and avoid
+		// being stuck on a previous bad estimate
+		resetZDeltaAngBiasCov();
 	}
 
 	// calculate observation jacobian
@@ -208,10 +208,11 @@ bool Ekf::resetYawToGps()
 	// GPS yaw measurement is alreday compensated for antenna offset in the driver
 	const float measured_yaw = _gps_sample_delayed.yaw;
 
-	const float yaw_variance = sq(fmaxf(_params.mag_heading_noise, 1.0e-2f));
+	const float yaw_variance = sq(fmaxf(_params.gps_heading_noise, 1.0e-2f));
 	resetQuatStateYaw(measured_yaw, yaw_variance, true);
 
 	_time_last_gps_yaw_fuse = _time_last_imu;
+	_yaw_signed_test_ratio_lpf.reset(0.f);
 
 	return true;
 }

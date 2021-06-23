@@ -760,13 +760,24 @@ void Ekf::controlGpsYawFusion(bool gps_checks_passing, bool gps_checks_failing)
 
 				fuseGpsYaw();
 
-				const bool is_fusion_failing = isTimedOut(_time_last_gps_yaw_fuse, _params.reset_timeout_max);
+				bool is_fusion_failing;
+
+				if (_control_status.flags.in_air) {
+					is_fusion_failing = isTimedOut(_time_last_gps_yaw_fuse, _params.reset_timeout_max);
+
+				} else {
+					// On ground, react faster because it could simply be due to a reset of the GNSS receiver
+					is_fusion_failing = isTimedOut(_time_last_gps_yaw_fuse, 2 * GPS_MAX_INTERVAL);
+				}
 
 				if (is_fusion_failing) {
 					if (_nb_gps_yaw_reset_available > 0) {
 						// Data seems good, attempt a reset
 						resetYawToGps();
-						_nb_gps_yaw_reset_available--;
+
+						if (_control_status.flags.in_air) {
+							_nb_gps_yaw_reset_available--;
+						}
 
 					} else if (starting_conditions_passing) {
 						// Data seems good, but previous reset did not fix the issue

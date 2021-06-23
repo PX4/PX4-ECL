@@ -274,6 +274,9 @@ struct parameters {
 	float mag_yaw_rate_gate{0.25f};		///< yaw rate threshold used by mode select logic (rad/sec)
 	const float quat_max_variance{0.0001f};	///< zero innovation yaw measurements will not be fused when the sum of quaternion variance is less than this
 
+	// GNSS heading fusion
+	float gps_heading_noise{3.0e-2f};
+
 	// airspeed fusion
 	float tas_innov_gate{5.0f};		///< True Airspeed innovation consistency gate size (STD)
 	float eas_noise{1.4f};			///< EAS measurement noise standard deviation used for airspeed fusion (m/s)
