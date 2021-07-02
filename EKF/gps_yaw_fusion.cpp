@@ -144,6 +144,18 @@ void Ekf::fuseGpsYaw()
 
 	// innovation test ratio
 	_yaw_test_ratio = sq(_heading_innov) / (sq(innov_gate) * _heading_innov_var);
+	_yaw_signed_test_ratio_lpf.update(matrix::sign(_heading_innov) * fminf(_yaw_test_ratio, 1.f));
+
+	if (!_control_status.flags.in_air
+	    && fabsf(_yaw_signed_test_ratio_lpf.getState()) > 0.2f) {
+
+		// A constant large signed test ratio is a sign of wrong gyro bias
+		// Reset the yaw gyro variance to converge faster and avoid
+		// being stuck on a previous bad estimate
+		printf("Large bias detected, reset cov\n");
+		resetZDeltaAngBiasCov();
+		_yaw_signed_test_ratio_lpf.reset(0.f);
+	}
 
 	// we are no longer using 3-axis fusion so set the reported test levels to zero
 	_mag_test_ratio.setZero();
@@ -154,17 +166,6 @@ void Ekf::fuseGpsYaw()
 
 	} else {
 		_innov_check_fail_status.flags.reject_yaw = false;
-	}
-
-	_yaw_signed_test_ratio_lpf.update(matrix::sign(_heading_innov) * _yaw_test_ratio);
-
-	if (!_control_status.flags.in_air
-	    && fabsf(_yaw_signed_test_ratio_lpf.getState()) > 0.2f) {
-
-		// A constant large signed test ratio is a sign of wrong gyro bias
-		// Reset the yaw gyro variance to converge faster and avoid
-		// being stuck on a previous bad estimate
-		resetZDeltaAngBiasCov();
 	}
 
 	// calculate observation jacobian

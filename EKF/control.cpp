@@ -762,18 +762,21 @@ void Ekf::controlGpsYawFusion(bool gps_checks_passing, bool gps_checks_failing)
 
 				bool is_fusion_failing;
 
-				if (_control_status.flags.in_air) {
-					is_fusion_failing = isTimedOut(_time_last_gps_yaw_fuse, _params.reset_timeout_max);
+				is_fusion_failing = isTimedOut(_time_last_gps_yaw_fuse, _params.reset_timeout_max);
+				/* if (_control_status.flags.in_air) { */
+				/* 	is_fusion_failing = isTimedOut(_time_last_gps_yaw_fuse, _params.reset_timeout_max); */
 
-				} else {
-					// On ground, react faster because it could simply be due to a reset of the GNSS receiver
-					is_fusion_failing = isTimedOut(_time_last_gps_yaw_fuse, 2 * GPS_MAX_INTERVAL);
-				}
+				/* } else { */
+				/* 	// On ground, react faster because it could simply be due to a reset of the GNSS receiver */
+				/* 	is_fusion_failing = isTimedOut(_time_last_gps_yaw_fuse, 2 * GPS_MAX_INTERVAL); */
+				/* } */
 
 				if (is_fusion_failing) {
+					printf("Failing\n");
 					if (_nb_gps_yaw_reset_available > 0) {
 						// Data seems good, attempt a reset
 						resetYawToGps();
+						printf("Reset\n");
 
 						if (_control_status.flags.in_air) {
 							_nb_gps_yaw_reset_available--;
@@ -802,6 +805,7 @@ void Ekf::controlGpsYawFusion(bool gps_checks_passing, bool gps_checks_failing)
 		        if (starting_conditions_passing) {
 				// Try to activate GPS yaw fusion
 				if (resetYawToGps()) {
+					printf("Start\n");
 					_control_status.flags.yaw_align = true;
 					_nb_gps_yaw_reset_available = 1;
 					startGpsYawFusion();
