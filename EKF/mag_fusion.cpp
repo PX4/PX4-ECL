@@ -748,18 +748,25 @@ void Ekf::fuseHeading()
 		// handle special case where yaw measurement is unavailable
 		bool fuse_zero_innov = false;
 		if (_is_yaw_fusion_inhibited) {
-			// The yaw measurement cannot be trusted but we need to fuse something to prevent a badly
+			// The yaw sensor cannot be trusted but we need to fuse something to prevent a badly
 			// conditioned covariance matrix developing over time.
 			if (!_control_status.flags.vehicle_at_rest) {
-				// Vehicle is not at rest so fuse a zero innovation if necessary to prevent
-				// unconstrained quaternion variance growth and record the predicted heading
-				// to use as an observation when movement ceases.
-				// TODO a better way of determining when this is necessary
-				const float sumQuatVar = P(0,0) + P(1,1) + P(2,2) + P(3,3);
-				if (sumQuatVar > _params.quat_max_variance) {
-					fuse_zero_innov = true;
-					R_YAW = 0.25f;
+				// use the yaw estimator as a synthetic yaw source if available
+				float new_yaw, new_yaw_variance;
+				if (_yawEstimator.getYawData(&new_yaw, &new_yaw_variance) && new_yaw_variance < sq(_params.EKFGSF_yaw_err_max)) {
+					measured_hdg = new_yaw;
 
+				} else {
+					// Fuse a zero innovation if necessary to prevent unconstrained quaternion
+					// variance growth and record the predicted heading to use as an observation
+					// when movement ceases.
+					// TODO a better way of determining when this is necessary
+					const float sumQuatVar = P(0,0) + P(1,1) + P(2,2) + P(3,3);
+					if (sumQuatVar > _params.quat_max_variance) {
+						fuse_zero_innov = true;
+						R_YAW = 0.25f;
+
+					}
 				}
 				_last_static_yaw = predicted_hdg;
 
@@ -799,18 +806,25 @@ void Ekf::fuseHeading()
 		// handle special case where yaw measurement is unavailable
 		bool fuse_zero_innov = false;
 		if (_is_yaw_fusion_inhibited) {
-			// The yaw measurement cannot be trusted but we need to fuse something to prevent a badly
+			// The yaw sensor cannot be trusted but we need to fuse something to prevent a badly
 			// conditioned covariance matrix developing over time.
 			if (!_control_status.flags.vehicle_at_rest) {
-				// Vehicle is not at rest so fuse a zero innovation if necessary to prevent
-				// unconstrained quaterniion variance growth and record the predicted heading
-				// to use as an observation when movement ceases.
-				// TODO a better way of determining when this is necessary
-				const float sumQuatVar = P(0,0) + P(1,1) + P(2,2) + P(3,3);
-				if (sumQuatVar > _params.quat_max_variance) {
-					fuse_zero_innov = true;
-					R_YAW = 0.25f;
+				// use the yaw estimator as a synthetic yaw source if available
+				float new_yaw, new_yaw_variance;
+				if (_yawEstimator.getYawData(&new_yaw, &new_yaw_variance) && new_yaw_variance < sq(_params.EKFGSF_yaw_err_max)) {
+					measured_hdg = new_yaw;
 
+				} else {
+					// Fuse a zero innovation if necessary to prevent unconstrained quaternion
+					// variance growth and record the predicted heading to use as an observation
+					// when movement ceases.
+					// TODO a better way of determining when this is necessary
+					const float sumQuatVar = P(0,0) + P(1,1) + P(2,2) + P(3,3);
+					if (sumQuatVar > _params.quat_max_variance) {
+						fuse_zero_innov = true;
+						R_YAW = 0.25f;
+
+					}
 				}
 				_last_static_yaw = predicted_hdg;
 
