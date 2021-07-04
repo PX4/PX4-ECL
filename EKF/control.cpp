@@ -607,14 +607,13 @@ void Ekf::controlGpsFusion()
 			if ((recent_takeoff_nav_failure || inflight_nav_failure) && _time_last_hor_vel_fuse > 0) {
 				// Do sanity check to see if the innovation failures is likely caused by a yaw angle error
 				// by measuring the angle between the velocity estimate and the last velocity observation
-				// Only use those vectors if their norm if they are larger than 4 times their noise standard deviation
+				// Only use those vectors if their norm is sufficiently larger than the observation noise uncertainty
 				const float vel_obs_xy_norm_sq = _last_vel_obs.xy().norm_squared();
 				const float vel_state_xy_norm_sq = _state.vel.xy().norm_squared();
 
-				const float vel_obs_threshold_sq = fmaxf(sq(4.f) * (_last_vel_obs_var(0) + _last_vel_obs_var(1)), sq(0.4f));
-				const float vel_state_threshold_sq = fmaxf(sq(4.f) * (P(4, 4) + P(5, 5)), sq(0.4f));
+				const float vel_obs_threshold_sq = fmaxf(sq(_params.EKFGSF_vel_threshold_sigma) * (_last_vel_obs_var(0) + _last_vel_obs_var(1)), sq(_params.EKFGSF_vel_threshold));
 
-				if (vel_obs_xy_norm_sq > vel_obs_threshold_sq && vel_state_xy_norm_sq > vel_state_threshold_sq) {
+				if (vel_obs_xy_norm_sq > vel_obs_threshold_sq && vel_state_xy_norm_sq > vel_obs_threshold_sq) {
 					const float obs_dot_vel = Vector2f(_last_vel_obs).dot(_state.vel.xy());
 					const float cos_sq = sq(obs_dot_vel) / (vel_state_xy_norm_sq * vel_obs_xy_norm_sq);
 
