@@ -137,7 +137,7 @@ TEST_F(EkfFusionLogicTest, gyroBias)
 	for (int i = 0; i < 100; i++) {
 		accel_bias = _ekf->getAccelBias();
 		_sensor_simulator.runSeconds(0.5);
-		if (fabsf(accel_bias(2)) > 0.01f) {
+		if (fabsf(accel_bias(2)) > 0.3f) {
 			printf("Bias diverged = %f, %f, %f, i = %d\n", (double)accel_bias(0), (double)accel_bias(1), (double)accel_bias(2), i);
 			EXPECT_FALSE(true);
 			break;

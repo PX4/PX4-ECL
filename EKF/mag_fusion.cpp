@@ -699,6 +699,8 @@ void Ekf::updateQuaternion(const float innovation, const float variance, const f
 		fixCovarianceErrors(true);
 
 		// apply the state corrections
+		printf("Mag fusion, innov = %f, K_acc_z_bias = %f, delta_bias = %f\n", (double)_heading_innov, (double)Kfusion(15), (double)(Kfusion(15) * _heading_innov));
+		/* Kfusion(15) = 0.f; */
 		fuse(Kfusion, _heading_innov);
 
 	}
