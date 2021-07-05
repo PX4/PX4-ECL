@@ -122,6 +122,29 @@ TEST_F(EkfFusionLogicTest, doGpsFusion)
 	// THIS is not happening at the moment
 }
 
+TEST_F(EkfFusionLogicTest, gyroBias)
+{
+	// GIVEN: a healthy filter
+	_ekf_wrapper.enableGpsFusion();
+	_sensor_simulator.startGps();
+	_sensor_simulator.runSeconds(11);
+
+	// WHEN: there is a yaw gyro bias
+	_sensor_simulator._imu.setGyroData(Vector3f(0.f, 0.f, 0.1f));
+
+	// THEN: the vertical accel bias should not be affected
+	Vector3f accel_bias;
+	for (int i = 0; i < 100; i++) {
+		accel_bias = _ekf->getAccelBias();
+		_sensor_simulator.runSeconds(0.5);
+		if (fabsf(accel_bias(2)) > 0.01f) {
+			printf("Bias diverged = %f, %f, %f, i = %d\n", (double)accel_bias(0), (double)accel_bias(1), (double)accel_bias(2), i);
+			EXPECT_FALSE(true);
+			break;
+		}
+	}
+}
+
 TEST_F(EkfFusionLogicTest, rejectGpsSignalJump)
 {
 	// GIVEN: a tilt and heading aligned filter
