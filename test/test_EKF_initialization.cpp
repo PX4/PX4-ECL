@@ -120,13 +120,15 @@ class EkfInitializationTest : public ::testing::Test {
 	{
 		const Dcmf R_to_earth = Dcmf(_ekf->getQuaternion());
 		const Vector3f dvel_bias_var = _ekf_wrapper.getDeltaVelBiasVariance();
+		const Vector3f accel_bias = _ekf->getAccelBias();
 
 		for (int i = 0; i < 3; i++){
 			if (fabsf(R_to_earth(2, i)) > 0.8f) {
 				// Highly observable, the variance decreases
 				EXPECT_LT(dvel_bias_var(i), 4.0e-6f) << "axis " << i;
-
 			}
+
+			EXPECT_LT(accel_bias(i), 4.0e-6f) << "axis " << i;
 		}
 	}
 };
@@ -146,6 +148,27 @@ TEST_F(EkfInitializationTest, initializeWithZeroTilt)
 
 	_sensor_simulator.runSeconds(1.f);
 	learningCorrectAccelBias();
+}
+
+TEST_F(EkfInitializationTest, gyroBias)
+{
+	// GIVEN: a healthy filter
+	_sensor_simulator.runSeconds(20);
+
+	// WHEN: there is a yaw gyro bias after initial convergence of the filter
+	_sensor_simulator._imu.setGyroData(Vector3f(0.f, 0.f, 0.1f));
+
+	// THEN: the vertical accel bias should not be affected
+	Vector3f accel_bias;
+	for (int i = 0; i < 100; i++) {
+		_sensor_simulator.runSeconds(0.5);
+		accel_bias = _ekf->getAccelBias();
+		ASSERT_LT(fabsf(accel_bias(2)), 0.3f) << "Bias diverged = ("
+						       << accel_bias(0) << ", "
+						       << accel_bias(1) << ", "
+						       << accel_bias(2) << "), i ="
+						       << i;
+	}
 }
 
 TEST_F(EkfInitializationTest, initializeHeadingWithZeroTilt)
