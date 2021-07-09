@@ -347,6 +347,7 @@ private:
 	bool _gps_data_ready{false};	///< true when new GPS data has fallen behind the fusion time horizon and is available to be fused
 	bool _mag_data_ready{false};	///< true when new magnetometer data has fallen behind the fusion time horizon and is available to be fused
 	bool _baro_data_ready{false};	///< true when new baro height data has fallen behind the fusion time horizon and is available to be fused
+	bool _rng_data_ready{false};
 	bool _flow_data_ready{false};	///< true when the leading edge of the optical flow integration period has fallen behind the fusion time horizon
 	bool _ev_data_ready{false};	///< true when new external vision system data has fallen behind the fusion time horizon and is available to be fused
 	bool _tas_data_ready{false};	///< true when new true airspeed data has fallen behind the fusion time horizon and is available to be fused
@@ -377,6 +378,9 @@ private:
 
 	uint64_t _time_acc_bias_check{0};	///< last time the  accel bias check passed (uSec)
 	uint64_t _delta_time_baro_us{0};	///< delta time between two consecutive delayed baro samples from the buffer (uSec)
+	uint64_t _delta_time_gps_us{0};
+	uint64_t _delta_time_rng_us{0};
+	uint64_t _delta_time_ev_us{0};
 
 	Vector3f _earth_rate_NED;	///< earth rotation vector (NED) in rad/s
 
@@ -487,15 +491,15 @@ private:
 
 	// Variables used by the initial filter alignment
 	bool _is_first_imu_sample{true};
-	uint32_t _baro_counter{0};		///< number of baro samples read during initialisation
-	uint32_t _mag_counter{0};		///< number of magnetometer samples read during initialisation
 	AlphaFilter<Vector3f> _accel_lpf{0.1f};	///< filtered accelerometer measurement used to align tilt (m/s/s)
 	AlphaFilter<Vector3f> _gyro_lpf{0.1f};	///< filtered gyro measurement used for alignment excessive movement check (rad/sec)
 
 	// Variables used to perform in flight resets and switch between height sources
 	AlphaFilter<Vector3f> _mag_lpf{0.1f};	///< filtered magnetometer measurement for instant reset (Gauss)
-	float _hgt_sensor_offset{0.0f};		///< set as necessary if desired to maintain the same height after a height reset (m)
-	float _baro_hgt_offset{0.0f};		///< baro height reading at the local NED origin (m)
+	float _baro_hgt_offset{NAN};		///< baro height reading at the local NED origin (m)
+	float _gps_hgt_offset{NAN};
+	float _rng_hgt_offset{NAN};
+	float _ev_hgt_offset{NAN};
 
 	// Variables used to control activation of post takeoff functionality
 	float _last_on_ground_posD{0.0f};	///< last vertical position when the in_air status was false (m)
@@ -884,8 +888,6 @@ private:
 
 	void startBaroHgtFusion();
 	void startGpsHgtFusion();
-
-	void updateBaroHgtOffset();
 
 	// return an estimation of the GPS altitude variance
 	float getGpsHeightVariance();

@@ -164,6 +164,24 @@ void EstimatorInterface::setMagData(const magSample &mag_sample)
 		_mag_data_sum.setZero();
 		_mag_timestamp_sum = 0;
 	}
+
+	{
+		magSample sample_delayed;
+
+		if (_mag_buffer.peek_first_older_than(_imu_sample_delayed.time_us, &sample_delayed)) {
+			if ((sample_delayed.time_us != 0) && (sample_delayed.time_us > _mag_sample_delayed_time_us_last)) {
+				if (_mag_counter == 0) {
+					_mag_lpf.reset(sample_delayed.mag);
+
+				} else {
+					_mag_lpf.update(sample_delayed.mag);
+				}
+
+				_mag_counter++;
+				_mag_sample_delayed_time_us_last = sample_delayed.time_us;
+			}
+		}
+	}
 }
 
 void EstimatorInterface::setGpsData(const gps_message &gps)
@@ -228,6 +246,25 @@ void EstimatorInterface::setGpsData(const gps_message &gps)
 
 		_gps_buffer.push(gps_sample_new);
 	}
+
+	{
+		// accumulate enough height measurements to be confident in the quality of the data
+		gpsSample sample_delayed;
+
+		if (_gps_buffer.peek_first_older_than(_imu_sample_delayed.time_us, &sample_delayed)) {
+			if ((sample_delayed.time_us != 0) && (sample_delayed.time_us > _gps_sample_delayed_time_us_last)) {
+				if (_gps_hgt_counter == 0) {
+					_gps_hgt_lpf.reset(sample_delayed.hgt);
+
+				} else {
+					_gps_hgt_lpf.update(sample_delayed.hgt);
+				}
+
+				_gps_hgt_counter++;
+				_gps_sample_delayed_time_us_last = sample_delayed.time_us;
+			}
+		}
+	}
 }
 
 void EstimatorInterface::setBaroData(const baroSample &baro_sample)
@@ -272,6 +309,25 @@ void EstimatorInterface::setBaroData(const baroSample &baro_sample)
 		_baro_sample_count = 0;
 		_baro_alt_sum = 0.0f;
 		_baro_timestamp_sum = 0;
+	}
+
+	{
+		// accumulate enough height measurements to be confident in the quality of the data
+		baroSample sample_delayed;
+
+		if (_baro_buffer.peek_first_older_than(_imu_sample_delayed.time_us, &sample_delayed)) {
+			if ((sample_delayed.time_us != 0) && (sample_delayed.time_us > _baro_sample_delayed_time_us_last)) {
+				if (_baro_hgt_counter == 0) {
+					_baro_hgt_lpf.reset(sample_delayed.hgt);
+
+				} else {
+					_baro_hgt_lpf.update(sample_delayed.hgt);
+				}
+
+				_baro_hgt_counter++;
+				_baro_sample_delayed_time_us_last = sample_delayed.time_us;
+			}
+		}
 	}
 }
 
@@ -332,6 +388,8 @@ void EstimatorInterface::setRangeData(const rangeSample &range_sample)
 
 		_range_buffer.push(range_sample_new);
 	}
+
+	_rng_hgt_filter.update(range_sample.rng);
 }
 
 void EstimatorInterface::setOpticalFlowData(const flowSample &flow)
@@ -392,6 +450,26 @@ void EstimatorInterface::setExtVisionData(const extVisionSample &evdata)
 		ev_sample_new.time_us -= FILTER_UPDATE_PERIOD_MS * 1000 / 2;
 
 		_ext_vision_buffer.push(ev_sample_new);
+	}
+
+
+	{
+		// accumulate enough height measurements to be confident in the quality of the data
+		extVisionSample sample_delayed;
+
+		if (_ext_vision_buffer.peek_first_older_than(_imu_sample_delayed.time_us, &sample_delayed)) {
+			if ((sample_delayed.time_us != 0) && (sample_delayed.time_us > _ev_sample_delayed_time_us_last)) {
+				if (_ev_hgt_counter == 0) {
+					_ev_hgt_lpf.reset(sample_delayed.pos(2));
+
+				} else {
+					_ev_hgt_lpf.update(sample_delayed.pos(2));
+				}
+
+				_ev_hgt_counter++;
+				_ev_sample_delayed_time_us_last = sample_delayed.time_us;
+			}
+		}
 	}
 }
 
