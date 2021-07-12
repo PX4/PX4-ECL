@@ -1223,8 +1223,7 @@ void Ekf::controlHeightFusion()
 
 void Ekf::checkRangeAidSuitability()
 {
-	if (_control_status.flags.in_air
-	    && _range_sensor.isHealthy()
+	if (_range_sensor.isHealthy()
 	    && isTerrainEstimateValid()) {
 		// check if we can use range finder measurements to estimate height, use hysteresis to avoid rapid switching
 		// Note that the 0.7 coefficients and the innovation check are arbitrary values but work well in practice
