@@ -257,41 +257,54 @@ void Ekf::resetVerticalPositionTo(const float &new_vert_pos)
 // Reset height state using the last height measurement
 void Ekf::resetHeight()
 {
-	// Get the most recent GPS data
-	const gpsSample &gps_newest = _gps_buffer.get_newest();
+	// use median filtered range data
+	// correct the range data for position offset relative to the IMU
+	const Vector3f pos_offset_body{_params.rng_pos_body - _params.imu_pos_body};
+	const Vector3f pos_offset_earth{_R_to_earth * pos_offset_body};
+	const float range = _rng_hgt_filter.median() + pos_offset_earth(2) / _range_sensor.getCosTilt();
+	float dist_bottom = range * _range_sensor.getCosTilt();
+
+	if (!_control_status.flags.in_air && (range < _range_sensor.getValidMinVal() || range > _range_sensor.getValidMaxVal())) {
+		dist_bottom = _params.rng_gnd_clearance;
+	}
 
 	// reset the vertical position
 	if (_control_status.flags.rng_hgt) {
 
-		// a fallback from any other height source to rangefinder happened
-		if(!_control_status_prev.flags.rng_hgt) {
+		if (_range_sensor.isHealthy()) {
+			// a fallback from any other height source to rangefinder happened
+			if (!ISFINITE(_rng_hgt_offset) && !_control_status_prev.flags.rng_hgt) {
+				if (_control_status.flags.in_air && isTerrainEstimateValid()) {
+					_rng_hgt_offset = _terrain_vpos;
 
-			if (_control_status.flags.in_air && isTerrainEstimateValid()) {
-			    _hgt_sensor_offset = _terrain_vpos;
-			} else if (_control_status.flags.in_air) {
-				 _hgt_sensor_offset = _range_sensor.getDistBottom() + _state.pos(2);
-			} else {
-				_hgt_sensor_offset = _params.rng_gnd_clearance;
+				} else if (_control_status.flags.in_air) {
+					_rng_hgt_offset = dist_bottom + _state.pos(2);
+
+				} else {
+					_rng_hgt_offset = _params.rng_gnd_clearance;
+				}
 			}
 
+			// update the state and associated variance
+			resetVerticalPositionTo(_rng_hgt_offset - dist_bottom);
+
+			// the state variance is the same as the observation
+			P.uncorrelateCovarianceSetVariance<1>(9, sq(_params.range_noise));
+
+		} else {
+			// TODO: reset to last known baro based estimate
 		}
 
-		// update the state and associated variance
-		resetVerticalPositionTo(_hgt_sensor_offset - _range_sensor.getDistBottom());
-
-		// the state variance is the same as the observation
-		P.uncorrelateCovarianceSetVariance<1>(9, sq(_params.range_noise));
-
-		// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
-		const baroSample &baro_newest = _baro_buffer.get_newest();
-		_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
-
 	} else if (_control_status.flags.baro_hgt) {
-		// initialize vertical position with newest baro measurement
-		const baroSample &baro_newest = _baro_buffer.get_newest();
 
 		if (!_baro_hgt_faulty) {
-			resetVerticalPositionTo(-baro_newest.hgt + _baro_hgt_offset);
+
+			if (!ISFINITE(_baro_hgt_offset) && !_control_status_prev.flags.baro_hgt) {
+				_baro_hgt_offset = _state.pos(2) + _baro_hgt_lpf.getState();
+			}
+
+			// initialize vertical position with newest baro measurement
+			resetVerticalPositionTo(-_baro_hgt_lpf.getState() + _baro_hgt_offset);
 
 			// the state variance is the same as the observation
 			P.uncorrelateCovarianceSetVariance<1>(9, sq(_params.baro_noise));
@@ -303,39 +316,74 @@ void Ekf::resetHeight()
 	} else if (_control_status.flags.gps_hgt) {
 		// initialize vertical position and velocity with newest gps measurement
 		if (!_gps_hgt_intermittent) {
-			resetVerticalPositionTo(_hgt_sensor_offset - gps_newest.hgt + _gps_alt_ref);
+
+			if (!ISFINITE(_gps_hgt_offset) && !_control_status_prev.flags.gps_hgt) {
+				_gps_hgt_offset = _state.pos(2) + _gps_hgt_lpf.getState() - _gps_alt_ref;
+			}
+
+			gpsSample gps_sample;
+
+			if (!_gps_buffer.peek_first_older_than(_imu_sample_delayed.time_us, &gps_sample)) {
+				gps_sample = _gps_buffer.get_newest();
+			}
+
+			resetVerticalPositionTo(_gps_hgt_offset - _gps_hgt_lpf.getState() + _gps_alt_ref);
 
 			// the state variance is the same as the observation
-			P.uncorrelateCovarianceSetVariance<1>(9, sq(gps_newest.vacc));
-
-			// reset the baro offset which is subtracted from the baro reading if we need to use it as a backup
-			const baroSample &baro_newest = _baro_buffer.get_newest();
-			_baro_hgt_offset = baro_newest.hgt + _state.pos(2);
+			P.uncorrelateCovarianceSetVariance<1>(9, sq(gps_sample.vacc));
 
 		} else {
 			// TODO: reset to last known gps based estimate
 		}
 
 	} else if (_control_status.flags.ev_hgt) {
-		// initialize vertical position with newest measurement
-		const extVisionSample &ev_newest = _ext_vision_buffer.get_newest();
+		if (!ISFINITE(_ev_hgt_offset) &&!_control_status_prev.flags.ev_hgt) {
+			_ev_hgt_offset = _state.pos(2) + _ev_hgt_lpf.getState();
+		}
+
+		extVisionSample ext_vision_sample;
+
+		if (!_ext_vision_buffer.peek_first_older_than(_imu_sample_delayed.time_us, &ext_vision_sample)) {
+			ext_vision_sample = _ext_vision_buffer.get_newest();
+		}
 
 		// use the most recent data if it's time offset from the fusion time horizon is smaller
-		if (ev_newest.time_us >= _ev_sample_delayed.time_us) {
-			resetVerticalPositionTo(ev_newest.pos(2));
+		resetVerticalPositionTo(_ev_hgt_lpf.getState());
 
-		} else {
-			resetVerticalPositionTo(_ev_sample_delayed.pos(2));
-		}
+		P.uncorrelateCovarianceSetVariance<1>(9, sq(ext_vision_sample.posVar(2)));
 	}
+
+	// reset the height sensor offsets which is subtracted from the readings if we need to use it as a backup
+	_baro_hgt_offset = _state.pos(2) + _baro_hgt_lpf.getState();
+	_gps_hgt_offset  = _state.pos(2) + _gps_hgt_lpf.getState() - _gps_alt_ref;
+	_rng_hgt_offset  = _state.pos(2) + dist_bottom;
+	_ev_hgt_offset   = _state.pos(2) + _ev_hgt_lpf.getState();
 
 	// reset the vertical velocity state
 	if (_control_status.flags.gps && !_gps_hgt_intermittent) {
+		gpsSample gps_sample;
+
+		if (!_gps_buffer.peek_first_older_than(_imu_sample_delayed.time_us, &gps_sample)) {
+			gps_sample = _gps_buffer.get_newest();
+		}
+
 		// If we are using GPS, then use it to reset the vertical velocity
-		resetVerticalVelocityTo(gps_newest.vel(2));
+		resetVerticalVelocityTo(gps_sample.vel(2));
 
 		// the state variance is the same as the observation
-		P.uncorrelateCovarianceSetVariance<1>(6, sq(1.5f * gps_newest.sacc));
+		P.uncorrelateCovarianceSetVariance<1>(6, sq(1.5f * gps_sample.sacc));
+
+	} else if (_control_status.flags.ev_vel) {
+		extVisionSample ext_vision_sample;
+
+		if (!_ext_vision_buffer.peek_first_older_than(_imu_sample_delayed.time_us, &ext_vision_sample)) {
+			ext_vision_sample = _ext_vision_buffer.get_newest();
+		}
+
+		// use the most recent data if it's time offset from the fusion time horizon is smaller
+		resetVerticalVelocityTo(ext_vision_sample.vel(2));
+
+		P.uncorrelateCovarianceSetVariance<1>(6, math::max(getVisionVelocityVarianceInEkfFrame()(2), sq(0.05f)));
 
 	} else {
 		// we don't know what the vertical velocity is, so set it to zero
@@ -1286,10 +1334,6 @@ void Ekf::startBaroHgtFusion()
 {
 	setControlBaroHeight();
 
-	// We don't need to set a height sensor offset
-	// since we track a separate _baro_hgt_offset
-	_hgt_sensor_offset = 0.0f;
-
 	// Turn off ground effect compensation if it times out
 	if (_control_status.flags.gnd_effect) {
 		if (isTimedOut(_time_last_gnd_effect_on, GNDEFFECT_TIMEOUT)) {
@@ -1302,26 +1346,6 @@ void Ekf::startBaroHgtFusion()
 void Ekf::startGpsHgtFusion()
 {
 	setControlGPSHeight();
-
-	// we have just switched to using gps height, calculate height sensor offset such that current
-	// measurement matches our current height estimate
-	if (_control_status_prev.flags.gps_hgt != _control_status.flags.gps_hgt) {
-		_hgt_sensor_offset = _gps_sample_delayed.hgt - _gps_alt_ref + _state.pos(2);
-	}
-}
-
-void Ekf::updateBaroHgtOffset()
-{
-	// calculate a filtered offset between the baro origin and local NED origin if we are not
-	// using the baro as a height reference
-	if (!_control_status.flags.baro_hgt && _baro_data_ready) {
-		const float local_time_step = math::constrain(1e-6f * _delta_time_baro_us, 0.0f, 1.0f);
-
-		// apply a 10 second first order low pass filter to baro offset
-		const float offset_rate_correction =  0.1f * (_baro_sample_delayed.hgt + _state.pos(2) -
-								_baro_hgt_offset);
-		_baro_hgt_offset += local_time_step * math::constrain(offset_rate_correction, -0.1f, 0.1f);
-	}
 }
 
 float Ekf::getGpsHeightVariance()
