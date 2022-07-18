@@ -95,7 +95,8 @@ void Ekf::fuseVelPosHeight()
 	}
 
 	if (_fuse_height) {
-		if (_control_status.flags.baro_hgt) {
+		// if (_control_status.flags.baro_hgt) {
+		if (false) {
 			fuse_map[5] = true;
 			// vertical position innovation - baro measurement has opposite sign to earth z axis
 			innovation[5] = _state.pos(2) + _baro_sample_delayed.hgt - _baro_hgt_offset - _hgt_sensor_offset;
